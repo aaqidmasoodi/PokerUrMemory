@@ -182,8 +182,7 @@ class GameRoom {
             isHost: player.isHost,
             isCurrentTurn: this.getPlayerIndex(socketId) === this.currentPlayerIndex && 
                           this.gamePhase !== 'memoryReveal' &&
-                          this.gamePhase !== 'waiting' &&
-                          this.gamePhase !== 'draw',
+                          this.gamePhase !== 'waiting',
             hand: player.hand.map((card, i) => {
                 let showCard = false;
                 

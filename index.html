@@ -518,7 +518,7 @@
 
             hand.forEach((card, index) => {
                 const cardEl = document.createElement('div');
-                const shouldShow = card.faceUp;
+                const shouldShow = card.value !== null && card.suit !== null;
                 const isRed = card.suit === '♥' || card.suit === '♦';
                 
                 cardEl.className = `card ${shouldShow ? 'face-up' : 'face-down'} ${shouldShow ? (isRed ? 'red' : 'black') : ''}`;
