@@ -58,7 +58,7 @@ class GameRoom {
         this.players.set(socketId, {
             id: socketId,
             name: name,
-            chips: 1000,
+            chips: 100,
             hand: [],
             currentBet: 0,
             folded: false,
@@ -149,7 +149,9 @@ class GameRoom {
 
     endMemoryRevealPhase() {
         this.gamePhase = 'firstBetting';
-        this.currentPlayerIndex = 0;
+        
+        const playerArray = Array.from(this.players.values());
+        this.currentPlayerIndex = Math.floor(Math.random() * playerArray.length);
 
         this.players.forEach((player, id) => {
             player.hand.forEach(card => {
@@ -162,7 +164,7 @@ class GameRoom {
         
         const allPlayers = Array.from(this.players.values());
         allPlayers.forEach(player => {
-            io.to(player.id).emit('actionLog', 'Time up! Your cards remain visible. Opponent cards are now hidden.');
+            io.to(player.id).emit('actionLog', 'Time up! Your cards remain visible. Opponent cards are now hidden. Betting begins!');
         });
     }
 
@@ -198,8 +200,20 @@ class GameRoom {
                         showCard = card.isInitiallyFaceUp === true;
                     }
                 }
+                // Draw phase: show own cards
+                else if (this.gamePhase === 'draw' || this.gamePhase === 'drawReveal') {
+                    if (isSamePlayer) {
+                        showCard = true;
+                    } else if (this.gamePhase === 'drawReveal') {
+                        // During reveal, show the face-up card
+                        const replacementData = this.drawSelections?.get(player.id);
+                        if (replacementData?.faceUpCard === card) {
+                            showCard = true;
+                        }
+                    }
+                }
                 // After memory reveal: show own cards only
-                else if (this.gamePhase === 'firstBetting' || this.gamePhase === 'draw' || this.gamePhase === 'secondBetting') {
+                else if (this.gamePhase === 'firstBetting' || this.gamePhase === 'secondBetting') {
                     if (isSamePlayer) {
                         showCard = true;
                     }
@@ -251,12 +265,13 @@ class GameRoom {
                 this.nextPlayer();
                 break;
             case 'bet':
-                if (amount > player.chips) return;
-                player.chips -= amount;
-                player.currentBet += amount;
-                this.pot += amount;
+                const betAmount = Math.min(amount, 20, player.chips);
+                if (betAmount < 1) return;
+                player.chips -= betAmount;
+                player.currentBet += betAmount;
+                this.pot += betAmount;
                 this.currentBet = Math.max(this.currentBet, player.currentBet);
-                io.to(this.roomCode).emit('actionLog', `${player.name} bets $${amount}.`);
+                io.to(this.roomCode).emit('actionLog', `${player.name} bets $${betAmount}.`);
                 this.nextPlayer();
                 break;
             case 'call':
@@ -268,12 +283,13 @@ class GameRoom {
                 this.nextPlayer();
                 break;
             case 'raise':
-                if (amount > player.chips) return;
-                player.chips -= amount;
-                player.currentBet += amount;
-                this.pot += amount;
+                const raiseAmount = Math.min(amount, 20, player.chips);
+                if (raiseAmount < 1) return;
+                player.chips -= raiseAmount;
+                player.currentBet += raiseAmount;
+                this.pot += raiseAmount;
                 this.currentBet = Math.max(this.currentBet, player.currentBet);
-                io.to(this.roomCode).emit('actionLog', `${player.name} raises to $${amount}.`);
+                io.to(this.roomCode).emit('actionLog', `${player.name} raises to $${raiseAmount}.`);
                 this.nextPlayer();
                 break;
             case 'fold':
@@ -363,12 +379,19 @@ class GameRoom {
         });
         this.pot = 0;
         this.broadcastState();
+        setTimeout(() => this.broadcastLeaderboard(), 100);
+    }
+
+    broadcastLeaderboard() {
+        const leaderboard = Array.from(this.players.values())
+            .map(p => ({ name: p.name, chips: p.chips }))
+            .sort((a, b) => b.chips - a.chips);
+        io.to(this.roomCode).emit('leaderboard', leaderboard);
     }
 
     startDrawPhase() {
         this.isDrawPhase = true;
         this.currentBet = 0;
-        this.currentPlayerIndex = 0;
         
         this.players.forEach(p => {
             p.currentBet = 0;
@@ -376,120 +399,134 @@ class GameRoom {
         });
 
         this.gamePhase = 'draw';
+        this.drawTimer = 20;
+        this.drawSelections = new Map();
+        this.playersConfirmed = new Set();
+        
+        io.to(this.roomCode).emit('drawPhaseStart', { timer: this.drawTimer });
         this.broadcastState();
-        this.notifyCurrentPlayer();
-    }
-
-    setDrawSelection(socketId, selectedIndices) {
-        const player = this.players.get(socketId);
-        if (!player || this.gamePhase !== 'draw') return;
-
-        const playerIndex = this.getPlayerIndex(socketId);
-        if (playerIndex !== this.currentPlayerIndex) return;
-
-        this.selectedCards.set(socketId, selectedIndices);
-        io.to(socketId).emit('drawSelectionConfirmed', { count: selectedIndices.length });
-    }
-
-    confirmDraw(socketId) {
-        const player = this.players.get(socketId);
-        if (!player || this.gamePhase !== 'draw') return;
-
-        const playerIndex = this.getPlayerIndex(socketId);
-        if (playerIndex !== this.currentPlayerIndex) return;
-
-        const selectedIndices = this.selectedCards.get(socketId) || [];
-        const discardCount = selectedIndices.length;
-        const newCards = [];
-
-        for (let i = 0; i < discardCount; i++) {
-            newCards.push(this.deck.pop());
-        }
-
-        const sortedIndices = selectedIndices.sort((a, b) => b - a);
-        sortedIndices.forEach(index => {
-            player.hand.splice(index, 1);
-        });
-
-        player.hand.push(...newCards);
-
-        if (discardCount === 1) {
-            player.hand[player.hand.length - 1].faceUp = false;
-        } else if (discardCount > 1) {
-            newCards.forEach((card, i) => {
-                if (i === 0) {
-                    card.faceUp = true;
-                    this.tempRevealCards.push({ playerId: socketId, card: card });
-                } else {
-                    card.faceUp = false;
-                }
-            });
+        
+        this.drawTimerInterval = setInterval(() => {
+            this.drawTimer--;
+            io.to(this.roomCode).emit('timerUpdate', this.drawTimer);
             
-            this.broadcastState();
-            this.handleDrawReveal(socketId, newCards);
-            return;
-        }
-
-        io.to(this.roomCode).emit('actionLog', `${player.name} draws ${discardCount} card(s).`);
-        
-        this.broadcastState();
-        this.finishDrawPhase();
-    }
-
-    handleDrawReveal(socketId, newCards) {
-        this.revealTimeLeft = 10;
-        io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
-        
-        io.to(this.roomCode).emit('drawReveal', {
-            playerId: socketId,
-            playerName: this.players.get(socketId).name,
-            card: newCards[0]
-        });
-
-        this.revealTimer = setInterval(() => {
-            this.revealTimeLeft--;
-            io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
-
-            if (this.revealTimeLeft <= 0) {
-                clearInterval(this.revealTimer);
-                
-                newCards.forEach(card => {
-                    card.faceUp = false;
-                });
-
-                io.to(this.roomCode).emit('drawRevealEnd', { playerId: socketId });
-                io.to(this.roomCode).emit('actionLog', 'Replacement cards hidden.');
-                
-                this.broadcastState();
-                this.finishDrawPhase();
+            if (this.drawTimer <= 0) {
+                clearInterval(this.drawTimerInterval);
+                this.endDrawPhaseNoDiscard();
             }
         }, 1000);
     }
 
-    finishDrawPhase() {
-        const playerArray = Array.from(this.players.keys());
-        let nextIndex = (this.currentPlayerIndex + 1) % this.players.size;
-        let attempts = 0;
+    playerSelectCards(socketId, selectedIndices) {
+        if (this.gamePhase !== 'draw') return;
+        this.drawSelections.set(socketId, selectedIndices);
+    }
+
+    playerConfirmDiscard(socketId) {
+        if (this.gamePhase !== 'draw') return;
+        if (this.playersConfirmed.has(socketId)) return;
         
-        while (attempts < this.players.size && this.players.get(playerArray[nextIndex])?.folded) {
-            nextIndex = (nextIndex + 1) % this.players.size;
-            attempts++;
+        this.playersConfirmed.add(socketId);
+        
+        if (this.playersConfirmed.size === this.players.size) {
+            clearInterval(this.drawTimerInterval);
+            this.processAllDiscards();
         }
+    }
 
-        if (this.currentPlayerIndex >= this.players.size - 1 || nextIndex === 0) {
-            const allSelected = Array.from(this.selectedCards.keys()).length >= this.players.size;
-            if (allSelected || this.currentPlayerIndex === this.players.size - 1) {
-                this.gamePhase = 'secondBetting';
-                this.currentBet = 0;
-                this.currentPlayerIndex = 0;
-                this.players.forEach(p => p.currentBet = 0);
-                this.broadcastState();
-                this.notifyCurrentPlayer();
-                return;
+    processAllDiscards() {
+        this.players.forEach((player, socketId) => {
+            const selectedIndices = this.drawSelections.get(socketId) || [];
+            const discardCount = selectedIndices.length;
+            const newCards = [];
+
+            for (let i = 0; i < discardCount; i++) {
+                newCards.push(this.deck.pop());
             }
-        }
 
-        this.currentPlayerIndex = nextIndex;
+            const sortedIndices = selectedIndices.sort((a, b) => b - a);
+            sortedIndices.forEach(index => {
+                player.hand.splice(index, 1);
+            });
+
+            player.hand.push(...newCards);
+
+            let faceUpCard = null;
+            if (discardCount > 0) {
+                newCards.forEach((card, i) => {
+                    if (i === 0 && discardCount > 1) {
+                        card.faceUp = true;
+                        faceUpCard = card;
+                    } else {
+                        card.faceUp = false;
+                    }
+                });
+            }
+
+            io.to(this.roomCode).emit('actionLog', `${player.name} discards ${discardCount} card(s).`);
+            
+            this.drawSelections.set(socketId, { newCards, faceUpCard, playerName: player.name });
+        });
+
+        this.showReplacementCards();
+    }
+
+    showReplacementCards() {
+        this.gamePhase = 'drawReveal';
+        this.revealTimer = 7;
+        
+        this.drawSelections.forEach((data, playerId) => {
+            if (data.faceUpCard) {
+                data.faceUpCard.faceUp = true;
+            }
+        });
+
+        io.to(this.roomCode).emit('drawRevealStart', { 
+            timer: this.revealTimer,
+            replacements: Array.from(this.drawSelections.entries()).map(([id, data]) => ({
+                playerId: id,
+                playerName: data.playerName,
+                faceUpCard: data.faceUpCard
+            }))
+        });
+        
+        this.broadcastState();
+
+        this.revealTimerInterval = setInterval(() => {
+            this.revealTimer--;
+            io.to(this.roomCode).emit('timerUpdate', this.revealTimer);
+            
+            if (this.revealTimer <= 0) {
+                clearInterval(this.revealTimerInterval);
+                this.endDrawPhase();
+            }
+        }, 1000);
+    }
+
+    endDrawPhase() {
+        this.drawSelections.forEach((data, playerId) => {
+            if (data.newCards) {
+                data.newCards.forEach(card => card.faceUp = false);
+            }
+        });
+
+        io.to(this.roomCode).emit('actionLog', 'Draw phase complete. Second betting begins.');
+        
+        this.gamePhase = 'secondBetting';
+        this.currentPlayerIndex = Math.floor(Math.random() * this.players.size);
+        this.players.forEach(p => p.currentBet = 0);
+        
+        this.broadcastState();
+        this.notifyCurrentPlayer();
+    }
+
+    endDrawPhaseNoDiscard() {
+        io.to(this.roomCode).emit('actionLog', 'Draw phase ended. No discards made.');
+        
+        this.gamePhase = 'secondBetting';
+        this.currentPlayerIndex = Math.floor(Math.random() * this.players.size);
+        this.players.forEach(p => p.currentBet = 0);
+        
         this.broadcastState();
         this.notifyCurrentPlayer();
     }
@@ -498,15 +535,25 @@ class GameRoom {
         const playerArray = Array.from(this.players.values());
         const currentPlayer = playerArray[this.currentPlayerIndex];
         if (currentPlayer) {
+            io.to(currentPlayer.id).emit('yourTurnNotification', { 
+                message: 'YOUR TURN!',
+                phase: this.gamePhase
+            });
+            const maxBetAmount = Math.min(20, currentPlayer.chips);
+            const canRaise = this.currentBet > 0 && 
+                           currentPlayer.currentBet < this.currentBet && 
+                           !currentPlayer.isAllIn &&
+                           this.currentBet < 20;
+            
             io.to(currentPlayer.id).emit('yourTurn', {
                 canCheck: this.currentBet === 0,
                 canCall: this.currentBet > 0 && currentPlayer.currentBet < this.currentBet && !currentPlayer.isAllIn,
-                canRaise: this.currentBet > 0 && currentPlayer.currentBet < this.currentBet && !currentPlayer.isAllIn,
+                canRaise: canRaise,
                 currentBet: this.currentBet,
                 playerBet: currentPlayer.currentBet,
-                minRaise: this.currentBet > 0 ? this.currentBet * 2 : 10,
-                maxBet: currentPlayer.chips,
-                minBet: this.currentBet > 0 ? this.currentBet + 1 : 10
+                minRaise: this.currentBet > 0 ? Math.min(this.currentBet * 2, 20) : Math.min(10, maxBetAmount),
+                maxBet: maxBetAmount,
+                minBet: this.currentBet > 0 ? Math.min(this.currentBet + 1, 20) : Math.min(10, maxBetAmount)
             });
         }
     }
@@ -531,7 +578,10 @@ class GameRoom {
         hands.sort((a, b) => b.result.rank - a.result.rank || this.compareTieBreakers(a.result, b.result));
         
         const winner = hands[0];
-        winner.player.chips += this.pot;
+        const winnerPlayer = this.players.get(winner.playerId);
+        if (winnerPlayer) {
+            winnerPlayer.chips += this.pot;
+        }
 
         io.to(this.roomCode).emit('showdown', {
             hands: hands.map(h => ({
@@ -550,6 +600,7 @@ class GameRoom {
 
         this.pot = 0;
         this.broadcastState();
+        setTimeout(() => this.broadcastLeaderboard(), 100);
     }
 
     evaluateHand(cards) {
@@ -694,18 +745,18 @@ io.on('connection', (socket) => {
         room.playerAction(socket.id, data.action, data.amount);
     });
 
-    socket.on('setDrawSelection', (data) => {
+    socket.on('playerSelectCards', (data) => {
         const room = rooms.get(data.roomCode);
         if (!room) return;
 
-        room.setDrawSelection(socket.id, data.selectedIndices);
+        room.playerSelectCards(socket.id, data.selectedIndices);
     });
 
-    socket.on('confirmDraw', (data) => {
+    socket.on('playerConfirmDiscard', (data) => {
         const room = rooms.get(data.roomCode);
         if (!room) return;
 
-        room.confirmDraw(socket.id);
+        room.playerConfirmDiscard(socket.id);
     });
 
     socket.on('nextHand', (data, callback) => {

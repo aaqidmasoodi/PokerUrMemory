@@ -73,6 +73,10 @@
         .phase-display { font-size: 1.1em; padding: 8px 15px; background: rgba(244,208,63,0.2); border-radius: 5px; }
         .timer-display { font-size: 1.2em; color: #ff6b6b; font-weight: bold; }
 
+        .leaderboard-inline { font-size: 0.85em; color: #4ecdc4; }
+        .leaderboard-inline span { margin: 0 8px; }
+        .leaderboard-inline span:first-child { color: #f4d03f; font-weight: bold; }
+
         .message-area {
             text-align: center;
             padding: 15px;
@@ -137,6 +141,7 @@
         .card.red { color: #e74c3c; }
         .card.black { color: #2c3e50; }
         .card.reveal-animation { animation: cardReveal 0.5s ease-out; }
+        .card.selected { transform: translateY(-15px); box-shadow: 0 8px 20px rgba(244,208,63,0.6); border: 3px solid #f4d03f; }
 
         @keyframes cardReveal {
             0% { transform: scale(0.5) rotateY(180deg); opacity: 0; }
@@ -243,6 +248,9 @@
             <div class="game-info">
                 <div class="pot-display">Pot: $<span id="potAmount">0</span></div>
                 <div class="phase-display" id="phaseDisplay">Phase: Waiting</div>
+                <div class="leaderboard-inline" id="leaderboard">
+                    <span id="leaderboardList"></span>
+                </div>
                 <div class="timer-display" id="timerDisplay"></div>
             </div>
 
@@ -259,6 +267,8 @@
                     <button class="action-btn btn-fold" id="btnFold" disabled>Fold</button>
                     <button class="action-btn btn-all-in" id="btnAllIn" disabled>All In</button>
                 </div>
+
+                <button class="action-btn" id="btnConfirmDiscard" style="display:none; background:#27ae60;color:#fff;font-size:1.2em;padding:15px 40px;" onclick="confirmDiscard()">Confirm Discard</button>
 
                 <div class="bet-input-area" id="betInputArea">
                     <label>Amount: $</label>
@@ -381,9 +391,14 @@
             
             if (state.phase === 'draw') {
                 const myPlayer = state.players.find(p => p.id === playerId);
-                if (myPlayer && myPlayer.isCurrentTurn) {
-                    showDrawControls(myPlayer.hand);
+                if (myPlayer) {
+                    enableDiscard(myPlayer.hand);
                 }
+                document.getElementById('btnConfirmDiscard').style.display = 'block';
+                document.getElementById('actionButtons').classList.add('hidden');
+            } else if (state.phase === 'drawReveal') {
+                document.getElementById('btnConfirmDiscard').style.display = 'none';
+                document.getElementById('actionButtons').classList.add('hidden');
             }
         });
 
@@ -391,7 +406,8 @@
             switch(phase) {
                 case 'memoryReveal': return 'Memory Reveal';
                 case 'firstBetting': return 'First Betting';
-                case 'draw': return 'Draw Phase';
+                case 'draw': return 'Draw Phase - Click cards to discard';
+                case 'drawReveal': return 'Replacement Cards';
                 case 'secondBetting': return 'Second Betting';
                 case 'showdown': return 'Showdown';
                 default: return phase;
@@ -414,7 +430,10 @@
                 else if (player.isAllIn) status = 'All In';
                 else if (currentGameState?.phase === 'waiting') status = 'Waiting';
 
-                panel.innerHTML = `
+                const isDrawPhase = currentGameState?.phase === 'draw';
+                    const isClickable = isMe && isDrawPhase && !hasDiscarded;
+                    
+                    panel.innerHTML = `
                     <div class="player-name">${player.name}${isMe ? ' (You)' : ''}</div>
                     <div class="player-status">${status}</div>
                     <div class="player-chips">Chips: $${player.chips}</div>
@@ -423,7 +442,9 @@
                         ${player.hand.map((card, i) => {
                             const shouldShow = card.value !== null && card.suit !== null;
                             const isRed = card.suit === '♥' || card.suit === '♦';
-                            return `<div class="card ${shouldShow ? 'face-up' : 'face-down'} ${shouldShow ? (isRed ? 'red' : 'black') : ''}">
+                            const isSelected = selectedCards.has(i) && isClickable;
+                            const clickAttr = isClickable ? `onclick="handleCardClick(${i})"` : '';
+                            return `<div class="card ${shouldShow ? 'face-up' : 'face-down'} ${shouldShow ? (isRed ? 'red' : 'black') : ''} ${isSelected ? 'selected' : ''}" ${clickAttr}>
                                 ${shouldShow ? `${card.value}<span style="font-size:1.5em">${card.suit}</span>` : ''}
                             </div>`;
                         }).join('')}
@@ -438,6 +459,7 @@
             document.getElementById('betInputArea').classList.remove('active');
             document.getElementById('drawControls').classList.remove('active');
             document.getElementById('showdownDisplay').classList.add('hidden');
+            document.getElementById('btnConfirmDiscard').style.display = 'none';
         }
 
         socket.on('yourTurn', (data) => {
@@ -451,13 +473,17 @@
             const btnAllIn = document.getElementById('btnAllIn');
 
             btnCheck.disabled = !data.canCheck;
-            btnBet.disabled = false;
+            btnBet.disabled = data.currentBet >= 20;
             btnCall.disabled = !data.canCall;
             btnRaise.disabled = !data.canRaise;
             btnFold.disabled = false;
             btnAllIn.disabled = data.maxBet <= 0;
 
-            btnCall.textContent = data.canCall ? `Call $${data.currentBet - data.playerBet}` : 'Call';
+btnCall.textContent = data.canCall ? `Call $${data.currentBet - data.playerBet}` : 'Call';
+        });
+
+        socket.on('yourTurnNotification', (data) => {
+            document.getElementById('messageArea').textContent = data.message;
         });
 
         function playerCheck() {
@@ -471,7 +497,9 @@
             
             const socketData = currentGameState;
             const input = document.getElementById('betAmount');
-            input.min = isRaise ? socketData.currentBet * 2 : 10;
+            const minVal = isRaise ? Math.min(socketData.currentBet * 2, 20) : 10;
+            input.min = Math.min(minVal, 20);
+            input.max = 20;
             input.value = input.min;
         }
 
@@ -506,63 +534,56 @@
             socket.emit('playerAction', { roomCode: currentRoomCode, action: 'allIn' });
         }
 
-        function showDrawControls(hand) {
-            selectedCards.clear();
-            document.getElementById('drawControls').classList.add('active');
-            renderCardSelector(hand);
-        }
+        let hasDiscarded = false;
 
-        function renderCardSelector(hand) {
-            const container = document.getElementById('cardSelector');
-            container.innerHTML = '';
-
-            hand.forEach((card, index) => {
-                const cardEl = document.createElement('div');
-                const shouldShow = card.value !== null && card.suit !== null;
-                const isRed = card.suit === '♥' || card.suit === '♦';
-                
-                cardEl.className = `card ${shouldShow ? 'face-up' : 'face-down'} ${shouldShow ? (isRed ? 'red' : 'black') : ''}`;
-                if (selectedCards.has(index)) cardEl.classList.add('selected');
-                
-                if (shouldShow) {
-                    cardEl.innerHTML = `${card.value}<span style="font-size:1.5em">${card.suit}</span>`;
-                }
-                
-                cardEl.onclick = () => toggleCardSelection(index, hand);
-                container.appendChild(cardEl);
-            });
+        function enableDiscard(hand) {
+            if (hasDiscarded) return;
+            const myPlayer = currentGameState?.players?.find(p => p.id === playerId);
+            if (!myPlayer) return;
             
-            updateDrawButton();
+            document.getElementById('messageArea').textContent = 'Click cards to discard (0-4) - immediate replacement!';
         }
 
-        function toggleCardSelection(index, hand) {
+        function handleCardClick(index) {
+            if (hasDiscarded || currentGameState?.phase !== 'draw') return;
+            
             if (selectedCards.has(index)) {
                 selectedCards.delete(index);
             } else if (selectedCards.size < 4) {
                 selectedCards.add(index);
             }
-            renderCardSelector(hand);
-        }
-
-        function updateDrawButton() {
-            const btn = document.getElementById('confirmDrawBtn');
-            const count = selectedCards.size;
-            btn.textContent = count === 0 ? 'Stand (Keep all cards)' : 
-                             count === 1 ? 'Discard 1 card' : `Discard ${count} cards`;
-        }
-
-        function confirmDraw() {
-            socket.emit('setDrawSelection', { 
-                roomCode: currentRoomCode, 
-                selectedIndices: Array.from(selectedCards) 
-            });
             
-            socket.emit('confirmDraw', { roomCode: currentRoomCode });
+            renderPlayers(currentGameState.players);
+            
+            socket.emit('playerSelectCards', {
+                roomCode: currentRoomCode,
+                selectedIndices: Array.from(selectedCards)
+            });
         }
 
-        socket.on('drawReveal', (data) => {
-            if (data.playerId === playerId) return;
-            document.getElementById('messageArea').textContent = `${data.playerName}'s replacement card revealed!`;
+        function confirmDiscard() {
+            if (hasDiscarded) return;
+            
+            hasDiscarded = true;
+            document.getElementById('btnConfirmDiscard').disabled = true;
+            document.getElementById('btnConfirmDiscard').textContent = 'Confirmed!';
+            
+            socket.emit('playerConfirmDiscard', {
+                roomCode: currentRoomCode
+            });
+        }
+
+        socket.on('drawPhaseStart', (data) => {
+            hasDiscarded = false;
+            selectedCards.clear();
+            document.getElementById('messageArea').textContent = `Draw phase! Click cards to discard, then click Confirm (${data.timer}s)`;
+            document.getElementById('btnConfirmDiscard').style.display = 'block';
+            document.getElementById('btnConfirmDiscard').disabled = false;
+            document.getElementById('btnConfirmDiscard').textContent = 'Confirm Discard';
+        });
+
+        socket.on('drawRevealStart', (data) => {
+            document.getElementById('messageArea').textContent = `Opponent replacement cards revealed for ${data.timer}s!`;
         });
 
         socket.on('showdown', (data) => {
@@ -612,6 +633,13 @@
 
         socket.on('timerUpdate', (time) => {
             document.getElementById('timerDisplay').textContent = time > 0 ? `⏱ ${time}s` : '';
+        });
+
+        socket.on('leaderboard', (data) => {
+            const list = document.getElementById('leaderboardList');
+            list.innerHTML = data.map((p, i) => `
+                <span>${i + 1}. ${p.name}: $${p.chips}</span>
+            `).join(' | ');
         });
 
         document.getElementById('btnCheck').onclick = playerCheck;
