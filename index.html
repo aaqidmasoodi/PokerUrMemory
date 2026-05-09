@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokerUrMemory</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 50%, #1a472a 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .game-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .title { text-align: center; font-size: 2.5em; font-weight: bold; margin-bottom: 20px; color: #f4d03f; }
+        
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        .join-screen {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .join-screen h2 { margin-bottom: 20px; color: #f4d03f; }
+        .join-screen input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #555;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1em;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #f4d03f; color: #1a472a; }
+        .btn-primary:hover { transform: scale(1.05); }
+        .btn-secondary { background: #3498db; color: #fff; }
+
+        .room-info { margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; }
+        .room-code { font-size: 2em; color: #f4d03f; font-weight: bold; letter-spacing: 3px; }
+
+        .players-list { margin-top: 15px; }
+        .players-list div { padding: 8px; background: rgba(255,255,255,0.1); margin: 5px 0; border-radius: 5px; }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.4);
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .pot-display { font-size: 1.3em; color: #f4d03f; }
+        .phase-display { font-size: 1.1em; padding: 8px 15px; background: rgba(244,208,63,0.2); border-radius: 5px; }
+        .timer-display { font-size: 1.2em; color: #ff6b6b; font-weight: bold; }
+
+        .message-area {
+            text-align: center;
+            padding: 15px;
+            font-size: 1.2em;
+            min-height: 50px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .players-area {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .player-panel {
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 250px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        .player-panel.active { border-color: #f4d03f; }
+        .player-panel.folded { opacity: 0.5; }
+        .player-panel.current-turn { box-shadow: 0 0 20px rgba(244,208,63,0.5); }
+
+        .player-name { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: #f4d03f; }
+        .player-status { font-size: 0.9em; color: #aaa; margin-bottom: 10px; }
+        .player-chips { font-size: 1em; color: #4ecdc4; margin-bottom: 10px; }
+        .player-bet { font-size: 1em; color: #ff6b6b; margin-bottom: 10px; }
+
+        .cards-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            min-height: 100px;
+        }
+
+        .card {
+            width: 70px;
+            height: 100px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            position: relative;
+        }
+        .card.face-down {
+            background: linear-gradient(135deg, #8b0000 0%, #a52a2a 25%, #8b0000 50%, #a52a2a 75%, #8b0000 100%);
+            border: 3px solid #ffd700;
+        }
+        .card.face-down::before { content: '♠'; font-size: 2em; color: rgba(255,215,0,0.3); }
+        .card.face-up { background: #fff; border: 2px solid #333; color: #333; }
+        .card.red { color: #e74c3c; }
+        .card.black { color: #2c3e50; }
+        .card.reveal-animation { animation: cardReveal 0.5s ease-out; }
+
+        @keyframes cardReveal {
+            0% { transform: scale(0.5) rotateY(180deg); opacity: 0; }
+            100% { transform: scale(1) rotateY(0); opacity: 1; }
+        }
+
+        .controls-area {
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .action-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+        .action-btn {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            min-width: 100px;
+        }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-check { background: #3498db; color: #fff; }
+        .btn-bet { background: #e74c3c; color: #fff; }
+        .btn-call { background: #9b59b6; color: #fff; }
+        .btn-raise { background: #f39c12; color: #fff; }
+        .btn-fold { background: #7f8c8d; color: #fff; }
+        .btn-all-in { background: #e91e63; color: #fff; }
+        .action-btn:hover:not(:disabled) { transform: scale(1.05); }
+
+        .bet-input-area { display: none; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        .bet-input-area.active { display: flex; }
+        .bet-input-area input {
+            padding: 10px;
+            font-size: 1.1em;
+            width: 120px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .draw-controls { display: none; flex-direction: column; align-items: center; gap: 20px; }
+        .draw-controls.active { display: flex; }
+        .draw-instructions { font-size: 1.1em; color: #f4d03f; }
+        .card-selector { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .card-selector .card { cursor: pointer; transition: all 0.2s; }
+        .card-selector .card:hover { transform: translateY(-5px); }
+        .card-selector .card.selected { transform: translateY(-10px); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        
+        .draw-btn { padding: 15px 30px; font-size: 1.2em; background: #27ae60; color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .draw-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .showdown-display {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        .showdown-display h3 { color: #f4d03f; margin-bottom: 20px; font-size: 1.5em; }
+        .showdown-hands { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; }
+        .showdown-hand { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; }
+        .showdown-hand .hand-name { font-size: 1.3em; color: #4ecdc4; margin-bottom: 10px; }
+        .winner-display { font-size: 2em; color: #f4d03f; margin: 20px 0; animation: winnerPulse 1s infinite; }
+        @keyframes winnerPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+        .next-hand-btn { padding: 15px 30px; font-size: 1.2em; background: #f4d03f; color: #1a472a; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 20px; }
+        
+        .your-hand-label { color: #4ecdc4; font-size: 0.9em; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">♠ PokerUrMemory ♣</h1>
+
+        <div class="screen active" id="joinScreen">
+            <div class="join-screen">
+                <h2>Join or Create Room</h2>
+                <input type="text" id="playerName" placeholder="Your Name" value="Player">
+                <br>
+                <button class="btn btn-primary" onclick="createRoom()">Create Room</button>
+                <div style="margin: 20px 0;">OR</div>
+                <input type="text" id="roomCodeInput" placeholder="Room Code" style="text-transform: uppercase;">
+                <br>
+                <button class="btn btn-secondary" onclick="joinRoom()">Join Room</button>
+            </div>
+        </div>
+
+        <div class="screen" id="lobbyScreen">
+            <div class="join-screen">
+                <div class="room-info">
+                    <div>Room Code:</div>
+                    <div class="room-code" id="displayRoomCode"></div>
+                </div>
+                <div class="players-list" id="playersList"></div>
+                <button class="btn btn-primary" id="startGameBtn" onclick="startGame()" style="display:none;">Start Game</button>
+            </div>
+        </div>
+
+        <div class="screen" id="gameScreen">
+            <div class="game-info">
+                <div class="pot-display">Pot: $<span id="potAmount">0</span></div>
+                <div class="phase-display" id="phaseDisplay">Phase: Waiting</div>
+                <div class="timer-display" id="timerDisplay"></div>
+            </div>
+
+            <div class="message-area" id="messageArea">Waiting for game to start...</div>
+
+            <div class="players-area" id="playersArea"></div>
+
+            <div class="controls-area">
+                <div class="action-buttons" id="actionButtons">
+                    <button class="action-btn btn-check" id="btnCheck" disabled>Check</button>
+                    <button class="action-btn btn-bet" id="btnBet" disabled>Bet</button>
+                    <button class="action-btn btn-call" id="btnCall" disabled>Call</button>
+                    <button class="action-btn btn-raise" id="btnRaise" disabled>Raise</button>
+                    <button class="action-btn btn-fold" id="btnFold" disabled>Fold</button>
+                    <button class="action-btn btn-all-in" id="btnAllIn" disabled>All In</button>
+                </div>
+
+                <div class="bet-input-area" id="betInputArea">
+                    <label>Amount: $</label>
+                    <input type="number" id="betAmount">
+                    <button class="action-btn btn-bet" onclick="confirmBet()">Confirm</button>
+                    <button class="action-btn btn-fold" onclick="cancelBet()">Cancel</button>
+                </div>
+
+                <div class="draw-controls" id="drawControls">
+                    <div class="draw-instructions" id="drawInstructions">Select cards to discard (0-4):</div>
+                    <div class="your-hand-label" id="yourHandLabel">Your Hand:</div>
+                    <div class="card-selector" id="cardSelector"></div>
+                    <button class="draw-btn" id="confirmDrawBtn" onclick="confirmDraw()">Confirm</button>
+                </div>
+            </div>
+
+            <div class="showdown-display hidden" id="showdownDisplay">
+                <h3>Showdown!</h3>
+                <div class="showdown-hands" id="showdownHands"></div>
+                <div class="winner-display" id="winnerDisplay"></div>
+                <button class="next-hand-btn" id="nextHandBtn" onclick="nextHand()">Next Hand</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        
+        let currentRoomCode = '';
+        let playerId = '';
+        let isHost = false;
+        let currentGameState = null;
+        let selectedCards = new Set();
+        let currentBetMode = false;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function createRoom() {
+            const playerName = document.getElementById('playerName').value || 'Player';
+            socket.emit('createRoom', { playerName }, (response) => {
+                if (response.success) {
+                    currentRoomCode = response.roomCode;
+                    playerId = response.playerId;
+                    isHost = response.isHost;
+                    document.getElementById('displayRoomCode').textContent = currentRoomCode;
+                    showScreen('lobbyScreen');
+                } else {
+                    alert('Failed to create room');
+                }
+            });
+        }
+
+        function joinRoom() {
+            const playerName = document.getElementById('playerName').value || 'Player';
+            const roomCode = document.getElementById('roomCodeInput').value.toUpperCase();
+            
+            socket.emit('joinRoom', { roomCode, playerName }, (response) => {
+                if (response.success) {
+                    currentRoomCode = roomCode;
+                    playerId = response.playerId;
+                    isHost = response.isHost;
+                    document.getElementById('displayRoomCode').textContent = currentRoomCode;
+                    showScreen('lobbyScreen');
+                } else {
+                    alert(response.error || 'Failed to join room');
+                }
+            });
+        }
+
+        socket.on('playerJoined', (data) => {
+            updateLobby();
+        });
+
+        socket.on('playerLeft', (data) => {
+            updateLobby();
+        });
+
+        socket.on('roomClosed', (msg) => {
+            alert(msg);
+            showScreen('joinScreen');
+        });
+
+        socket.on('lobbyUpdate', (data) => {
+            const list = document.getElementById('playersList');
+            list.innerHTML = data.players.map(p => `<div>${p.name}${p.isHost ? ' (Host)' : ''}</div>`).join('');
+            document.getElementById('startGameBtn').style.display = isHost && data.players.length >= 2 ? 'block' : 'none';
+        });
+
+        function updateLobby() {
+            socket.emit('getRoomInfo', { roomCode: currentRoomCode }, (info) => {
+                const list = document.getElementById('playersList');
+                list.innerHTML = info.players.map(p => `<div>${p.name}${p.isHost ? ' (Host)' : ''}</div>`).join('');
+                document.getElementById('startGameBtn').style.display = isHost && info.players.length >= 2 ? 'block' : 'none';
+            });
+        }
+
+        function startGame() {
+            socket.emit('startGame', { roomCode: currentRoomCode }, (response) => {
+                if (!response.success) {
+                    alert(response.error);
+                }
+            });
+        }
+
+        socket.on('gameState', (state) => {
+            currentGameState = state;
+            document.getElementById('potAmount').textContent = state.pot;
+            document.getElementById('phaseDisplay').textContent = getPhaseDisplay(state.phase);
+            document.getElementById('timerDisplay').textContent = state.timeLeft > 0 ? `⏱ ${state.timeLeft}s` : '';
+            
+            if (state.phase !== 'waiting' && state.phase !== 'showdown') {
+                showScreen('gameScreen');
+            }
+            
+            renderPlayers(state.players);
+            hideAllControls();
+            
+            if (state.phase === 'draw') {
+                const myPlayer = state.players.find(p => p.id === playerId);
+                if (myPlayer && myPlayer.isCurrentTurn) {
+                    showDrawControls(myPlayer.hand);
+                }
+            }
+        });
+
+        function getPhaseDisplay(phase) {
+            switch(phase) {
+                case 'memoryReveal': return 'Memory Reveal';
+                case 'firstBetting': return 'First Betting';
+                case 'draw': return 'Draw Phase';
+                case 'secondBetting': return 'Second Betting';
+                case 'showdown': return 'Showdown';
+                default: return phase;
+            }
+        }
+
+        function renderPlayers(players) {
+            const container = document.getElementById('playersArea');
+            container.innerHTML = '';
+
+            const currentPlayerIndex = currentGameState?.currentPlayerIndex || 0;
+
+            players.forEach((player, index) => {
+                const isMe = player.id === playerId;
+                const panel = document.createElement('div');
+                panel.className = `player-panel ${player.folded ? 'folded' : ''} ${player.isCurrentTurn ? 'current-turn' : ''}`;
+
+                let status = '';
+                if (player.folded) status = 'Folded';
+                else if (player.isAllIn) status = 'All In';
+                else if (currentGameState?.phase === 'waiting') status = 'Waiting';
+
+                panel.innerHTML = `
+                    <div class="player-name">${player.name}${isMe ? ' (You)' : ''}</div>
+                    <div class="player-status">${status}</div>
+                    <div class="player-chips">Chips: $${player.chips}</div>
+                    ${player.currentBet > 0 ? `<div class="player-bet">Bet: $${player.currentBet}</div>` : ''}
+                    <div class="cards-container">
+                        ${player.hand.map((card, i) => {
+                            const shouldShow = card.value !== null && card.suit !== null;
+                            const isRed = card.suit === '♥' || card.suit === '♦';
+                            return `<div class="card ${shouldShow ? 'face-up' : 'face-down'} ${shouldShow ? (isRed ? 'red' : 'black') : ''}">
+                                ${shouldShow ? `${card.value}<span style="font-size:1.5em">${card.suit}</span>` : ''}
+                            </div>`;
+                        }).join('')}
+                    </div>
+                `;
+                container.appendChild(panel);
+            });
+        }
+
+        function hideAllControls() {
+            document.getElementById('actionButtons').classList.add('hidden');
+            document.getElementById('betInputArea').classList.remove('active');
+            document.getElementById('drawControls').classList.remove('active');
+            document.getElementById('showdownDisplay').classList.add('hidden');
+        }
+
+        socket.on('yourTurn', (data) => {
+            document.getElementById('actionButtons').classList.remove('hidden');
+            
+            const btnCheck = document.getElementById('btnCheck');
+            const btnBet = document.getElementById('btnBet');
+            const btnCall = document.getElementById('btnCall');
+            const btnRaise = document.getElementById('btnRaise');
+            const btnFold = document.getElementById('btnFold');
+            const btnAllIn = document.getElementById('btnAllIn');
+
+            btnCheck.disabled = !data.canCheck;
+            btnBet.disabled = false;
+            btnCall.disabled = !data.canCall;
+            btnRaise.disabled = !data.canRaise;
+            btnFold.disabled = false;
+            btnAllIn.disabled = data.maxBet <= 0;
+
+            btnCall.textContent = data.canCall ? `Call $${data.currentBet - data.playerBet}` : 'Call';
+        });
+
+        function playerCheck() {
+            socket.emit('playerAction', { roomCode: currentRoomCode, action: 'check' });
+        }
+
+        function showBetInput(isRaise = false) {
+            currentBetMode = isRaise;
+            document.getElementById('actionButtons').classList.add('hidden');
+            document.getElementById('betInputArea').classList.add('active');
+            
+            const socketData = currentGameState;
+            const input = document.getElementById('betAmount');
+            input.min = isRaise ? socketData.currentBet * 2 : 10;
+            input.value = input.min;
+        }
+
+        function confirmBet() {
+            const amount = parseInt(document.getElementById('betAmount').value);
+            socket.emit('playerAction', { 
+                roomCode: currentRoomCode, 
+                action: currentBetMode ? 'raise' : 'bet', 
+                amount 
+            });
+            cancelBet();
+        }
+
+        function cancelBet() {
+            document.getElementById('betInputArea').classList.remove('active');
+            document.getElementById('actionButtons').classList.remove('hidden');
+        }
+
+        function playerCall() {
+            socket.emit('playerAction', { roomCode: currentRoomCode, action: 'call' });
+        }
+
+        function playerRaise() {
+            showBetInput(true);
+        }
+
+        function playerFold() {
+            socket.emit('playerAction', { roomCode: currentRoomCode, action: 'fold' });
+        }
+
+        function playerAllIn() {
+            socket.emit('playerAction', { roomCode: currentRoomCode, action: 'allIn' });
+        }
+
+        function showDrawControls(hand) {
+            selectedCards.clear();
+            document.getElementById('drawControls').classList.add('active');
+            renderCardSelector(hand);
+        }
+
+        function renderCardSelector(hand) {
+            const container = document.getElementById('cardSelector');
+            container.innerHTML = '';
+
+            hand.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                const shouldShow = card.faceUp;
+                const isRed = card.suit === '♥' || card.suit === '♦';
+                
+                cardEl.className = `card ${shouldShow ? 'face-up' : 'face-down'} ${shouldShow ? (isRed ? 'red' : 'black') : ''}`;
+                if (selectedCards.has(index)) cardEl.classList.add('selected');
+                
+                if (shouldShow) {
+                    cardEl.innerHTML = `${card.value}<span style="font-size:1.5em">${card.suit}</span>`;
+                }
+                
+                cardEl.onclick = () => toggleCardSelection(index, hand);
+                container.appendChild(cardEl);
+            });
+            
+            updateDrawButton();
+        }
+
+        function toggleCardSelection(index, hand) {
+            if (selectedCards.has(index)) {
+                selectedCards.delete(index);
+            } else if (selectedCards.size < 4) {
+                selectedCards.add(index);
+            }
+            renderCardSelector(hand);
+        }
+
+        function updateDrawButton() {
+            const btn = document.getElementById('confirmDrawBtn');
+            const count = selectedCards.size;
+            btn.textContent = count === 0 ? 'Stand (Keep all cards)' : 
+                             count === 1 ? 'Discard 1 card' : `Discard ${count} cards`;
+        }
+
+        function confirmDraw() {
+            socket.emit('setDrawSelection', { 
+                roomCode: currentRoomCode, 
+                selectedIndices: Array.from(selectedCards) 
+            });
+            
+            socket.emit('confirmDraw', { roomCode: currentRoomCode });
+        }
+
+        socket.on('drawReveal', (data) => {
+            if (data.playerId === playerId) return;
+            document.getElementById('messageArea').textContent = `${data.playerName}'s replacement card revealed!`;
+        });
+
+        socket.on('showdown', (data) => {
+            document.getElementById('showdownDisplay').classList.remove('hidden');
+            document.getElementById('actionButtons').classList.add('hidden');
+            document.getElementById('drawControls').classList.remove('active');
+            
+            const handsContainer = document.getElementById('showdownHands');
+            handsContainer.innerHTML = data.hands.map(h => `
+                <div class="showdown-hand">
+                    <div class="player-name">${h.playerName}</div>
+                    <div class="cards-container">
+                        ${h.hand.map(c => `
+                            <div class="card face-up ${c.suit === '♥' || c.suit === '♦' ? 'red' : 'black'}">
+                                ${c.value}<span style="font-size:1.5em">${c.suit}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="hand-name">${h.rankName}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('winnerDisplay').textContent = `🏆 ${data.winner.playerName} Wins with ${data.winner.rankName}!`;
+            document.getElementById('potAmount').textContent = 0;
+            document.getElementById('phaseDisplay').textContent = 'Hand Complete';
+            document.getElementById('nextHandBtn').style.display = isHost ? 'block' : 'none';
+        });
+
+        socket.on('bluffWin', (data) => {
+            document.getElementById('messageArea').textContent = `${data.winner} wins $${data.amount}! (Opponent folded)`;
+            document.getElementById('showdownDisplay').classList.remove('hidden');
+            document.getElementById('winnerDisplay').textContent = `🏆 ${data.winner} Wins!`;
+            document.getElementById('nextHandBtn').style.display = isHost ? 'block' : 'none';
+        });
+
+        function nextHand() {
+            socket.emit('nextHand', { roomCode: currentRoomCode }, (response) => {
+                if (!response.success) {
+                    alert(response.error);
+                }
+            });
+        }
+
+        socket.on('actionLog', (msg) => {
+            document.getElementById('messageArea').textContent = msg;
+        });
+
+        socket.on('timerUpdate', (time) => {
+            document.getElementById('timerDisplay').textContent = time > 0 ? `⏱ ${time}s` : '';
+        });
+
+        document.getElementById('btnCheck').onclick = playerCheck;
+        document.getElementById('btnBet').onclick = () => showBetInput(false);
+        document.getElementById('btnCall').onclick = playerCall;
+        document.getElementById('btnRaise').onclick = playerRaise;
+        document.getElementById('btnFold').onclick = playerFold;
+        document.getElementById('btnAllIn').onclick = playerAllIn;
+    </script>
+</body>
+</html>

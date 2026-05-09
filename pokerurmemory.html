@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokerUrMemory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 50%, #1a472a 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 2.5em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 20px;
+            color: #f4d03f;
+        }
+
+        .setup-screen, .game-screen {
+            display: none;
+        }
+
+        .setup-screen.active, .game-screen.active {
+            display: block;
+        }
+
+        .player-setup {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .player-setup h2 {
+            margin-bottom: 20px;
+            color: #f4d03f;
+        }
+
+        .player-count-select {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .player-count-btn {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border: 2px solid #f4d03f;
+            background: transparent;
+            color: #fff;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .player-count-btn:hover, .player-count-btn.selected {
+            background: #f4d03f;
+            color: #1a472a;
+        }
+
+        .player-names {
+            margin-bottom: 20px;
+        }
+
+        .player-name-input {
+            margin-bottom: 15px;
+        }
+
+        .player-name-input label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+        }
+
+        .player-name-input input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 1em;
+        }
+
+        .start-btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.3em;
+            background: #f4d03f;
+            color: #1a472a;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.02);
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.4);
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .pot-display {
+            font-size: 1.3em;
+            color: #f4d03f;
+        }
+
+        .phase-display {
+            font-size: 1.1em;
+            padding: 8px 15px;
+            background: rgba(244,208,63,0.2);
+            border-radius: 5px;
+        }
+
+        .timer-display {
+            font-size: 1.2em;
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+
+        .table-area {
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            min-height: 200px;
+        }
+
+        .message-area {
+            text-align: center;
+            padding: 15px;
+            font-size: 1.2em;
+            min-height: 50px;
+        }
+
+        .players-area {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .player-panel {
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 250px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .player-panel.active {
+            border-color: #f4d03f;
+        }
+
+        .player-panel.folded {
+            opacity: 0.5;
+        }
+
+        .player-panel.current-turn {
+            box-shadow: 0 0 20px rgba(244,208,63,0.5);
+        }
+
+        .player-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #f4d03f;
+        }
+
+        .player-status {
+            font-size: 0.9em;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        .player-chips {
+            font-size: 1em;
+            color: #4ecdc4;
+            margin-bottom: 15px;
+        }
+
+        .player-bet {
+            font-size: 1em;
+            color: #ff6b6b;
+            margin-bottom: 15px;
+        }
+
+        .cards-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            min-height: 100px;
+        }
+
+        .card {
+            width: 70px;
+            height: 100px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.5em;
+            position: relative;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: default;
+        }
+
+        .card.face-down {
+            background: linear-gradient(135deg, #8b0000 0%, #a52a2a 25%, #8b0000 50%, #a52a2a 75%, #8b0000 100%);
+            border: 3px solid #ffd700;
+        }
+
+        .card.face-down::before {
+            content: '♠';
+            font-size: 2em;
+            color: rgba(255,215,0,0.3);
+        }
+
+        .card.face-up {
+            background: #fff;
+            border: 2px solid #333;
+            color: #333;
+        }
+
+        .card.red {
+            color: #e74c3c;
+        }
+
+        .card.black {
+            color: #2c3e50;
+        }
+
+        .card.reveal-animation {
+            animation: cardReveal 0.5s ease-out;
+        }
+
+        @keyframes cardReveal {
+            0% { transform: scale(0.5) rotateY(180deg); opacity: 0; }
+            100% { transform: scale(1) rotateY(0); opacity: 1; }
+        }
+
+        .card.selected {
+            transform: translateY(-10px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .controls-area {
+            background: rgba(0,0,0,0.4);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .action-btn {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            min-width: 100px;
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-check { background: #3498db; color: #fff; }
+        .btn-bet { background: #e74c3c; color: #fff; }
+        .btn-call { background: #9b59b6; color: #fff; }
+        .btn-raise { background: #f39c12; color: #fff; }
+        .btn-fold { background: #7f8c8d; color: #fff; }
+        .btn-all-in { background: #e91e63; color: #fff; }
+
+        .action-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .bet-input-area {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .bet-input-area.active {
+            display: flex;
+        }
+
+        .bet-input-area input {
+            padding: 10px;
+            font-size: 1.1em;
+            width: 120px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+        }
+
+        .draw-controls {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .draw-controls.active {
+            display: flex;
+        }
+
+        .draw-instructions {
+            font-size: 1.1em;
+            color: #f4d03f;
+        }
+
+        .card-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .card-selector .card {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .card-selector .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .draw-btn {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: #27ae60;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .draw-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .showdown-display {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .showdown-display h3 {
+            color: #f4d03f;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .showdown-hands {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .showdown-hand {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .showdown-hand .hand-name {
+            font-size: 1.3em;
+            color: #4ecdc4;
+            margin-bottom: 10px;
+        }
+
+        .winner-display {
+            font-size: 2em;
+            color: #f4d03f;
+            margin: 20px 0;
+            animation: winnerPulse 1s infinite;
+        }
+
+        @keyframes winnerPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .next-hand-btn {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: #f4d03f;
+            color: #1a472a;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .hand-info {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        .call-info {
+            color: #e74c3c;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="title">♠ PokerUrMemory ♣</h1>
+        
+        <div class="setup-screen active" id="setupScreen">
+            <div class="player-setup">
+                <h2>Game Setup</h2>
+                <p style="margin-bottom: 20px; color: #aaa;">Select number of players (2-4):</p>
+                <div class="player-count-select">
+                    <button class="player-count-btn" data-count="2">2 Players</button>
+                    <button class="player-count-btn" data-count="3">3 Players</button>
+                    <button class="player-count-btn" data-count="4">4 Players</button>
+                </div>
+                <div class="player-names" id="playerNames"></div>
+                <button class="start-btn" id="startGameBtn">Start Game</button>
+            </div>
+        </div>
+
+        <div class="game-screen" id="gameScreen">
+            <div class="game-info">
+                <div class="pot-display">Pot: $<span id="potAmount">0</span></div>
+                <div class="phase-display" id="phaseDisplay">Phase: Setup</div>
+                <div class="timer-display" id="timerDisplay"></div>
+            </div>
+
+            <div class="table-area">
+                <div class="message-area" id="messageArea">Welcome to PokerUrMemory!</div>
+                <div class="players-area" id="playersArea"></div>
+            </div>
+
+            <div class="controls-area">
+                <div class="action-buttons" id="actionButtons">
+                    <button class="action-btn btn-check" id="btnCheck" disabled>Check</button>
+                    <button class="action-btn btn-bet" id="btnBet" disabled>Bet</button>
+                    <button class="action-btn btn-call" id="btnCall" disabled>Call</button>
+                    <button class="action-btn btn-raise" id="btnRaise" disabled>Raise</button>
+                    <button class="action-btn btn-fold" id="btnFold" disabled>Fold</button>
+                    <button class="action-btn btn-all-in" id="btnAllIn" disabled>All In</button>
+                </div>
+
+                <div class="bet-input-area" id="betInputArea">
+                    <label>Amount: $</label>
+                    <input type="number" id="betAmount" min="1">
+                    <button class="action-btn btn-bet" id="confirmBetBtn">Confirm</button>
+                    <button class="action-btn btn-fold" id="cancelBetBtn">Cancel</button>
+                </div>
+
+                <div class="draw-controls" id="drawControls">
+                    <div class="draw-instructions" id="drawInstructions">Select cards to discard (0-4):</div>
+                    <div class="card-selector" id="cardSelector"></div>
+                    <button class="draw-btn" id="confirmDrawBtn">Confirm Draw</button>
+                </div>
+            </div>
+
+            <div class="showdown-display hidden" id="showdownDisplay">
+                <h3>Showdown!</h3>
+                <div class="showdown-hands" id="showdownHands"></div>
+                <div class="winner-display" id="winnerDisplay"></div>
+                <button class="next-hand-btn" id="nextHandBtn">Next Hand</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUITS = ['♠', '♥', '♦', '♣'];
+        const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        const HAND_RANKS = [
+            'High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight',
+            'Flush', 'Full House', 'Four of a Kind', 'Straight Flush', 'Royal Flush'
+        ];
+
+        class Card {
+            constructor(suit, value, faceUp = false, isReplacement = false) {
+                this.suit = suit;
+                this.value = value;
+                this.faceUp = faceUp;
+                this.isReplacement = isReplacement;
+                this.isHidden = false;
+            }
+
+            get color() {
+                return (this.suit === '♥' || this.suit === '♦') ? 'red' : 'black';
+            }
+        }
+
+        class Player {
+            constructor(name, id) {
+                this.name = name;
+                this.id = id;
+                this.chips = 1000;
+                this.hand = [];
+                this.currentBet = 0;
+                this.folded = false;
+                this.isAllIn = false;
+            }
+
+            resetForNewHand() {
+                this.hand = [];
+                this.currentBet = 0;
+                this.folded = false;
+                this.isAllIn = false;
+            }
+        }
+
+        class PokerUrMemoryGame {
+            constructor() {
+                this.deck = [];
+                this.players = [];
+                this.pot = 0;
+                this.currentPlayerIndex = 0;
+                this.currentBet = 0;
+                this.gamePhase = 'setup';
+                this.playerCount = 2;
+                this.selectedCards = new Set();
+                this.isDrawPhase = false;
+                this.revealTimer = null;
+                this.tempRevealCards = [];
+                this.activePlayers = [];
+                this.gameWinner = null;
+                this.bluffWin = false;
+
+                this.initEventListeners();
+            }
+
+            initEventListeners() {
+                document.querySelectorAll('.player-count-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => this.selectPlayerCount(parseInt(e.target.dataset.count)));
+                });
+
+                document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
+
+                document.getElementById('btnCheck').addEventListener('click', () => this.playerCheck());
+                document.getElementById('btnBet').addEventListener('click', () => this.showBetInput());
+                document.getElementById('btnCall').addEventListener('click', () => this.playerCall());
+                document.getElementById('btnRaise').addEventListener('click', () => this.showBetInput(true));
+                document.getElementById('btnFold').addEventListener('click', () => this.playerFold());
+                document.getElementById('btnAllIn').addEventListener('click', () => this.playerAllIn());
+
+                document.getElementById('confirmBetBtn').addEventListener('click', () => this.confirmBet());
+                document.getElementById('cancelBetBtn').addEventListener('click', () => this.cancelBet());
+
+                document.getElementById('confirmDrawBtn').addEventListener('click', () => this.confirmDraw());
+
+                document.getElementById('nextHandBtn').addEventListener('click', () => this.startNewHand());
+            }
+
+            selectPlayerCount(count) {
+                this.playerCount = count;
+                document.querySelectorAll('.player-count-btn').forEach(btn => {
+                    btn.classList.toggle('selected', parseInt(btn.dataset.count) === count);
+                });
+
+                const namesContainer = document.getElementById('playerNames');
+                namesContainer.innerHTML = '';
+                for (let i = 0; i < count; i++) {
+                    namesContainer.innerHTML += `
+                        <div class="player-name-input">
+                            <label>Player ${i + 1} Name:</label>
+                            <input type="text" id="playerName${i}" value="Player ${i + 1}" placeholder="Enter name">
+                        </div>
+                    `;
+                }
+            }
+
+            createDeck() {
+                this.deck = [];
+                for (const suit of SUITS) {
+                    for (const value of VALUES) {
+                        this.deck.push(new Card(suit, value));
+                    }
+                }
+                this.shuffleDeck();
+            }
+
+            shuffleDeck() {
+                for (let i = this.deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+                }
+            }
+
+            dealCard() {
+                if (this.deck.length === 0) {
+                    this.createDeck();
+                }
+                return this.deck.pop();
+            }
+
+            startGame() {
+                this.players = [];
+                for (let i = 0; i < this.playerCount; i++) {
+                    const nameInput = document.getElementById(`playerName${i}`);
+                    const name = nameInput ? nameInput.value : `Player ${i + 1}`;
+                    this.players.push(new Player(name, i));
+                }
+
+                document.getElementById('setupScreen').classList.remove('active');
+                document.getElementById('gameScreen').classList.add('active');
+
+                this.startNewHand();
+            }
+
+            startNewHand() {
+                this.createDeck();
+                this.pot = 0;
+                this.currentBet = 0;
+                this.currentPlayerIndex = 0;
+                this.gamePhase = 'initialDeal';
+                this.selectedCards.clear();
+                this.isDrawPhase = false;
+                this.tempRevealCards = [];
+                this.activePlayers = [...this.players];
+                this.gameWinner = null;
+                this.bluffWin = false;
+
+                this.players.forEach(p => p.resetForNewHand());
+
+                document.getElementById('showdownDisplay').classList.add('hidden');
+                this.updateUI();
+
+                this.dealInitialCards();
+            }
+
+            dealInitialCards() {
+                this.gamePhase = 'memoryReveal';
+                this.updatePhaseDisplay('Memory Reveal Phase');
+                this.setMessage('Dealing cards...');
+
+                setTimeout(() => {
+                    this.players.forEach((player, index) => {
+                        for (let i = 0; i < 4; i++) {
+                            const card = this.dealCard();
+                            card.faceUp = true;
+                            card.isOwnedFaceUp = true;
+                            player.hand.push(card);
+                        }
+                        const hiddenCard = this.dealCard();
+                        hiddenCard.isHidden = false;
+                        hiddenCard.faceUp = false;
+                        hiddenCard.isOwnedFaceUp = true;
+                        player.hand.push(hiddenCard);
+                    });
+
+                    this.renderPlayers();
+                    this.setMessage('Cards dealt! 4 cards face-up, 1 face-down. Memorize them!');
+                    this.updateUI();
+
+                    this.startMemoryRevealTimer();
+                }, 500);
+            }
+
+            startMemoryRevealTimer() {
+                let timeLeft = 20;
+                this.updateTimer(timeLeft);
+
+                this.revealTimer = setInterval(() => {
+                    timeLeft--;
+                    this.updateTimer(timeLeft);
+
+                    if (timeLeft <= 0) {
+                        clearInterval(this.revealTimer);
+                        this.endMemoryRevealPhase();
+                    }
+                }, 1000);
+            }
+
+            endMemoryRevealPhase() {
+                this.updateTimer('');
+                this.setMessage('Time up! Your face-up cards remain visible. Opponent cards are now face-down. Betting begins!');
+
+                this.players.forEach(player => {
+                    player.hand.forEach(card => {
+                        if (!card.isOwnedFaceUp) {
+                            card.faceUp = false;
+                        }
+                    });
+                });
+
+                this.renderPlayers();
+                this.gamePhase = 'firstBetting';
+                this.currentPlayerIndex = 0;
+                this.startBettingRound();
+            }
+
+            startBettingRound() {
+                this.updatePhaseDisplay(this.isDrawPhase ? 'Second Betting Round' : 'First Betting Round');
+                
+                const activePlayers = this.players.filter(p => !p.folded);
+                
+                if (activePlayers.length === 1) {
+                    this.handleSinglePlayerLeft(activePlayers[0]);
+                    return;
+                }
+
+                if (this.currentBet === 0) {
+                    this.setMessage(`${this.players[this.currentPlayerIndex].name}'s turn to act.`);
+                } else {
+                    this.setMessage(`${this.players[this.currentPlayerIndex].name}'s turn to ${this.getBettingOptions()}`);
+                }
+
+                this.updateCurrentTurnUI();
+                this.updateActionButtons();
+            }
+
+            getBettingOptions() {
+                const player = this.players[this.currentPlayerIndex];
+                if (player.currentBet === this.currentBet) {
+                    return 'check or bet';
+                }
+                return 'call, raise, or fold';
+            }
+
+            updateActionButtons() {
+                const player = this.players[this.currentPlayerIndex];
+                const btnCheck = document.getElementById('btnCheck');
+                const btnBet = document.getElementById('btnBet');
+                const btnCall = document.getElementById('btnCall');
+                const btnRaise = document.getElementById('btnRaise');
+                const btnFold = document.getElementById('btnFold');
+                const btnAllIn = document.getElementById('btnAllIn');
+
+                const canCheck = this.currentBet === 0 || player.currentBet === this.currentBet;
+                const canCall = this.currentBet > 0 && player.currentBet < this.currentBet && !player.isAllIn;
+                const canRaise = this.currentBet > 0 && player.currentBet < this.currentBet && !player.isAllIn;
+
+                btnCheck.disabled = !canCheck || player.folded;
+                btnBet.disabled = player.folded;
+                btnCall.disabled = !canCall;
+                btnRaise.disabled = !canRaise;
+                btnFold.disabled = player.folded;
+                btnAllIn.disabled = player.folded || player.chips <= 0;
+
+                btnCall.textContent = this.currentBet > 0 ? `Call $${this.currentBet - player.currentBet}` : 'Call';
+            }
+
+            playerCheck() {
+                this.setMessage(`${this.players[this.currentPlayerIndex].name} checks.`);
+                this.nextPlayer();
+            }
+
+            showBetInput(isRaise = false) {
+                document.getElementById('actionButtons').classList.add('hidden');
+                const betArea = document.getElementById('betInputArea');
+                betArea.classList.add('active');
+
+                const player = this.players[this.currentPlayerIndex];
+                const minBet = isRaise ? this.currentBet * 2 : Math.max(this.currentBet + 1, 10);
+                const maxBet = player.chips;
+
+                const input = document.getElementById('betAmount');
+                input.min = minBet;
+                input.max = maxBet;
+                input.value = minBet;
+            }
+
+            confirmBet() {
+                const amount = parseInt(document.getElementById('betAmount').value);
+                const player = this.players[this.currentPlayerIndex];
+
+                if (amount > player.chips) {
+                    this.setMessage('Not enough chips!');
+                    return;
+                }
+
+                player.chips -= amount;
+                player.currentBet += amount;
+                this.pot += amount;
+                this.currentBet = Math.max(this.currentBet, player.currentBet);
+
+                this.cancelBet();
+                this.setMessage(`${player.name} bets $${amount}.`);
+                
+                this.nextPlayer();
+            }
+
+            cancelBet() {
+                document.getElementById('betInputArea').classList.remove('active');
+                document.getElementById('actionButtons').classList.remove('hidden');
+                this.updateActionButtons();
+            }
+
+            playerCall() {
+                const player = this.players[this.currentPlayerIndex];
+                const callAmount = this.currentBet - player.currentBet;
+
+                player.chips -= callAmount;
+                player.currentBet += callAmount;
+                this.pot += callAmount;
+
+                this.setMessage(`${player.name} calls $${callAmount}.`);
+                this.nextPlayer();
+            }
+
+            playerRaise() {
+                this.showBetInput(true);
+            }
+
+            playerFold() {
+                const player = this.players[this.currentPlayerIndex];
+                player.folded = true;
+                this.setMessage(`${player.name} folds.`);
+                
+                const activePlayers = this.players.filter(p => !p.folded);
+                if (activePlayers.length === 1) {
+                    this.handleSinglePlayerLeft(activePlayers[0]);
+                } else {
+                    this.nextPlayer();
+                }
+            }
+
+            playerAllIn() {
+                const player = this.players[this.currentPlayerIndex];
+                const allInAmount = player.chips;
+                
+                player.chips = 0;
+                player.currentBet += allInAmount;
+                player.isAllIn = true;
+                this.pot += allInAmount;
+                this.currentBet = Math.max(this.currentBet, player.currentBet);
+
+                this.setMessage(`${player.name} goes ALL IN for $${allInAmount}!`);
+                this.nextPlayer();
+            }
+
+            nextPlayer() {
+                let checkedPlayers = 0;
+                const activePlayers = this.players.filter(p => !p.folded);
+                
+                const startIndex = this.currentPlayerIndex;
+                do {
+                    this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+                    const current = this.players[this.currentPlayerIndex];
+                    if (!current.folded) checkedPlayers++;
+                } while (this.currentPlayerIndex !== startIndex && checkedPlayers < activePlayers.length);
+
+                if (this.shouldEndBettingRound()) {
+                    this.endBettingRound();
+                    return;
+                }
+
+                this.startBettingRound();
+            }
+
+            shouldEndBettingRound() {
+                const activePlayers = this.players.filter(p => !p.folded);
+                if (activePlayers.length <= 1) return true;
+
+                if (this.currentBet === 0) return false;
+
+                return activePlayers.every(p => p.currentBet === this.currentBet);
+            }
+
+            endBettingRound() {
+                const activePlayers = this.players.filter(p => !p.folded);
+
+                if (activePlayers.length === 1) {
+                    this.handleSinglePlayerLeft(activePlayers[0]);
+                    return;
+                }
+
+                const highestBettor = activePlayers.reduce((a, b) => a.currentBet > b.currentBet ? a : b);
+                
+                const allCalled = activePlayers.every(p => p.currentBet === highestBettor.currentBet);
+                
+                if (!allCalled) {
+                    this.bluffWin = true;
+                    this.gameWinner = highestBettor;
+                    this.pot += activePlayers.reduce((sum, p) => sum + p.currentBet, 0);
+                    this.showBluffWin();
+                    return;
+                }
+
+                if (!this.isDrawPhase) {
+                    this.startDrawPhase();
+                } else {
+                    this.startShowdown();
+                }
+            }
+
+            handleSinglePlayerLeft(winner) {
+                this.gameWinner = winner;
+                this.bluffWin = true;
+                this.showBluffWin();
+            }
+
+            showBluffWin() {
+                this.updateUI();
+                this.setMessage(`${this.gameWinner.name} wins $${this.pot}! (Opponent folded)`);
+                
+                this.gameWinner.chips += this.pot;
+                this.pot = 0;
+
+                document.getElementById('showdownDisplay').classList.remove('hidden');
+                document.getElementById('showdownHands').innerHTML = '';
+                document.getElementById('winnerDisplay').textContent = `🏆 ${this.gameWinner.name} Wins!`;
+            }
+
+            startDrawPhase() {
+                this.isDrawPhase = true;
+                this.currentBet = 0;
+                this.currentPlayerIndex = 0;
+                
+                this.players.forEach(p => {
+                    p.currentBet = 0;
+                    p.hand.forEach(card => card.faceUp = false);
+                });
+
+                this.gamePhase = 'draw';
+                this.updatePhaseDisplay('Draw Phase');
+                this.setMessage(`${this.players[this.currentPlayerIndex].name}'s turn to draw.`);
+                
+                this.showDrawControls();
+            }
+
+            showDrawControls() {
+                document.getElementById('actionButtons').classList.add('hidden');
+                document.getElementById('drawControls').classList.add('active');
+                this.selectedCards.clear();
+
+                const player = this.players[this.currentPlayerIndex];
+                this.renderCardSelector(player);
+                this.updateDrawButton();
+            }
+
+            renderCardSelector(player) {
+                const container = document.getElementById('cardSelector');
+                container.innerHTML = '';
+
+                player.hand.forEach((card, index) => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = `card ${card.faceUp ? 'face-up' : 'face-down'} ${card.color}`;
+                    if (card.faceUp) {
+                        cardEl.innerHTML = `${card.value}<span style="font-size:1.5em">${card.suit}</span>`;
+                    }
+                    
+                    if (this.selectedCards.has(index)) {
+                        cardEl.classList.add('selected');
+                    }
+
+                    cardEl.addEventListener('click', () => this.toggleCardSelection(index));
+                    container.appendChild(cardEl);
+                });
+            }
+
+            toggleCardSelection(index) {
+                if (this.selectedCards.has(index)) {
+                    this.selectedCards.delete(index);
+                } else if (this.selectedCards.size < 4) {
+                    this.selectedCards.add(index);
+                }
+
+                this.renderCardSelector(this.players[this.currentPlayerIndex]);
+                this.updateDrawButton();
+            }
+
+            updateDrawButton() {
+                const btn = document.getElementById('confirmDrawBtn');
+                const count = this.selectedCards.size;
+                let text = 'Confirm';
+                if (count === 0) text = 'Stand (Keep all cards)';
+                else if (count === 1) text = 'Discard 1 card';
+                else text = `Discard ${count} cards`;
+                
+                btn.textContent = text;
+            }
+
+            confirmDraw() {
+                const player = this.players[this.currentPlayerIndex];
+                const discardCount = this.selectedCards.size;
+                const newCards = [];
+
+                for (let i = 0; i < discardCount; i++) {
+                    const newCard = this.dealCard();
+                    newCard.isReplacement = true;
+                    newCards.push(newCard);
+                }
+
+                const sortedIndices = Array.from(this.selectedCards).sort((a, b) => b - a);
+                sortedIndices.forEach(index => {
+                    player.hand.splice(index, 1);
+                });
+
+                player.hand.push(...newCards);
+
+                if (discardCount === 1) {
+                    player.hand[player.hand.length - 1].faceUp = false;
+                    player.hand[player.hand.length - 1].isHidden = false;
+                } else if (discardCount > 1) {
+                    newCards.forEach((card, i) => {
+                        if (i === 0) {
+                            card.faceUp = true;
+                            this.tempRevealCards.push({ player: player, card: card, index: player.hand.length - newCards.length + i });
+                        } else {
+                            card.faceUp = false;
+                            card.isHidden = false;
+                        }
+                    });
+                }
+
+                this.setMessage(`${player.name} draws ${discardCount} card(s).`);
+                document.getElementById('drawControls').classList.remove('active');
+                document.getElementById('actionButtons').classList.remove('hidden');
+
+                if (discardCount > 1) {
+                    this.handleDrawReveal(player, newCards);
+                } else {
+                    this.finishDrawPhase();
+                }
+            }
+
+            handleDrawReveal(player, newCards) {
+                this.renderPlayers();
+                this.setMessage(`${player.name}'s replacement card revealed for 10 seconds!`);
+                
+                let revealTime = 10;
+                this.updateTimer(revealTime);
+
+                const revealInterval = setInterval(() => {
+                    revealTime--;
+                    this.updateTimer(revealTime);
+
+                    if (revealTime <= 0) {
+                        clearInterval(revealInterval);
+                        this.updateTimer('');
+
+                        newCards.forEach(card => {
+                            card.faceUp = false;
+                        });
+
+                        this.setMessage('Replacement cards hidden again.');
+                        this.renderPlayers();
+                        this.finishDrawPhase();
+                    }
+                }, 1000);
+            }
+
+            finishDrawPhase() {
+                const nextIndex = (this.currentPlayerIndex + 1) % this.players.length;
+                const activePlayers = this.players.filter(p => !p.folded);
+
+                if (nextIndex === 0 || this.currentPlayerIndex >= this.players.length - 1) {
+                    const allHaveDrawn = this.players.every((p, i) => p.folded || i === 0 || this.hasPlayerDrawn(i));
+                    
+                    if (!this.hasAllPlayersDrawn()) {
+                        this.currentPlayerIndex = this.findNextActivePlayer(0);
+                        this.showDrawControls();
+                    } else {
+                        this.gamePhase = 'secondBetting';
+                        this.currentPlayerIndex = this.findNextActivePlayer(0);
+                        this.currentBet = 0;
+                        this.players.forEach(p => p.currentBet = 0);
+                        this.startBettingRound();
+                    }
+                } else {
+                    this.currentPlayerIndex = this.findNextActivePlayer(this.currentPlayerIndex + 1);
+                    this.showDrawControls();
+                }
+            }
+
+            hasPlayerDrawn(index) {
+                return this.players[index]?.hand?.some(c => c.isReplacement) || false;
+            }
+
+            hasAllPlayersDrawn() {
+                return this.players.filter(p => !p.folded).every(p => p.hand.some(c => c.isReplacement));
+            }
+
+            findNextActivePlayer(startIndex) {
+                for (let i = startIndex; i < this.players.length; i++) {
+                    if (!this.players[i].folded) return i;
+                }
+                return 0;
+            }
+
+            startShowdown() {
+                this.updatePhaseDisplay('Showdown');
+                this.setMessage('Showdown! Revealing hands...');
+
+                const showdownDiv = document.getElementById('showdownDisplay');
+                showdownDiv.classList.remove('hidden');
+
+                const handsContainer = document.getElementById('showdownHands');
+                handsContainer.innerHTML = '';
+
+                const activePlayers = this.players.filter(p => !p.folded);
+                const hands = [];
+
+                activePlayers.forEach(player => {
+                    player.hand.forEach(card => {
+                        card.faceUp = true;
+                        card.isHidden = false;
+                    });
+
+                    const handResult = this.evaluateHand(player.hand);
+                    hands.push({ player, ...handResult });
+
+                    const handDiv = document.createElement('div');
+                    handDiv.className = 'showdown-hand';
+                    handDiv.innerHTML = `
+                        <div class="player-name">${player.name}</div>
+                        <div class="cards-container">
+                            ${player.hand.map(c => `
+                                <div class="card face-up ${c.color}">
+                                    ${c.value}<span style="font-size:1.5em">${c.suit}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="hand-name">${handResult.rankName}</div>
+                    `;
+                    handsContainer.appendChild(handDiv);
+                });
+
+                hands.sort((a, b) => b.rank - a.rank || this.compareTieBreakers(a, b));
+                const winner = hands[0];
+
+                this.gameWinner = winner.player;
+                this.gameWinner.chips += this.pot;
+                this.pot = 0;
+
+                const winnerDiv = document.getElementById('winnerDisplay');
+                winnerDiv.textContent = `🏆 ${winner.player.name} Wins with ${winner.rankName}!`;
+
+                this.renderPlayers();
+            }
+
+            evaluateHand(cards) {
+                const sorted = [...cards].sort((a, b) => VALUES.indexOf(b.value) - VALUES.indexOf(a.value));
+                const values = sorted.map(c => VALUES.indexOf(c.value));
+                const suits = sorted.map(c => c.suit);
+
+                const valueCounts = {};
+                values.forEach(v => valueCounts[v] = (valueCounts[v] || 0) + 1);
+                const counts = Object.values(valueCounts).sort((a, b) => b - a);
+
+                const isFlush = suits.every(s => s === suits[0]);
+                const isStraight = values.every((v, i) => i === 0 || v === values[i-1] - 1);
+                const isStraightFlush = isFlush && isStraight;
+                const isRoyal = isStraightFlush && values[0] === 12;
+
+                if (isRoyal) return { rank: 9, rankName: 'Royal Flush', tieBreakers: values };
+                if (isStraightFlush) return { rank: 8, rankName: 'Straight Flush', tieBreakers: values };
+                if (counts[0] === 4) return { rank: 7, rankName: 'Four of a Kind', tieBreakers: values };
+                if (counts[0] === 3 && counts[1] === 2) return { rank: 6, rankName: 'Full House', tieBreakers: values };
+                if (isFlush) return { rank: 5, rankName: 'Flush', tieBreakers: values };
+                if (isStraight) return { rank: 4, rankName: 'Straight', tieBreakers: values };
+                if (counts[0] === 3) return { rank: 3, rankName: 'Three of a Kind', tieBreakers: values };
+                if (counts[0] === 2 && counts[1] === 2) return { rank: 2, rankName: 'Two Pair', tieBreakers: values };
+                if (counts[0] === 2) return { rank: 1, rankName: 'Pair', tieBreakers: values };
+                return { rank: 0, rankName: 'High Card', tieBreakers: values };
+            }
+
+            compareTieBreakers(a, b) {
+                for (let i = 0; i < Math.min(a.tieBreakers.length, b.tieBreakers.length); i++) {
+                    if (a.tieBreakers[i] !== b.tieBreakers[i]) {
+                        return b.tieBreakers[i] - a.tieBreakers[i];
+                    }
+                }
+                return 0;
+            }
+
+            updateUI() {
+                document.getElementById('potAmount').textContent = this.pot;
+                this.renderPlayers();
+            }
+
+            updatePhaseDisplay(phase) {
+                document.getElementById('phaseDisplay').textContent = phase;
+            }
+
+            updateTimer(time) {
+                const timerEl = document.getElementById('timerDisplay');
+                if (time === '' || time === undefined) {
+                    timerEl.textContent = '';
+                } else {
+                    timerEl.textContent = `⏱ ${time}s`;
+                }
+            }
+
+            setMessage(msg) {
+                document.getElementById('messageArea').textContent = msg;
+            }
+
+            updateCurrentTurnUI() {
+                document.querySelectorAll('.player-panel').forEach((panel, i) => {
+                    panel.classList.toggle('current-turn', i === this.currentPlayerIndex && !this.players[i].folded);
+                });
+            }
+
+            renderPlayers() {
+                const container = document.getElementById('playersArea');
+                container.innerHTML = '';
+
+                this.players.forEach((player, index) => {
+                    const panel = document.createElement('div');
+                    panel.className = `player-panel ${player.folded ? 'folded' : ''} ${index === this.currentPlayerIndex && this.gamePhase !== 'setup' && this.gamePhase !== 'memoryReveal' && this.gamePhase !== 'draw' ? 'current-turn' : ''}`;
+
+                    let status = '';
+                    if (player.folded) status = 'Folded';
+                    else if (player.isAllIn) status = 'All In';
+                    else if (this.gamePhase === 'setup' || this.gamePhase === 'memoryReveal') status = 'Waiting';
+
+                    const isHumanPlayer = index === 0;
+                    
+                    panel.innerHTML = `
+                        <div class="player-name">${player.name}</div>
+                        <div class="player-status">${status}</div>
+                        <div class="player-chips">Chips: $${player.chips}</div>
+                        ${player.currentBet > 0 ? `<div class="player-bet">Bet: $${player.currentBet}</div>` : ''}
+                        <div class="cards-container">
+                            ${player.hand.map((card, i) => {
+                                const shouldShowFaceUp = card.faceUp || (isHumanPlayer && card.isOwnedFaceUp);
+                                const isRed = card.suit === '♥' || card.suit === '♦';
+                                return `<div class="card ${shouldShowFaceUp ? 'face-up' : 'face-down'} ${shouldShowFaceUp ? (isRed ? 'red' : 'black') : ''} ${card.faceUp && card.isReplacement ? 'reveal-animation' : ''}" 
+                                     style="${card.isHidden ? 'visibility:hidden' : ''}">
+                                    ${shouldShowFaceUp ? `${card.value}<span style="font-size:1.5em">${card.suit}</span>` : ''}
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    `;
+
+                    container.appendChild(panel);
+                });
+            }
+        }
+
+        const game = new PokerUrMemoryGame();
+    </script>
+</body>
+</html>
