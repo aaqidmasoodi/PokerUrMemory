@@ -19,10 +19,10 @@ interface PlayingCardProps {
 }
 
 const sizeMap = {
-  xs: "w-5 h-7 text-[5px] sm:w-10 sm:h-14 sm:text-[8px] md:w-12 md:h-16 md:text-[9px]",
-  sm: "w-7 h-10 text-[6px] sm:w-14 sm:h-20 sm:text-[11px] md:w-16 md:h-24 md:text-sm",
-  md: "w-10 h-14 text-[9px] sm:w-18 sm:h-26 sm:text-sm md:w-20 md:h-30 md:text-base",
-  lg: "w-12 h-18 text-[11px] sm:w-24 sm:h-34 sm:text-base md:w-28 md:h-40 md:text-lg",
+  xs: "w-5 h-7 text-[5px] sm:w-6 sm:h-9 sm:text-[6px] lg:w-12 lg:h-16 lg:text-[9px]",
+  sm: "w-7 h-10 text-[6px] sm:w-8 sm:h-11 sm:text-[7px] lg:w-16 lg:h-24 lg:text-sm",
+  md: "w-10 h-14 text-[9px] sm:w-12 sm:h-18 sm:text-[11px] lg:w-20 lg:h-30 lg:text-base",
+  lg: "w-12 h-18 text-[11px] sm:w-18 sm:h-26 sm:text-xs lg:w-28 lg:h-40 lg:text-lg",
 };
 
 export function PlayingCard({

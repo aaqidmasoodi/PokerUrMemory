@@ -65,8 +65,8 @@ function PlayerSeat({
         <div className={cn(
           "absolute whitespace-nowrap z-20 px-2 py-0.5 rounded-full bg-[color:var(--color-gold)] text-black font-display font-bold text-[8px] sm:text-[12px] tracking-widest uppercase shadow-[0_0_20px_rgba(212,168,67,0.8)] transition-all animate-in zoom-in fade-in",
           isHero 
-            ? "sm:-top-8 sm:bottom-auto landscape:sm:-top-8 landscape:sm:bottom-auto landscape:-left-20 landscape:top-1/2 landscape:-translate-y-1/2 portrait:-bottom-5" 
-            : "-top-4 sm:-top-10"
+            ? "sm:-top-12 sm:left-1/2 sm:-translate-x-1/2 landscape:-left-24 landscape:top-1/2 landscape:-translate-y-1/2 landscape:sm:left-1/2 landscape:sm:-translate-x-1/2 landscape:sm:top-auto landscape:sm:translate-y-0 landscape:sm:-top-14 portrait:-bottom-8 portrait:left-1/2 portrait:-translate-x-1/2" 
+            : "-top-6 left-1/2 -translate-x-1/2 sm:-top-14"
         )}>
           {isHero ? "Your Turn" : "Thinking..."}
         </div>
@@ -87,10 +87,10 @@ function PlayerSeat({
           {avatar}
         </div>
         <div className="flex flex-col leading-tight min-w-0">
-          <span className="font-display text-[9px] sm:text-sm font-semibold tracking-wider uppercase text-foreground/90 truncate max-w-[60px] sm:max-w-none">
+          <span className="font-display text-[9px] sm:text-lg font-semibold tracking-wider uppercase text-foreground/90 truncate max-w-[60px] sm:max-w-none">
             {name}
           </span>
-          <span className="text-[9px] sm:text-sm font-bold gold-text">${chips.toLocaleString()}</span>
+          <span className="text-[9px] sm:text-base font-bold gold-text">${chips.toLocaleString()}</span>
         </div>
         {typeof bet === "number" && bet > 0 && (
           <div className="ml-0.5 sm:ml-1 pl-1.5 sm:pl-2.5 border-l border-white/10 text-[8px] sm:text-[10px] text-[color:var(--color-gold)]/90 leading-tight">
@@ -121,9 +121,9 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "h-8 sm:h-10 rounded-lg font-display tracking-widest uppercase text-[8px] sm:text-[10px] font-bold transition-all",
+        "h-8 sm:h-14 rounded-lg sm:rounded-xl font-display tracking-widest uppercase text-[8px] sm:text-sm font-bold transition-all px-4 sm:px-8",
         variant === "primary"
-          ? "bg-gradient-to-b from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)] hover:brightness-110 border border-black/30 shadow-[0_4px_14px_rgba(0,0,0,0.5)]"
+          ? "bg-gradient-to-b from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)] hover:brightness-110 border border-black/30 shadow-[0_4px_14px_rgba(0,0,0,0.5)] sm:shadow-[0_8px_30px_rgba(0,0,0,0.6)]"
           : "bg-black/45 text-[color:var(--color-gold)] gold-border hover:bg-black/60",
         disabled && "opacity-40 cursor-not-allowed",
         className,
