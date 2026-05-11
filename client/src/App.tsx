@@ -9,8 +9,6 @@ import { Clock, Eye, LogOut, Copy, Check } from "lucide-react";
 
 type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "drawReveal" | "secondBetting" | "showdown";
 
-const CIRCUMFERENCE = 2 * Math.PI * 40; // r=40 in viewBox 0 0 100 100
-
 // ─── Phase badge (unified timer display — all timers live inside the pill) ────
 
 function PhaseBadge({
@@ -77,18 +75,38 @@ function PlayerSeat({
   avatar: string; folded?: boolean; turnTimeLeft?: number | null; compact?: boolean;
 }) {
   const showRing = active && !folded && turnTimeLeft != null;
-  const ringPct = showRing ? turnTimeLeft! / 20 : 0;
   const ringColor = !showRing ? "transparent"
     : turnTimeLeft! > 12 ? "oklch(0.65 0.20 145)"
     : turnTimeLeft! > 6  ? "var(--color-gold)"
     : "var(--color-chip-red)";
 
   return (
-    <div className="relative shrink-0">
-      {/* Active turn pulsing dot */}
+    <div className="relative shrink-0 flex flex-col gap-0.5">
+      {/* Drain bar — above the pill, drains left→right over 20 s */}
+      <div className={cn(
+        "h-[3px] rounded-full overflow-hidden transition-opacity duration-300",
+        showRing ? "opacity-100" : "opacity-0 pointer-events-none",
+      )}>
+        {/* Track */}
+        <div className="relative w-full h-full bg-white/[0.10] rounded-full">
+          {/* Fill */}
+          <div
+            className="absolute left-0 top-0 h-full rounded-full"
+            style={{
+              width: showRing ? `${(turnTimeLeft! / 20) * 100}%` : "100%",
+              backgroundColor: ringColor,
+              transition: "width 0.9s linear, background-color 0.5s ease",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Active pulsing dot (when it's your turn but no timer yet) */}
       {active && !folded && turnTimeLeft == null && (
         <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
       )}
+
+      {/* Pill */}
       <div className={cn(
         "flex items-center rounded-full bg-black/60 backdrop-blur-md transition-all",
         compact ? "gap-1 pl-0.5 pr-2 py-0.5" : "gap-1.5 pl-1 pr-2.5 py-1",
@@ -97,33 +115,12 @@ function PlayerSeat({
           : "border border-white/10",
         folded && "opacity-40 grayscale",
       )}>
-        {/* Avatar with timer ring */}
-        <div className={cn("relative shrink-0", compact ? "w-5 h-5" : "w-6 h-6 sm:w-8 sm:h-8")}>
-          {showRing && (
-            <svg
-              className="absolute pointer-events-none"
-              style={{ width: "calc(100% + 8px)", height: "calc(100% + 8px)", top: "-4px", left: "-4px" }}
-              viewBox="0 0 100 100"
-            >
-              <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
-              <circle
-                cx="50" cy="50" r="40"
-                fill="none"
-                stroke={ringColor}
-                strokeWidth="9"
-                strokeLinecap="round"
-                strokeDasharray={`${ringPct * CIRCUMFERENCE} ${CIRCUMFERENCE}`}
-                transform="rotate(-90 50 50)"
-                style={{ transition: "stroke-dasharray 0.9s linear, stroke 0.5s ease" }}
-              />
-            </svg>
-          )}
-          <div className={cn(
-            "w-full h-full rounded-full grid place-items-center font-display font-bold bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)]",
-            compact ? "text-[7px]" : "text-[9px] sm:text-sm",
-          )}>
-            {avatar}
-          </div>
+        {/* Avatar */}
+        <div className={cn(
+          "shrink-0 rounded-full grid place-items-center font-display font-bold bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)]",
+          compact ? "w-5 h-5 text-[7px]" : "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm",
+        )}>
+          {avatar}
         </div>
         {/* Name + chips */}
         <div className="flex flex-col leading-none">
@@ -444,18 +441,18 @@ export default function App() {
       </div>
 
       {/* ── FELT TABLE OVAL ───────────────────────────────────────────────────── */}
-      <div className="felt-surface absolute inset-x-[4%] top-[11%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]" />
+      <div className="felt-surface absolute inset-x-[4%] top-[9%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]" />
 
       {/* ── OPPONENTS — fanned across top of table, z-10 above reveal overlay ── */}
       <div className={cn(
-        "absolute top-[11%] left-0 right-0 flex items-start px-3 z-10",
+        "absolute top-[9%] left-0 right-0 flex items-start px-3 z-10",
         opponents.length <= 1 ? "justify-center" : "justify-around",
       )}>
         {opponents.map((opp, idx) => {
           const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
-          // Use compact pill for 2+ opponents; bigger cards when only 1 opponent
+          // Compact pill for 2+ opponents; xs cards for 2+ (sm only for solo opponent)
           const isCompact = opponents.length >= 2;
-          const cardSize = opponents.length >= 3 ? "xs" : "sm";
+          const cardSize = opponents.length >= 2 ? "xs" : "sm";
           return (
             <div key={idx} className="flex flex-col items-center gap-1">
               <PlayerSeat
