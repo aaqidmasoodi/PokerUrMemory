@@ -12,10 +12,9 @@ type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "drawReveal"
 // ─── Phase badge (unified timer display — all timers live inside the pill) ────
 
 function PhaseBadge({
-  phase, timer, turnTimer,
+  phase, timer,
 }: {
   phase: Phase; timer?: number | null;
-  turnTimer?: { playerId: string; timeLeft: number } | null;
 }) {
   const map: Record<Phase, string> = {
     waiting: "Waiting", memoryReveal: "Memory", firstBetting: "Betting",
@@ -24,17 +23,14 @@ function PhaseBadge({
   const isEye = phase === "memoryReveal" || phase === "drawReveal";
   const isBetting = phase === "firstBetting" || phase === "secondBetting";
 
-  // Which number to show — betting uses per-player turn timer; everything else uses phase timer
+  // During betting the bar on the player pill is the timer — don't duplicate it here
   const displayTimer: number | null = isBetting
-    ? (turnTimer?.timeLeft ?? null)
+    ? null
     : (typeof timer === "number" ? timer : null);
 
   const hasTimer = displayTimer != null && displayTimer > 0;
 
-  // Color: green→gold→red during betting urgency; gold otherwise
-  const timerColor = (isBetting && hasTimer)
-    ? (displayTimer! > 12 ? "oklch(0.65 0.20 145)" : displayTimer! > 6 ? "var(--color-gold)" : "var(--color-chip-red)")
-    : "var(--color-gold)";
+  const timerColor = "var(--color-gold)";
 
   return (
     <div className="pointer-events-none">
@@ -432,11 +428,10 @@ export default function App() {
             {roomCode}
           </span>
         </div>
-        {/* Right: phase badge — all timers live inside the pill */}
+        {/* Right: phase badge — reveal/draw timers only; betting uses the player drain bar */}
         <PhaseBadge
           phase={phase}
           timer={timer}
-          turnTimer={turnTimer}
         />
       </div>
 
