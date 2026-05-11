@@ -1,0 +1,18 @@
+{
+  "name": "PokerUrMemory",
+  "short_name": "PokerUrMem",
+  "description": "5-Card Draw Poker with a Memory Twist",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#111a14",
+  "theme_color": "#111a14",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

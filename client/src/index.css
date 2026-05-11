@@ -4,6 +4,8 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant landscape (@media (orientation: landscape));
+@custom-variant portrait (@media (orientation: portrait));
 
 /* Traditional poker fonts */
 /*
@@ -69,6 +71,7 @@
   --color-gold-soft: var(--gold-soft);
   --color-chip-red: var(--chip-red);
   --color-chip-blue: var(--chip-blue);
+  --color-chip-teal: var(--chip-teal);
   --color-chip-black: var(--chip-black);
 }
 
@@ -101,6 +104,7 @@
   --gold-soft: oklch(0.68 0.12 80);
   --chip-red: oklch(0.55 0.22 25);
   --chip-blue: oklch(0.50 0.18 245);
+  --chip-teal: oklch(0.65 0.14 185);
   --chip-black: oklch(0.20 0.02 150);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
