@@ -5,51 +5,65 @@ import { ChipStack } from "./components/poker/ChipStack";
 import { Button } from "./components/ui/button";
 import { Slider } from "./components/ui/slider";
 import { cn } from "./lib/utils";
-import { Clock, Eye, EyeOff, LogOut, Copy, Check } from "lucide-react";
+import { Clock, Eye, LogOut, Copy, Check } from "lucide-react";
 
 type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "drawReveal" | "secondBetting" | "showdown";
 
 const CIRCUMFERENCE = 2 * Math.PI * 40; // r=40 in viewBox 0 0 100 100
 
-// ─── Phase badge (unified timer display) ──────────────────────────────────────
+// ─── Phase badge (unified timer display — all timers live inside the pill) ────
 
 function PhaseBadge({
-  phase, timer, showCountdown,
+  phase, timer, turnTimer,
 }: {
-  phase: Phase; timer?: number | null; showCountdown?: boolean;
+  phase: Phase; timer?: number | null;
+  turnTimer?: { playerId: string; timeLeft: number } | null;
 }) {
   const map: Record<Phase, string> = {
     waiting: "Waiting", memoryReveal: "Memory", firstBetting: "Betting",
     draw: "Draw", drawReveal: "Reveal", secondBetting: "Betting", showdown: "Showdown",
   };
   const isEye = phase === "memoryReveal" || phase === "drawReveal";
+  const isBetting = phase === "firstBetting" || phase === "secondBetting";
+
+  // Which number to show — betting uses per-player turn timer; everything else uses phase timer
+  const displayTimer: number | null = isBetting
+    ? (turnTimer?.timeLeft ?? null)
+    : (typeof timer === "number" ? timer : null);
+
+  const hasTimer = displayTimer != null && displayTimer > 0;
+
+  // Color: green→gold→red during betting urgency; gold otherwise
+  const timerColor = (isBetting && hasTimer)
+    ? (displayTimer! > 12 ? "oklch(0.65 0.20 145)" : displayTimer! > 6 ? "var(--color-gold)" : "var(--color-chip-red)")
+    : "var(--color-gold)";
 
   return (
-    <div className="flex flex-col items-end gap-1 pointer-events-none">
-      {/* Phase pill — slightly bigger than before */}
-      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/60 gold-border backdrop-blur-sm">
-        {isEye
-          ? <Eye className="w-3 h-3 text-[color:var(--color-gold)]" />
-          : <EyeOff className="w-3 h-3 text-[color:var(--color-gold)]" />
-        }
-        <span className="font-display text-[9px] sm:text-[11px] font-semibold tracking-widest uppercase gold-text whitespace-nowrap">
-          {map[phase]}
-        </span>
-        {!showCountdown && typeof timer === "number" && (
-          <span className="flex items-center gap-0.5 text-[9px] sm:text-[11px] font-bold text-[color:var(--color-gold)]">
-            <Clock className="w-2.5 h-2.5" />{timer}s
+    <div className="pointer-events-none">
+      <div className={cn(
+        "flex flex-col items-center rounded-2xl bg-black/70 gold-border backdrop-blur-sm",
+        hasTimer ? "px-3 pt-1.5 pb-2" : "px-2.5 py-1.5",
+      )}>
+        {/* Phase label row */}
+        <div className="flex items-center gap-1.5">
+          {isEye
+            ? <Eye className="w-3 h-3 text-[color:var(--color-gold)]" />
+            : <Clock className="w-3 h-3 text-[color:var(--color-gold)]" />
+          }
+          <span className="font-display text-[9px] sm:text-[11px] font-semibold tracking-widest uppercase gold-text whitespace-nowrap">
+            {map[phase]}
+          </span>
+        </div>
+        {/* Big timer number inside the pill */}
+        {hasTimer && (
+          <span
+            className="font-display font-black leading-none tabular-nums text-[38px] sm:text-[52px] mt-0.5"
+            style={{ color: timerColor, textShadow: `0 0 18px ${timerColor}99, 0 0 40px ${timerColor}44` }}
+          >
+            {displayTimer}
           </span>
         )}
       </div>
-      {/* Large countdown shown during reveal phases — unified timer spot */}
-      {showCountdown && typeof timer === "number" && (
-        <span
-          className="font-display font-black leading-none text-[56px] sm:text-[72px] tabular-nums"
-          style={{ color: "var(--color-gold)", textShadow: "0 0 30px rgba(212,168,67,0.9), 0 0 60px rgba(212,168,67,0.4)" }}
-        >
-          {timer}
-        </span>
-      )}
     </div>
   );
 }
@@ -57,10 +71,10 @@ function PhaseBadge({
 // ─── Player seat with SVG turn-timer ring ─────────────────────────────────────
 
 function PlayerSeat({
-  name, chips, bet, active, avatar, folded, turnTimeLeft,
+  name, chips, bet, active, avatar, folded, turnTimeLeft, compact,
 }: {
   name: string; chips: number; bet?: number; active?: boolean;
-  avatar: string; folded?: boolean; turnTimeLeft?: number | null;
+  avatar: string; folded?: boolean; turnTimeLeft?: number | null; compact?: boolean;
 }) {
   const showRing = active && !folded && turnTimeLeft != null;
   const ringPct = showRing ? turnTimeLeft! / 20 : 0;
@@ -73,26 +87,25 @@ function PlayerSeat({
     <div className="relative shrink-0">
       {/* Active turn pulsing dot */}
       {active && !folded && turnTimeLeft == null && (
-        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
+        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
       )}
       <div className={cn(
-        "flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-md pl-1 pr-2.5 py-1 transition-all",
+        "flex items-center rounded-full bg-black/60 backdrop-blur-md transition-all",
+        compact ? "gap-1 pl-0.5 pr-2 py-0.5" : "gap-1.5 pl-1 pr-2.5 py-1",
         active && !folded
           ? "gold-border shadow-[0_0_14px_rgba(212,168,67,0.35)]"
           : "border border-white/10",
         folded && "opacity-40 grayscale",
       )}>
         {/* Avatar with timer ring */}
-        <div className="relative w-6 h-6 sm:w-8 sm:h-8 shrink-0">
+        <div className={cn("relative shrink-0", compact ? "w-5 h-5" : "w-6 h-6 sm:w-8 sm:h-8")}>
           {showRing && (
             <svg
               className="absolute pointer-events-none"
               style={{ width: "calc(100% + 8px)", height: "calc(100% + 8px)", top: "-4px", left: "-4px" }}
               viewBox="0 0 100 100"
             >
-              {/* Track */}
               <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="8" />
-              {/* Progress */}
               <circle
                 cx="50" cy="50" r="40"
                 fill="none"
@@ -105,18 +118,26 @@ function PlayerSeat({
               />
             </svg>
           )}
-          <div className="w-full h-full rounded-full grid place-items-center font-display font-bold text-[9px] sm:text-sm bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)]">
+          <div className={cn(
+            "w-full h-full rounded-full grid place-items-center font-display font-bold bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)]",
+            compact ? "text-[7px]" : "text-[9px] sm:text-sm",
+          )}>
             {avatar}
           </div>
         </div>
         {/* Name + chips */}
         <div className="flex flex-col leading-none">
-          <span className="font-display text-[8px] sm:text-[11px] font-semibold uppercase truncate max-w-[52px] sm:max-w-[80px] text-foreground/90">
+          <span className={cn(
+            "font-display font-semibold uppercase truncate text-foreground/90",
+            compact ? "text-[7px] max-w-[36px]" : "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]",
+          )}>
             {name}
           </span>
-          <span className="text-[7px] sm:text-[10px] font-bold gold-text">${chips.toLocaleString()}</span>
+          <span className={cn("font-bold gold-text", compact ? "text-[6px]" : "text-[7px] sm:text-[10px]")}>
+            ${chips.toLocaleString()}
+          </span>
         </div>
-        {typeof bet === "number" && bet > 0 && (
+        {!compact && typeof bet === "number" && bet > 0 && (
           <span className="text-[6px] sm:text-[8px] text-[color:var(--color-gold)]/80 pl-1.5 border-l border-white/10 leading-none whitespace-nowrap">
             <span className="block opacity-60 tracking-wider text-[5px] uppercase">bet</span>
             ${bet}
@@ -414,34 +435,44 @@ export default function App() {
             {roomCode}
           </span>
         </div>
-        {/* Right: phase badge (unified timer — big countdown during reveals) */}
+        {/* Right: phase badge — all timers live inside the pill */}
         <PhaseBadge
           phase={phase}
           timer={timer}
-          showCountdown={isRevealPhase}
+          turnTimer={turnTimer}
         />
       </div>
 
       {/* ── FELT TABLE OVAL ───────────────────────────────────────────────────── */}
       <div className="felt-surface absolute inset-x-[4%] top-[11%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]" />
 
-      {/* ── OPPONENTS — slightly higher, z-10 → above reveal overlay ─────────── */}
-      <div className="absolute top-[11%] left-0 right-0 flex justify-center items-start gap-3 sm:gap-6 px-2 z-10">
+      {/* ── OPPONENTS — fanned across top of table, z-10 above reveal overlay ── */}
+      <div className={cn(
+        "absolute top-[11%] left-0 right-0 flex items-start px-3 z-10",
+        opponents.length <= 1 ? "justify-center" : "justify-around",
+      )}>
         {opponents.map((opp, idx) => {
           const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
+          // Use compact pill for 2+ opponents; bigger cards when only 1 opponent
+          const isCompact = opponents.length >= 2;
+          const cardSize = opponents.length >= 3 ? "xs" : "sm";
           return (
-            <div key={idx} className={cn("flex flex-col items-center gap-1.5", opp.folded && "opacity-30 grayscale")}>
+            <div key={idx} className="flex flex-col items-center gap-1">
               <PlayerSeat
                 name={opp.name} chips={opp.chips} bet={opp.currentBet}
                 avatar={opp.name.charAt(0).toUpperCase()}
                 active={opp.isCurrentTurn && !isShowdown}
                 folded={opp.folded}
                 turnTimeLeft={oppTurnTimeLeft}
+                compact={isCompact}
               />
-              <div className="flex -space-x-1.5">
+              <div className={cn("flex", cardSize === "xs" ? "-space-x-1" : "-space-x-1.5")}>
                 {opp.hand.map((c, ci) => (
-                  <PlayingCard key={ci} card={c as any} size="xs" faceUp={c.faceUp}
-                    highlight={isDrawReveal && c.faceUp} />
+                  <PlayingCard
+                    key={ci} card={c as any} size={cardSize} faceUp={c.faceUp}
+                    highlight={isDrawReveal && c.faceUp}
+                    className={opp.folded ? "opacity-30 grayscale" : undefined}
+                  />
                 ))}
               </div>
             </div>
@@ -454,7 +485,7 @@ export default function App() {
         <div className="px-3 pt-5 pb-2 rounded-xl bg-black/50 gold-border backdrop-blur-md shadow-xl">
           <ChipStack amount={Math.max(1, gameState.pot)} variant={potChipVariant} size="sm" />
         </div>
-        <div className="text-[7px] sm:text-[10px] text-gray-300 bg-black/30 px-2 py-0.5 rounded-full border border-white/10 max-w-[160px] sm:max-w-[260px] truncate text-center">
+        <div className="text-[7px] sm:text-[10px] text-gray-300 bg-black/30 px-2 py-1 rounded-xl border border-white/10 max-w-[160px] sm:max-w-[260px] text-center leading-tight">
           {actionLog}
         </div>
       </div>

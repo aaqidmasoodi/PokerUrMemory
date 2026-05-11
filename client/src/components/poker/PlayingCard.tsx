@@ -26,10 +26,10 @@ const sizeMap = {
 };
 
 const textSizes: Record<"xs" | "sm" | "md" | "lg", { rank: string; suit: string }> = {
-  xs: { rank: "text-[5px] sm:text-[6px]",   suit: "text-[6px] sm:text-[7px]"   },
-  sm: { rank: "text-[9px] sm:text-[12px]",  suit: "text-[11px] sm:text-[14px]" },
-  md: { rank: "text-[12px] sm:text-[15px]", suit: "text-[14px] sm:text-[17px]" },
-  lg: { rank: "text-[15px] sm:text-[18px]", suit: "text-[17px] sm:text-[20px]" },
+  xs: { rank: "text-[9px] sm:text-[11px]",   suit: "text-[10px] sm:text-[12px]"  },
+  sm: { rank: "text-[13px] sm:text-[16px]",  suit: "text-[15px] sm:text-[18px]"  },
+  md: { rank: "text-[16px] sm:text-[20px]",  suit: "text-[18px] sm:text-[22px]"  },
+  lg: { rank: "text-[20px] sm:text-[24px]",  suit: "text-[22px] sm:text-[27px]"  },
 };
 
 export function PlayingCard({
@@ -59,7 +59,7 @@ export function PlayingCard({
       style={{ perspective: 1000 }}
     >
       {faceUp && card ? (
-        <div className="card-face absolute inset-0 flex flex-col items-start justify-start rounded-md p-[3px] overflow-hidden">
+        <div className="card-face absolute inset-0 flex flex-col items-center justify-center rounded-md overflow-hidden gap-0">
           <span className={cn(
             "font-display font-black leading-none",
             rankClass,
