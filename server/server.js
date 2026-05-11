@@ -54,6 +54,8 @@ class GameRoom {
         this.revealTimeLeft = 0;
         this.selectedCards = new Map();
         this.tempRevealCards = [];
+        this.turnTimer = null;
+        this.turnTimeLeft = 0;
     }
 
     addPlayer(socketId, name) {
@@ -264,6 +266,7 @@ class GameRoom {
         const playerIndex = this.getPlayerIndex(socketId);
         if (playerIndex !== this.currentPlayerIndex) return;
 
+        this.clearTurnTimer();
         this.playersActedThisRound++;
 
         switch (action) {
@@ -354,6 +357,7 @@ class GameRoom {
     }
 
     endBettingRound() {
+        this.clearTurnTimer();
         const activePlayers = this.getActivePlayers();
 
         if (activePlayers.length === 1) {
@@ -382,6 +386,7 @@ class GameRoom {
     }
 
     showBluffWin(winner) {
+        this.clearTurnTimer();
         winner.chips += this.pot;
         io.to(this.roomCode).emit('actionLog', `${winner.name} wins $${this.pot}!`);
         io.to(this.roomCode).emit('bluffWin', {
@@ -403,6 +408,7 @@ class GameRoom {
     }
 
     startDrawPhase() {
+        this.clearTurnTimer();
         this.isDrawPhase = true;
         this.currentBet = 0;
         
@@ -552,7 +558,7 @@ class GameRoom {
         const playerArray = Array.from(this.players.values());
         const currentPlayer = playerArray[this.currentPlayerIndex];
         if (currentPlayer) {
-            io.to(currentPlayer.id).emit('yourTurnNotification', { 
+            io.to(currentPlayer.id).emit('yourTurnNotification', {
                 message: 'YOUR TURN!',
                 phase: this.gamePhase
             });
@@ -563,7 +569,7 @@ class GameRoom {
             } else {
                 canRaise = currentPlayer.currentBet < this.currentBet && !currentPlayer.isAllIn;
             }
-            
+
             io.to(currentPlayer.id).emit('yourTurn', {
                 canCheck: this.currentBet === 0,
                 canCall: this.currentBet > 0 && currentPlayer.currentBet < this.currentBet && !currentPlayer.isAllIn,
@@ -574,10 +580,47 @@ class GameRoom {
                 maxBet: maxBetAmount,
                 minBet: this.currentBet > 0 ? Math.min(this.currentBet + 1, maxBetAmount) : Math.min(10, maxBetAmount)
             });
+
+            if (this.gamePhase === 'firstBetting' || this.gamePhase === 'secondBetting') {
+                this.startTurnTimer();
+            }
         }
     }
 
+    startTurnTimer() {
+        this.clearTurnTimer();
+        const playerArray = Array.from(this.players.values());
+        const currentPlayer = playerArray[this.currentPlayerIndex];
+        if (!currentPlayer || currentPlayer.folded) return;
+
+        this.turnTimeLeft = 20;
+        const playerId = currentPlayer.id;
+        io.to(this.roomCode).emit('turnTimer', { playerId, timeLeft: 20 });
+
+        this.turnTimer = setInterval(() => {
+            this.turnTimeLeft--;
+            io.to(this.roomCode).emit('turnTimer', { playerId, timeLeft: this.turnTimeLeft });
+
+            if (this.turnTimeLeft <= 0) {
+                this.clearTurnTimer();
+                const action = (this.currentBet === 0 || currentPlayer.currentBet === this.currentBet)
+                    ? 'check'
+                    : 'fold';
+                this.playerAction(playerId, action);
+            }
+        }, 1000);
+    }
+
+    clearTurnTimer() {
+        if (this.turnTimer) {
+            clearInterval(this.turnTimer);
+            this.turnTimer = null;
+        }
+        io.to(this.roomCode).emit('turnTimer', null);
+    }
+
     startShowdown() {
+        this.clearTurnTimer();
         this.gamePhase = 'showdown';
         
         this.players.forEach((player, id) => {

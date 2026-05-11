@@ -69,6 +69,7 @@ export function useSocket() {
   // Client-side interactions
   const [selectedDrawCards, setSelectedDrawCards] = useState<number[]>([]);
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
+  const [turnTimer, setTurnTimer] = useState<{ playerId: string; timeLeft: number } | null>(null);
 
   useEffect(() => {
     // We connect to the same host (the express server serves the react app)
@@ -91,16 +92,24 @@ export function useSocket() {
     newSocket.on('gameState', (state: GameState) => {
       setGameState(state);
       setTimer(state.timeLeft > 0 ? state.timeLeft : null);
-      
+
       if (state.phase !== 'waiting' && state.phase !== 'showdown') {
         setUiState('game');
         setShowdownData(null);
       }
-      
+
       if (state.phase !== 'draw') {
         setSelectedDrawCards([]);
         setHasDiscarded(false);
       }
+
+      if (state.phase !== 'firstBetting' && state.phase !== 'secondBetting') {
+        setTurnTimer(null);
+      }
+    });
+
+    newSocket.on('turnTimer', (data: { playerId: string; timeLeft: number } | null) => {
+      setTurnTimer(data);
     });
 
     newSocket.on('yourTurn', (data: YourTurnData) => {
@@ -244,7 +253,8 @@ export function useSocket() {
     showdownData,
     selectedDrawCards,
     hasDiscarded,
-    
+    turnTimer,
+
     createRoom,
     joinRoom,
     startGame,

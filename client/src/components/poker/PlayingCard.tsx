@@ -19,10 +19,17 @@ interface PlayingCardProps {
 }
 
 const sizeMap = {
-  xs: "w-[18px] h-[26px] text-[4.5px] sm:w-6 sm:h-9 sm:text-[6px]",
-  sm: "w-8 h-[46px] text-[7px] sm:w-11 sm:h-16 sm:text-[9px]",
-  md: "w-10 h-14 text-[9px] sm:w-14 sm:h-20 sm:text-xs",
-  lg: "w-12 h-[70px] text-[11px] sm:w-[72px] sm:h-[100px] sm:text-sm",
+  xs: "w-5 h-[28px] sm:w-6 sm:h-9",
+  sm: "w-8 h-[46px] sm:w-11 sm:h-16",
+  md: "w-10 h-14 sm:w-14 sm:h-20",
+  lg: "w-12 h-[70px] sm:w-[72px] sm:h-[100px]",
+};
+
+const textSizes: Record<"xs" | "sm" | "md" | "lg", { rank: string; suit: string }> = {
+  xs: { rank: "text-[5px] sm:text-[6px]",   suit: "text-[6px] sm:text-[7px]"   },
+  sm: { rank: "text-[9px] sm:text-[12px]",  suit: "text-[11px] sm:text-[14px]" },
+  md: { rank: "text-[12px] sm:text-[15px]", suit: "text-[14px] sm:text-[17px]" },
+  lg: { rank: "text-[15px] sm:text-[18px]", suit: "text-[17px] sm:text-[20px]" },
 };
 
 export function PlayingCard({
@@ -35,6 +42,7 @@ export function PlayingCard({
   className,
 }: PlayingCardProps) {
   const isRed = card?.suit === "♥" || card?.suit === "♦";
+  const { rank: rankClass, suit: suitClass } = textSizes[size];
 
   return (
     <button
@@ -51,33 +59,21 @@ export function PlayingCard({
       style={{ perspective: 1000 }}
     >
       {faceUp && card ? (
-        <div className="card-face absolute inset-0 flex flex-col rounded-md p-1 sm:p-1.5 overflow-hidden">
-          <div
-            className={cn(
-              "flex flex-col items-start leading-none font-display font-bold",
-              isRed ? "text-[oklch(0.5_0.22_25)]" : "text-[oklch(0.18_0.03_150)]",
-            )}
-          >
-            <span>{card.rank || (card as any).value}</span>
-            <span className="text-[1.1em]">{card.suit}</span>
-          </div>
-          <div
-            className={cn(
-              "flex-1 flex items-center justify-center text-[2em]",
-              isRed ? "text-[oklch(0.5_0.22_25)]" : "text-[oklch(0.18_0.03_150)]",
-            )}
-          >
+        <div className="card-face absolute inset-0 flex flex-col items-start justify-start rounded-md p-[3px] overflow-hidden">
+          <span className={cn(
+            "font-display font-black leading-none",
+            rankClass,
+            isRed ? "text-[oklch(0.5_0.22_25)]" : "text-[oklch(0.18_0.03_150)]",
+          )}>
+            {card.rank || (card as any).value}
+          </span>
+          <span className={cn(
+            "font-display font-bold leading-none",
+            suitClass,
+            isRed ? "text-[oklch(0.5_0.22_25)]" : "text-[oklch(0.18_0.03_150)]",
+          )}>
             {card.suit}
-          </div>
-          <div
-            className={cn(
-              "flex flex-col items-end leading-none font-display font-bold rotate-180",
-              isRed ? "text-[oklch(0.5_0.22_25)]" : "text-[oklch(0.18_0.03_150)]",
-            )}
-          >
-            <span>{card.rank || (card as any).value}</span>
-            <span className="text-[1.1em]">{card.suit}</span>
-          </div>
+          </span>
         </div>
       ) : (
         <div className="card-back absolute inset-0 rounded-md flex items-center justify-center">
