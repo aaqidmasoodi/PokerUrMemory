@@ -64,12 +64,21 @@ function PhaseBadge({
 
 // ─── Player seat with SVG turn-timer ring ─────────────────────────────────────
 
+// Size tiers: "normal" (hero / 1 opp), "compact" (2 opps), "mini" (3 opps)
+const SEAT_CFG = {
+  normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1",    avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true  },
+  compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5",     avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: false },
+  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 py-[1px]", avatar: "w-4 h-4 text-[6px]",                         name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: false },
+} as const;
+
 function PlayerSeat({
-  name, chips, bet, active, avatar, folded, turnTimeLeft, compact,
+  name, chips, bet, active, avatar, folded, turnTimeLeft, size = "normal",
 }: {
   name: string; chips: number; bet?: number; active?: boolean;
-  avatar: string; folded?: boolean; turnTimeLeft?: number | null; compact?: boolean;
+  avatar: string; folded?: boolean; turnTimeLeft?: number | null;
+  size?: "normal" | "compact" | "mini";
 }) {
+  const cfg = SEAT_CFG[size];
   const showRing = active && !folded && turnTimeLeft != null;
   const ringColor = !showRing ? "transparent"
     : turnTimeLeft! > 12 ? "oklch(0.65 0.20 145)"
@@ -78,14 +87,12 @@ function PlayerSeat({
 
   return (
     <div className="relative shrink-0 flex flex-col gap-0.5">
-      {/* Drain bar — above the pill, drains left→right over 20 s */}
+      {/* Drain bar — above pill, drains left→right over 20 s */}
       <div className={cn(
         "h-[3px] rounded-full overflow-hidden transition-opacity duration-300",
         showRing ? "opacity-100" : "opacity-0 pointer-events-none",
       )}>
-        {/* Track */}
         <div className="relative w-full h-full bg-white/[0.10] rounded-full">
-          {/* Fill */}
           <div
             className="absolute left-0 top-0 h-full rounded-full"
             style={{
@@ -97,7 +104,7 @@ function PlayerSeat({
         </div>
       </div>
 
-      {/* Active pulsing dot (when it's your turn but no timer yet) */}
+      {/* Active pulsing dot (turn is active, no per-player timer visible) */}
       {active && !folded && turnTimeLeft == null && (
         <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
       )}
@@ -105,32 +112,25 @@ function PlayerSeat({
       {/* Pill */}
       <div className={cn(
         "flex items-center rounded-full bg-black/60 backdrop-blur-md transition-all",
-        compact ? "gap-1 pl-0.5 pr-2 py-0.5" : "gap-1.5 pl-1 pr-2.5 py-1",
-        active && !folded
-          ? "gold-border shadow-[0_0_14px_rgba(212,168,67,0.35)]"
-          : "border border-white/10",
+        cfg.pill,
+        active && !folded ? "gold-border shadow-[0_0_14px_rgba(212,168,67,0.35)]" : "border border-white/10",
         folded && "opacity-40 grayscale",
       )}>
-        {/* Avatar */}
         <div className={cn(
           "shrink-0 rounded-full grid place-items-center font-display font-bold bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)]",
-          compact ? "w-5 h-5 text-[7px]" : "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm",
+          cfg.avatar,
         )}>
           {avatar}
         </div>
-        {/* Name + chips */}
         <div className="flex flex-col leading-none">
-          <span className={cn(
-            "font-display font-semibold uppercase truncate text-foreground/90",
-            compact ? "text-[7px] max-w-[36px]" : "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]",
-          )}>
+          <span className={cn("font-display font-semibold uppercase truncate text-foreground/90", cfg.name)}>
             {name}
           </span>
-          <span className={cn("font-bold gold-text", compact ? "text-[6px]" : "text-[7px] sm:text-[10px]")}>
+          <span className={cn("font-bold gold-text", cfg.chips)}>
             ${chips.toLocaleString()}
           </span>
         </div>
-        {!compact && typeof bet === "number" && bet > 0 && (
+        {cfg.showBet && typeof bet === "number" && bet > 0 && (
           <span className="text-[6px] sm:text-[8px] text-[color:var(--color-gold)]/80 pl-1.5 border-l border-white/10 leading-none whitespace-nowrap">
             <span className="block opacity-60 tracking-wider text-[5px] uppercase">bet</span>
             ${bet}
@@ -436,29 +436,32 @@ export default function App() {
       </div>
 
       {/* ── FELT TABLE OVAL ───────────────────────────────────────────────────── */}
-      <div className="felt-surface absolute inset-x-[4%] top-[9%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]" />
+      <div className="felt-surface absolute inset-x-[4%] top-[7%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]" />
 
-      {/* ── OPPONENTS — fanned across top of table, z-10 above reveal overlay ── */}
+      {/* ── OPPONENTS — top-7%, fanned; size scales with player count ─────────── */}
       <div className={cn(
-        "absolute top-[9%] left-0 right-0 flex items-start px-3 z-10",
-        opponents.length <= 1 ? "justify-center" : "justify-around",
+        "absolute top-[7%] left-0 right-0 flex items-start z-10",
+        opponents.length <= 1 ? "justify-center px-4" :
+        opponents.length === 2 ? "justify-around px-2" :
+        "justify-between px-3",
       )}>
         {opponents.map((opp, idx) => {
           const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
-          // Compact pill for 2+ opponents; xs cards for 2+ (sm only for solo opponent)
-          const isCompact = opponents.length >= 2;
+          // Scale everything down as more opponents appear
+          const seatSize = opponents.length >= 3 ? "mini" : opponents.length >= 2 ? "compact" : "normal";
           const cardSize = opponents.length >= 2 ? "xs" : "sm";
+          const cardSpacing = opponents.length >= 3 ? "-space-x-1.5" : "-space-x-1";
           return (
-            <div key={idx} className="flex flex-col items-center gap-1">
+            <div key={idx} className="flex flex-col items-center gap-0.5">
               <PlayerSeat
                 name={opp.name} chips={opp.chips} bet={opp.currentBet}
                 avatar={opp.name.charAt(0).toUpperCase()}
                 active={opp.isCurrentTurn && !isShowdown}
                 folded={opp.folded}
                 turnTimeLeft={oppTurnTimeLeft}
-                compact={isCompact}
+                size={seatSize}
               />
-              <div className={cn("flex", cardSize === "xs" ? "-space-x-1" : "-space-x-1.5")}>
+              <div className={cn("flex", cardSpacing)}>
                 {opp.hand.map((c, ci) => (
                   <PlayingCard
                     key={ci} card={c as any} size={cardSize} faceUp={c.faceUp}
@@ -472,10 +475,17 @@ export default function App() {
         })}
       </div>
 
-      {/* ── CENTER — pot (ChipStack sm) & action log ──────────────────────────── */}
+      {/* ── CENTER — pot pill & action log ────────────────────────────────────── */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1.5">
-        <div className="px-3 pt-5 pb-2 rounded-xl bg-black/50 gold-border backdrop-blur-md shadow-xl">
-          <ChipStack amount={Math.max(1, gameState.pot)} variant={potChipVariant} size="sm" />
+        {/* Simple horizontal pot pill — chip dot + amount, never deforms */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/65 gold-border backdrop-blur-md shadow-xl whitespace-nowrap">
+          <div
+            className="w-3.5 h-3.5 rounded-full shrink-0 shadow-md"
+            style={{ backgroundColor: potChipVariant === "gold" ? "var(--color-gold)" : potChipVariant === "blue" ? "var(--color-chip-blue)" : "var(--color-chip-red)" }}
+          />
+          <span className="font-display font-bold gold-text text-[11px] sm:text-sm">
+            ${gameState.pot.toLocaleString()}
+          </span>
         </div>
         <div className="text-[7px] sm:text-[10px] text-gray-300 bg-black/30 px-2 py-1 rounded-xl border border-white/10 max-w-[160px] sm:max-w-[260px] text-center leading-tight">
           {actionLog}

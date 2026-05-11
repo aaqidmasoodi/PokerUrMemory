@@ -603,10 +603,11 @@ class GameRoom {
 
             if (this.turnTimeLeft <= 0) {
                 this.clearTurnTimer();
-                const action = (this.currentBet === 0 || currentPlayer.currentBet === this.currentBet)
-                    ? 'check'
-                    : 'fold';
-                this.playerAction(playerId, action);
+                io.to(this.roomCode).emit('actionLog', `${currentPlayer.name} timed out and folded.`);
+                currentPlayer.folded = true;
+                this.playersActedThisRound++;
+                this.broadcastState();
+                this.nextPlayer();
             }
         }, 1000);
     }
