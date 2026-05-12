@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-export type Phase = 'waiting' | 'memoryReveal' | 'firstBetting' | 'draw' | 'drawReveal' | 'secondBetting' | 'showdown';
+export type Phase = 'waiting' | 'memoryReveal' | 'firstBetting' | 'draw' | 'discardReveal' | 'drawReveal' | 'secondBetting' | 'showdown';
 
 export interface CardData {
   suit: '♠' | '♥' | '♦' | '♣' | null;
@@ -46,6 +46,17 @@ export interface YourTurnData {
   minBet: number;
 }
 
+export interface DiscardEntry {
+  playerId: string;
+  playerName: string;
+  cards: CardData[];
+}
+
+export interface DiscardRevealData {
+  timer: number;
+  discards: DiscardEntry[];
+}
+
 export type UIState = 'join' | 'lobby' | 'game';
 
 const SESSION_KEY = 'pokermemory_session';
@@ -81,6 +92,7 @@ export function useSocket() {
   const [actionLog, setActionLog] = useState<string>('Waiting for game to start...');
   const [timer, setTimer] = useState<number | null>(null);
   const [showdownData, setShowdownData] = useState<any | null>(null);
+  const [discardRevealData, setDiscardRevealData] = useState<DiscardRevealData | null>(null);
 
   const [selectedDrawCards, setSelectedDrawCards] = useState<number[]>([]);
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
@@ -168,9 +180,17 @@ export function useSocket() {
       setHasDiscarded(false);
       setSelectedDrawCards([]);
       setMyTurnData(null);
+      setDiscardRevealData(null);
+    });
+
+    newSocket.on('discardRevealStart', (data: DiscardRevealData) => {
+      setDiscardRevealData(data);
+      setHasDiscarded(true);
+      setMyTurnData(null);
     });
 
     newSocket.on('drawRevealStart', (_data: any) => {
+      setDiscardRevealData(null);
       setHasDiscarded(true);
       setMyTurnData(null);
     });
@@ -292,6 +312,7 @@ export function useSocket() {
     actionLog,
     timer,
     showdownData,
+    discardRevealData,
     selectedDrawCards,
     hasDiscarded,
     turnTimer,

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSocket } from "./hooks/useSocket";
+import { useSocket, type DiscardEntry } from "./hooks/useSocket";
 import { PlayingCard } from "./components/poker/PlayingCard";
 import { ChipStack } from "./components/poker/ChipStack";
 import { Button } from "./components/ui/button";
@@ -7,7 +7,7 @@ import { Slider } from "./components/ui/slider";
 import { cn } from "./lib/utils";
 import { Clock, Eye, LogOut, Copy, Check } from "lucide-react";
 
-type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "drawReveal" | "secondBetting" | "showdown";
+type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "discardReveal" | "drawReveal" | "secondBetting" | "showdown";
 
 // ─── Phase badge (unified timer display — all timers live inside the pill) ────
 
@@ -18,7 +18,7 @@ function PhaseBadge({
 }) {
   const map: Record<Phase, string> = {
     waiting: "Waiting", memoryReveal: "Memory", firstBetting: "Betting",
-    draw: "Draw", drawReveal: "Reveal", secondBetting: "Betting", showdown: "Showdown",
+    draw: "Draw", discardReveal: "Discards", drawReveal: "Reveal", secondBetting: "Betting", showdown: "Showdown",
   };
   const isEye = phase === "memoryReveal" || phase === "drawReveal";
   const isBetting = phase === "firstBetting" || phase === "secondBetting";
@@ -168,6 +168,99 @@ function ActionButton({
 
 // ─── Exit / custom confirm dialog ────────────────────────────────────────────
 
+// ─── Discard Reveal Overlay ──────────────────────────────────────────────────
+
+function fanTransform(index: number, total: number): string {
+  if (total <= 1) return '';
+  const maxAngle = Math.min((total - 1) * 6, 18);
+  const step = maxAngle / (total - 1);
+  const angle = -maxAngle / 2 + step * index;
+  const lift = Math.abs(angle) * 0.4;
+  return `rotate(${angle}deg) translateY(${lift}px)`;
+}
+
+function DiscardGroup({ entry }: { entry: DiscardEntry }) {
+  const cardWidth = 36; // px — corresponds to size="sm" w-8 (32px) + slight gap
+  const fanOverlap = 18; // px horizontal offset per card in the fan
+  const containerW = entry.cards.length <= 1
+    ? cardWidth
+    : cardWidth + fanOverlap * (entry.cards.length - 1);
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <span className="text-[9px] uppercase tracking-widest font-display gold-text bg-black/60 px-2 py-0.5 rounded-full gold-border whitespace-nowrap">
+        {entry.playerName}
+      </span>
+
+      {entry.cards.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-[62px]">
+          <span className="text-[9px] text-white/40 italic tracking-wide">Stand Pat</span>
+        </div>
+      ) : (
+        <div className="relative" style={{ width: containerW, height: 62 }}>
+          {entry.cards.map((card, i) => (
+            <div
+              key={i}
+              className="absolute bottom-0"
+              style={{
+                left: i * fanOverlap,
+                transform: fanTransform(i, entry.cards.length),
+                transformOrigin: 'bottom center',
+                zIndex: i,
+              }}
+            >
+              <PlayingCard card={card as any} faceUp size="sm" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {entry.cards.length > 0 && (
+        <span className="text-[8px] text-white/35 tracking-wide">
+          {entry.cards.length} discarded
+        </span>
+      )}
+    </div>
+  );
+}
+
+function DiscardRevealOverlay({
+  discards, timer,
+}: {
+  discards: DiscardEntry[];
+  timer: number | null;
+}) {
+  const count = discards.length;
+  const gridClass = count <= 2
+    ? "flex flex-row flex-wrap gap-6 sm:gap-10 justify-center items-start"
+    : "grid grid-cols-2 gap-4 sm:gap-6";
+
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/82 backdrop-blur-sm px-4">
+      <p className="font-display text-[10px] sm:text-xs uppercase tracking-[0.2em] gold-text mb-5">
+        Cards Discarded
+      </p>
+
+      <div className={gridClass}>
+        {discards.map(entry => (
+          <DiscardGroup key={entry.playerId} entry={entry} />
+        ))}
+      </div>
+
+      {/* Countdown bar */}
+      <div className="mt-6 w-40 sm:w-52 h-[3px] rounded-full bg-white/10 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-[color:var(--color-gold)] transition-all duration-1000 ease-linear"
+          style={{ width: `${((timer ?? 0) / 10) * 100}%` }}
+        />
+      </div>
+      <p className="text-[8px] text-white/30 mt-1.5 uppercase tracking-widest">
+        {timer ?? 0}s
+      </p>
+    </div>
+  );
+}
+
 function ConfirmDialog({
   title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", onConfirm, onCancel,
 }: {
@@ -214,7 +307,7 @@ function CardFan() {
 export default function App() {
   const {
     uiState, roomCode, playerId, isHost, lobbyPlayers, gameState,
-    myTurnData, actionLog, timer, showdownData, selectedDrawCards, hasDiscarded,
+    myTurnData, actionLog, timer, showdownData, discardRevealData, selectedDrawCards, hasDiscarded,
     turnTimer,
     createRoom, joinRoom, startGame, playAction, toggleDrawCard, confirmDiscard, leaveGame,
   } = useSocket();
@@ -352,13 +445,14 @@ export default function App() {
   const opponents = gameState.players.filter(p => p.id !== playerId);
   const phase = gameState.phase;
 
-  const isDrawReveal  = phase === "drawReveal";
-  const isDrawPhase   = phase === "draw";
-  const isShowdown    = phase === "showdown" || showdownData !== null;
-  const isBettingPhase = phase === "firstBetting" || phase === "secondBetting";
-  const isMemoryReveal = phase === "memoryReveal";
-  const isRevealPhase  = isMemoryReveal || isDrawReveal;
-  const myTurnActive  = myTurnData !== null && !isShowdown && !isDrawReveal;
+  const isDrawReveal    = phase === "drawReveal";
+  const isDiscardReveal = phase === "discardReveal";
+  const isDrawPhase     = phase === "draw";
+  const isShowdown      = phase === "showdown" || showdownData !== null;
+  const isBettingPhase  = phase === "firstBetting" || phase === "secondBetting";
+  const isMemoryReveal  = phase === "memoryReveal";
+  const isRevealPhase   = isMemoryReveal || isDrawReveal || isDiscardReveal;
+  const myTurnActive    = myTurnData !== null && !isShowdown && !isDrawReveal && !isDiscardReveal;
   const showDraw      = isDrawPhase && !myPlayer?.folded && !hasDiscarded;
   const showBetting   = myTurnActive && isBettingPhase && !showBetSlider && !!myTurnData;
 
@@ -384,6 +478,11 @@ export default function App() {
       {/* ── REVEAL OVERLAY — absolute z-5, BEHIND cards (z-10/z-20) ─────────── */}
       {isRevealPhase && (
         <div className="absolute inset-0 z-[5] bg-black/55 pointer-events-none" />
+      )}
+
+      {/* ── DISCARD REVEAL OVERLAY ───────────────────────────────────────────── */}
+      {isDiscardReveal && discardRevealData && (
+        <DiscardRevealOverlay discards={discardRevealData.discards} timer={timer} />
       )}
 
       {/* ── SHOWDOWN BANNER ──────────────────────────────────────────────────── */}

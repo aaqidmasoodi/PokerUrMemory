@@ -45,6 +45,8 @@ class GameRoom {
         this.revealTimerInterval = null;
         this.drawSelections = new Map();
         this.playersConfirmed = new Set();
+        this.discardPool = new Map();
+        this.discardRevealInterval = null;
     }
 
     addPlayer(socketId, name) {
@@ -100,6 +102,7 @@ class GameRoom {
         this.selectedCards.clear();
         this.drawSelections = new Map();
         this.playersConfirmed = new Set();
+        this.discardPool = new Map();
 
         this.players.forEach(player => {
             player.hand = [];
@@ -205,7 +208,7 @@ class GameRoom {
                             showCard = true;
                         }
                     }
-                } else if (this.gamePhase === 'firstBetting' || this.gamePhase === 'secondBetting') {
+                } else if (this.gamePhase === 'firstBetting' || this.gamePhase === 'secondBetting' || this.gamePhase === 'discardReveal') {
                     showCard = isSamePlayer;
                 }
 
@@ -459,31 +462,64 @@ class GameRoom {
             const socketId = player.id;
             const selectedIndices = this.drawSelections.get(socketId) || [];
             const discardCount = selectedIndices.length;
-            const newCards = [];
 
+            // Capture discarded cards BEFORE splicing so we can show them to everyone
+            const discardedCards = selectedIndices.map(i => player.hand[i]);
+            this.discardPool.set(socketId, { playerName: player.name, cards: discardedCards });
+
+            // Deal replacement cards
+            const newCards = [];
             for (let i = 0; i < discardCount; i++) {
                 newCards.push(this.deck.pop());
             }
 
+            // Remove discarded cards in reverse-index order, then add replacements
             const sortedIndices = [...selectedIndices].sort((a, b) => b - a);
             sortedIndices.forEach(index => player.hand.splice(index, 1));
             player.hand.push(...newCards);
 
-            // Show first replacement card face-up (regardless of how many were discarded)
+            // Face-up rule: show 1 replacement face-up only when 2+ cards were drawn;
+            // a single drawn card stays face-down (more mystery)
             let faceUpCard = null;
-            if (discardCount > 0 && newCards.length > 0) {
+            if (discardCount > 1 && newCards.length > 0) {
                 newCards[0].faceUp = true;
                 faceUpCard = newCards[0];
-                for (let i = 1; i < newCards.length; i++) {
-                    newCards[i].faceUp = false;
-                }
             }
 
-            this.io.to(this.roomCode).emit('actionLog', `${player.name} discards ${discardCount} card(s).`);
             this.drawSelections.set(socketId, { newCards, faceUpCard, playerName: player.name });
         });
 
-        this.showReplacementCards();
+        // First show the discarded cards, then (after 10s) show replacement cards
+        this.showDiscardReveal();
+    }
+
+    showDiscardReveal() {
+        this.gamePhase = 'discardReveal';
+        this.revealTimer = 10;
+
+        // Build payload — include ALL active players so stand-pat is visible too
+        const discards = this.getActivePlayers().map(player => ({
+            playerId: player.id,
+            playerName: player.name,
+            cards: (this.discardPool.get(player.id)?.cards || []).map(c => ({
+                suit: c.suit,
+                value: c.value,
+            })),
+        }));
+
+        this.io.to(this.roomCode).emit('discardRevealStart', { timer: 10, discards });
+        this.broadcastState();
+
+        this.discardRevealInterval = setInterval(() => {
+            this.revealTimer--;
+            this.io.to(this.roomCode).emit('timerUpdate', this.revealTimer);
+
+            if (this.revealTimer <= 0) {
+                clearInterval(this.discardRevealInterval);
+                this.discardRevealInterval = null;
+                this.showReplacementCards();
+            }
+        }, 1000);
     }
 
     showReplacementCards() {
@@ -617,6 +653,7 @@ class GameRoom {
         if (this.revealTimer) { clearInterval(this.revealTimer); this.revealTimer = null; }
         if (this.drawTimerInterval) { clearInterval(this.drawTimerInterval); this.drawTimerInterval = null; }
         if (this.revealTimerInterval) { clearInterval(this.revealTimerInterval); this.revealTimerInterval = null; }
+        if (this.discardRevealInterval) { clearInterval(this.discardRevealInterval); this.discardRevealInterval = null; }
     }
 
     startShowdown() {
