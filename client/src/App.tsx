@@ -216,7 +216,7 @@ export default function App() {
     uiState, roomCode, playerId, isHost, lobbyPlayers, gameState,
     myTurnData, actionLog, timer, showdownData, selectedDrawCards, hasDiscarded,
     turnTimer,
-    createRoom, joinRoom, startGame, playAction, toggleDrawCard, confirmDiscard,
+    createRoom, joinRoom, startGame, playAction, toggleDrawCard, confirmDiscard, leaveGame,
   } = useSocket();
 
   const [playerNameInput, setPlayerNameInput] = useState("Player");
@@ -377,7 +377,7 @@ export default function App() {
           message="You'll be disconnected from the table. Any chips in the pot will be forfeited."
           confirmLabel="Leave" cancelLabel="Stay"
           onCancel={() => setShowExitDialog(false)}
-          onConfirm={() => window.location.reload()}
+          onConfirm={() => leaveGame()}
         />
       )}
 

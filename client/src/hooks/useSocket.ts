@@ -9,7 +9,6 @@ export interface CardData {
   faceUp: boolean;
   isInitiallyFaceUp?: boolean;
   isInitiallyHidden?: boolean;
-  isHidden?: boolean;
   isReplacement?: boolean;
 }
 
@@ -22,6 +21,7 @@ export interface Player {
   isAllIn: boolean;
   isHost: boolean;
   isCurrentTurn: boolean;
+  disconnected?: boolean;
   hand: CardData[];
 }
 
@@ -46,39 +46,70 @@ export interface YourTurnData {
   minBet: number;
 }
 
-// Inferred UI state
 export type UIState = 'join' | 'lobby' | 'game';
+
+const SESSION_KEY = 'pokermemory_session';
+
+function saveSession(roomCode: string, playerName: string) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ roomCode, playerName }));
+}
+
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function loadSession(): { roomCode: string; playerName: string } | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function useSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
-  
-  // High-level App State
+
   const [uiState, setUiState] = useState<UIState>('join');
   const [roomCode, setRoomCode] = useState<string>('');
   const [playerId, setPlayerId] = useState<string>('');
   const [isHost, setIsHost] = useState<boolean>(false);
   const [lobbyPlayers, setLobbyPlayers] = useState<any[]>([]);
-  
-  // Game State
+
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [myTurnData, setMyTurnData] = useState<YourTurnData | null>(null);
   const [actionLog, setActionLog] = useState<string>('Waiting for game to start...');
   const [timer, setTimer] = useState<number | null>(null);
   const [showdownData, setShowdownData] = useState<any | null>(null);
-  
-  // Client-side interactions
+
   const [selectedDrawCards, setSelectedDrawCards] = useState<number[]>([]);
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
   const [turnTimer, setTurnTimer] = useState<{ playerId: string; timeLeft: number } | null>(null);
 
   useEffect(() => {
-    // We connect to the same host (the express server serves the react app)
     const newSocket = io();
     setSocket(newSocket);
 
-
+    // Attempt reconnect on every new connection (handles page refresh)
+    newSocket.on('connect', () => {
+      const session = loadSession();
+      if (session) {
+        newSocket.emit('playerReconnect', session, (res: any) => {
+          if (res?.success) {
+            setRoomCode(session.roomCode);
+            setPlayerId(res.playerId);
+            setIsHost(res.isHost);
+            setUiState('game');
+          } else {
+            // Session is stale — clear it and stay on join screen
+            clearSession();
+          }
+        });
+      }
+    });
 
     newSocket.on('roomClosed', (msg: string) => {
+      clearSession();
       alert(msg);
       setUiState('join');
       setRoomCode('');
@@ -116,8 +147,13 @@ export function useSocket() {
       setMyTurnData(data);
     });
 
-    newSocket.on('yourTurnNotification', (_data: { message: string, phase: string }) => {
-      // Optional: Toast notification here
+    newSocket.on('yourTurnNotification', () => {
+      // Vibrate on mobile (Android Chrome; iOS Safari ignores this)
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      // Flash the page title so the player notices even in background tabs
+      const original = document.title;
+      document.title = '🃏 Your Turn! — PokerUrMemory';
+      setTimeout(() => { document.title = original; }, 3000);
     });
 
     newSocket.on('actionLog', (msg: string) => {
@@ -131,7 +167,7 @@ export function useSocket() {
     newSocket.on('drawPhaseStart', () => {
       setHasDiscarded(false);
       setSelectedDrawCards([]);
-      setMyTurnData(null); // Hide betting controls
+      setMyTurnData(null);
     });
 
     newSocket.on('drawRevealStart', (_data: any) => {
@@ -149,7 +185,7 @@ export function useSocket() {
       setShowdownData({
         isBluff: true,
         winner: { playerName: data.winner },
-        amount: data.amount
+        amount: data.amount,
       });
       setMyTurnData(null);
       setUiState('game');
@@ -160,7 +196,6 @@ export function useSocket() {
     };
   }, []);
 
-  // Actions
   const createRoom = useCallback((playerName: string) => {
     if (!socket) return;
     socket.emit('createRoom', { playerName }, (response: any) => {
@@ -170,6 +205,7 @@ export function useSocket() {
         setIsHost(response.isHost);
         setUiState('lobby');
         setLobbyPlayers([{ name: playerName, isHost: true, id: response.playerId }]);
+        saveSession(response.roomCode, playerName);
       } else {
         alert('Failed to create room');
       }
@@ -184,7 +220,7 @@ export function useSocket() {
         setPlayerId(response.playerId);
         setIsHost(response.isHost);
         setUiState('lobby');
-        // Will get lobbyUpdate soon
+        saveSession(roomCodeInput, playerName);
       } else {
         alert(response.error || 'Failed to join room');
       }
@@ -209,12 +245,12 @@ export function useSocket() {
   const playAction = useCallback((action: string, amount: number = 0) => {
     if (!socket) return;
     socket.emit('playerAction', { roomCode, action, amount });
-    setMyTurnData(null); // Hide controls optimistically
+    setMyTurnData(null);
   }, [socket, roomCode]);
 
   const toggleDrawCard = useCallback((index: number) => {
     if (hasDiscarded || gameState?.phase !== 'draw') return;
-    
+
     setSelectedDrawCards(prev => {
       const newSet = new Set(prev);
       if (newSet.has(index)) {
@@ -223,12 +259,7 @@ export function useSocket() {
         newSet.add(index);
       }
       const arr = Array.from(newSet);
-      
-      socket?.emit('playerSelectCards', {
-        roomCode,
-        selectedIndices: arr
-      });
-      
+      socket?.emit('playerSelectCards', { roomCode, selectedIndices: arr });
       return arr;
     });
   }, [hasDiscarded, gameState, socket, roomCode]);
@@ -238,6 +269,16 @@ export function useSocket() {
     setHasDiscarded(true);
     socket.emit('playerConfirmDiscard', { roomCode });
   }, [hasDiscarded, socket, roomCode]);
+
+  const leaveGame = useCallback(() => {
+    clearSession();
+    socket?.disconnect();
+    setUiState('join');
+    setRoomCode('');
+    setGameState(null);
+    setMyTurnData(null);
+    setShowdownData(null);
+  }, [socket]);
 
   return {
     socket,
@@ -261,6 +302,7 @@ export function useSocket() {
     nextHand,
     playAction,
     toggleDrawCard,
-    confirmDiscard
+    confirmDiscard,
+    leaveGame,
   };
 }
