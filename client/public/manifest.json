@@ -4,7 +4,7 @@
   "description": "5-Card Draw Poker with a Memory Twist",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "landscape",
+  "orientation": "any",
   "background_color": "#111a14",
   "theme_color": "#111a14",
   "icons": [

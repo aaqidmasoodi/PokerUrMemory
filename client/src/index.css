@@ -159,6 +159,17 @@
 @layer base {
   * {
     border-color: var(--color-border);
+    /* kills double-tap zoom & 300ms click delay on every element */
+    touch-action: manipulation;
+    box-sizing: border-box;
+  }
+
+  html {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
@@ -166,7 +177,33 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    /* lock the body so only explicit scroll containers scroll */
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
+
+  /* allow text selection inside inputs */
+  input, select, textarea {
+    font-size: 16px; /* prevents iOS Safari from zooming on focus */
+    user-select: text;
+    -webkit-user-select: text;
+    touch-action: manipulation;
+  }
+
+  /* safe-area utilities for notch / home indicator */
+  .pt-safe  { padding-top:    env(safe-area-inset-top,    0px); }
+  .pb-safe  { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pl-safe  { padding-left:   env(safe-area-inset-left,   0px); }
+  .pr-safe  { padding-right:  env(safe-area-inset-right,  0px); }
+  .mb-safe  { margin-bottom:  env(safe-area-inset-bottom, 0px); }
 
   .font-display {
     font-family: var(--font-display);
