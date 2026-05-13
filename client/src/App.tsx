@@ -80,9 +80,9 @@ function PhaseBadge({
 // ─── Player seat ─────────────────────────────────────────────────────────────
 
 const SEAT_CFG = {
-  normal:  { pill: "gap-1.5 pl-1 pr-2.5 pt-1 pb-2.5", avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true,  timerH: "h-[6px]" },
-  compact: { pill: "gap-1 pl-0.5 pr-2 pt-0.5 pb-1.5",  avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: false, timerH: "h-[4px]" },
-  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 pt-[1px] pb-[4px]", avatar: "w-4 h-4 text-[6px]",                   name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: false, timerH: "h-[3px]" },
+  normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1",       avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true,  ringPad: 5, numCls: "text-[15px]" },
+  compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5",         avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: false, ringPad: 3, numCls: "text-[11px]" },
+  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 py-[1px]",   avatar: "w-4 h-4 text-[6px]",                           name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: false, ringPad: 2, numCls: "text-[10px]" },
 } as const;
 
 function PlayerSeat({
@@ -94,60 +94,72 @@ function PlayerSeat({
 }) {
   const cfg = SEAT_CFG[size];
   const showRing = active && !folded && turnTimeLeft != null;
-  const timerColor = !showRing ? "transparent"
-    : turnTimeLeft! > 18 ? "#22c55e"
-    : turnTimeLeft! > 10 ? "var(--color-gold)"
-    : "#ef4444";
+  const pct  = showRing ? (turnTimeLeft! / 30) * 100 : 100;
+  const timerColor = showRing
+    ? turnTimeLeft! > 18 ? "#22c55e"
+    : turnTimeLeft! > 10 ? "#f59e0b"
+    : "#ef4444"
+    : "#e2e8f0";
+
+  // Outer wrapper carries the ring; inner pill (fully opaque) masks the gradient center
+  const ringStyle = showRing
+    ? {
+        padding: `${cfg.ringPad}px`,
+        borderRadius: '9999px',
+        background: `conic-gradient(${timerColor} ${pct.toFixed(1)}%, #e2e8f0 ${pct.toFixed(1)}%)`,
+        boxShadow: turnTimeLeft! <= 10 ? `0 0 18px 3px ${timerColor}99` : undefined,
+      }
+    : active && !folded
+    ? { padding: '2px', borderRadius: '9999px', background: '#d4a843', boxShadow: '0 0 14px rgba(212,168,67,0.35)' }
+    : { padding: '1px', borderRadius: '9999px', background: 'rgba(0,0,0,0.10)' };
 
   return (
-    <div className="relative shrink-0 flex flex-col">
-      {active && !folded && turnTimeLeft == null && (
-        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
-      )}
-
-      {/* Pill */}
-      <div className={cn(
-        "relative flex items-center rounded-full bg-white/90 backdrop-blur-md shadow-md transition-all overflow-hidden",
-        cfg.pill,
-        active && !folded ? "gold-border shadow-[0_0_14px_rgba(212,168,67,0.35)]" : "border border-black/10",
-        folded && "opacity-40 grayscale",
-      )}>
-        <div className={cn(
-          "shrink-0 rounded-full grid place-items-center font-display font-bold bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-white",
-          cfg.avatar,
-        )}>
-          {avatar}
-        </div>
-        <div className="flex flex-col leading-none">
-          <span className={cn("font-display font-semibold uppercase truncate text-foreground/90", cfg.name)}>
-            {name}
-          </span>
-          <span className={cn("font-bold gold-text", cfg.chips)}>
-            ${chips.toLocaleString()}
-          </span>
-        </div>
-        {cfg.showBet && typeof bet === "number" && bet > 0 && (
-          <span className="text-[6px] sm:text-[8px] text-[color:var(--color-gold)] pl-1.5 border-l border-black/10 leading-none whitespace-nowrap">
-            <span className="block opacity-60 tracking-wider text-[5px] uppercase">bet</span>
-            ${bet}
-          </span>
+    <div className="shrink-0 flex flex-col items-center gap-1">
+      {/* Ring wrapper + pill */}
+      <div className="relative" style={ringStyle}>
+        {/* Pulsing dot when it's this player's turn but no per-player timer yet */}
+        {active && !folded && !showRing && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
         )}
 
-        {/* Integrated timer bar — clipped by pill's overflow-hidden + rounded-full */}
-        <div className={cn("absolute bottom-0 left-0 right-0 bg-black/[0.07]", cfg.timerH)}>
-          {showRing && (
-            <div
-              className={cn("h-full", cfg.timerH)}
-              style={{
-                width: `${(turnTimeLeft! / 30) * 100}%`,
-                backgroundColor: timerColor,
-                boxShadow: turnTimeLeft! <= 10 ? `0 0 8px ${timerColor}cc` : 'none',
-                transition: "width 0.9s linear, background-color 0.5s ease",
-              }}
-            />
+        {/* Pill — bg-white (fully opaque) so it masks the gradient centre */}
+        <div className={cn(
+          "flex items-center rounded-full bg-white shadow-md",
+          cfg.pill,
+          folded && "opacity-40 grayscale",
+        )}>
+          <div className={cn(
+            "shrink-0 rounded-full grid place-items-center font-display font-bold bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-white",
+            cfg.avatar,
+          )}>
+            {avatar}
+          </div>
+          <div className="flex flex-col leading-none">
+            <span className={cn("font-display font-semibold uppercase truncate text-foreground/90", cfg.name)}>
+              {name}
+            </span>
+            <span className={cn("font-bold gold-text", cfg.chips)}>
+              ${chips.toLocaleString()}
+            </span>
+          </div>
+          {cfg.showBet && typeof bet === "number" && bet > 0 && (
+            <span className="text-[6px] sm:text-[8px] text-[color:var(--color-gold)] pl-1.5 border-l border-black/10 leading-none whitespace-nowrap">
+              <span className="block opacity-60 tracking-wider text-[5px] uppercase">bet</span>
+              ${bet}
+            </span>
           )}
         </div>
       </div>
+
+      {/* Large countdown number — very readable, colour-coded */}
+      {showRing && (
+        <span
+          className={cn("font-display font-black leading-none tabular-nums", cfg.numCls)}
+          style={{ color: timerColor, textShadow: `0 0 10px ${timerColor}66` }}
+        >
+          {turnTimeLeft}s
+        </span>
+      )}
     </div>
   );
 }
@@ -725,7 +737,7 @@ export default function App() {
       {/* ── HERO AREA ── */}
       {myPlayer && (
         <div
-          className="absolute right-[100px] sm:right-[136px] z-20 flex items-center gap-2"
+          className="absolute right-[100px] sm:right-[136px] z-20 flex items-start gap-2"
           style={{
             bottom: 'calc(10% + env(safe-area-inset-bottom, 0px))',
             left:   'calc(1rem + env(safe-area-inset-left, 0px))',
