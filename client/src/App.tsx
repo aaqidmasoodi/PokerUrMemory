@@ -28,6 +28,10 @@ function randomUsername() {
 
 type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "discardReveal" | "drawReveal" | "secondBetting" | "showdown";
 
+function playSound(file: string, volume = 0.55) {
+  try { const a = new Audio(`/sounds/${file}`); a.volume = volume; a.play().catch(() => {}); } catch {}
+}
+
 // ─── Phase badge ─────────────────────────────────────────────────────────────
 
 function PhaseBadge({
@@ -130,11 +134,15 @@ function PlayerSeat({
           cfg.pill,
           folded && "opacity-40 grayscale",
         )}>
-          <div className={cn(
-            "shrink-0 rounded-full grid place-items-center font-display font-bold bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-white",
-            cfg.avatar,
-          )}>
-            {avatar}
+          <div
+            className={cn(
+              "shrink-0 rounded-full grid place-items-center font-display font-bold text-white",
+              cfg.avatar,
+              !showRing && "bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)]",
+            )}
+            style={showRing ? { backgroundColor: timerColor } : undefined}
+          >
+            {showRing ? <span className="font-black tabular-nums">{turnTimeLeft}</span> : avatar}
           </div>
           {/* Name + chips — stay in DOM to hold pill width; hidden behind flash overlay */}
           <div className="relative flex flex-col leading-none">
@@ -165,15 +173,6 @@ function PlayerSeat({
         </div>
       </div>
 
-      {/* Large countdown number — very readable, colour-coded */}
-      {showRing && (
-        <span
-          className={cn("font-display font-black leading-none tabular-nums text-white", cfg.numCls)}
-          style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
-        >
-          {turnTimeLeft}s
-        </span>
-      )}
     </div>
   );
 }
@@ -380,12 +379,23 @@ export default function App() {
       else if (rest.startsWith('goes all'))  { label = 'ALL IN!'; color = '#dc2626'; }
       if (label) {
         setFlashAction({ playerId: p.id, label, color });
+        playSound(label === 'FOLD' ? 'player_fold.wav' : 'player_bet.wav');
         const t = setTimeout(() => setFlashAction(null), 2500);
         return () => clearTimeout(t);
       }
       break;
     }
   }, [actionLog]);
+
+  const prevPhaseRef = useRef<string | null>(null);
+  useEffect(() => {
+    const phase = gameState?.phase;
+    if (!phase || phase === prevPhaseRef.current) return;
+    if (phase === 'memoryReveal' || phase === 'drawReveal' || phase === 'discardReveal') {
+      playSound('card_flip.wav');
+    }
+    prevPhaseRef.current = phase;
+  }, [gameState?.phase]);
 
   function copyRoomCode() {
     navigator.clipboard?.writeText(roomCode).then(() => {
