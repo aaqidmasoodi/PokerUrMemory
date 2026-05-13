@@ -5,7 +5,7 @@ import { ChipStack } from "./components/poker/ChipStack";
 import { Button } from "./components/ui/button";
 import { Slider } from "./components/ui/slider";
 import { cn } from "./lib/utils";
-import { Clock, Eye, LogOut, Copy, Check, RefreshCw } from "lucide-react";
+import { Clock, Eye, LogOut, Copy, Check, RefreshCw, Volume2, VolumeX, ScrollText, ArrowLeft, X } from "lucide-react";
 
 // ─── Random username generator ────────────────────────────────────────────────
 
@@ -28,7 +28,9 @@ function randomUsername() {
 
 type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "discardReveal" | "drawReveal" | "secondBetting" | "showdown";
 
+let _globalMuted = false;
 function playSound(file: string, volume = 0.55) {
+  if (_globalMuted) return;
   try { const a = new Audio(`/sounds/${file}`); a.volume = volume; a.play().catch(() => {}); } catch {}
 }
 
@@ -157,8 +159,8 @@ function PlayerSeat({
             </span>
             {flashLabel && (
               <span
-                className={cn("absolute inset-0 flex items-center font-display font-black uppercase tracking-wide", cfg.flashCls)}
-                style={{ color: flashColor }}
+                className={cn("absolute inset-0 flex items-center justify-center font-display font-black uppercase tracking-wide rounded-full bg-white/95", cfg.flashCls)}
+                style={{ color: flashColor ?? '#111', border: `1.5px solid ${flashColor ?? '#ccc'}` }}
               >
                 {flashLabel}
               </span>
@@ -213,7 +215,7 @@ function fanTransform(index: number, total: number): string {
   return `rotate(${angle}deg) translateY(${lift}px)`;
 }
 
-function DiscardGroup({ entry }: { entry: DiscardEntry }) {
+function DiscardGroup({ entry, myPlayerId }: { entry: DiscardEntry; myPlayerId: string }) {
   const cardWidth = 36;
   const fanOverlap = 28;
   const containerW = entry.cards.length <= 1
@@ -222,8 +224,13 @@ function DiscardGroup({ entry }: { entry: DiscardEntry }) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <span className="text-[9px] uppercase tracking-widest font-display gold-text bg-white/90 px-2 py-0.5 rounded-full gold-border whitespace-nowrap shadow-sm">
-        {entry.playerName}
+      <span className={cn(
+        "text-[9px] uppercase tracking-widest font-display px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm",
+        entry.playerId === myPlayerId
+          ? "bg-[color:var(--color-blue)] text-white border border-[color:var(--color-blue-soft)]"
+          : "gold-text bg-white/90 gold-border",
+      )}>
+        {entry.playerId === myPlayerId ? "You" : entry.playerName}
       </span>
 
       {entry.cards.length === 0 ? (
@@ -259,10 +266,11 @@ function DiscardGroup({ entry }: { entry: DiscardEntry }) {
 }
 
 function DiscardRevealOverlay({
-  discards, timer,
+  discards, timer, myPlayerId,
 }: {
   discards: DiscardEntry[];
   timer: number | null;
+  myPlayerId: string;
 }) {
   const count = discards.length;
   const gridClass = count <= 2
@@ -277,7 +285,7 @@ function DiscardRevealOverlay({
 
       <div className={gridClass}>
         {discards.map(entry => (
-          <DiscardGroup key={entry.playerId} entry={entry} />
+          <DiscardGroup key={entry.playerId} entry={entry} myPlayerId={myPlayerId} />
         ))}
       </div>
 
@@ -343,8 +351,8 @@ export default function App() {
   const {
     uiState, roomCode, playerId, isHost, lobbyPlayers, gameState,
     myTurnData, actionLog, timer, showdownData, discardRevealData, selectedDrawCards, hasDiscarded,
-    turnTimer,
-    createRoom, joinRoom, startGame, playAction, toggleDrawCard, confirmDiscard, leaveGame,
+    turnTimer, gameLogs,
+    createRoom, joinRoom, startGame, playAction, toggleDrawCard, confirmDiscard, leaveLobby, leaveGame,
   } = useSocket();
 
   const [playerNameInput, setPlayerNameInput] = useState(() => randomUsername());
@@ -353,6 +361,10 @@ export default function App() {
   const [showBetSlider, setShowBetSlider] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [showLog, setShowLog] = useState(false);
+
+  useEffect(() => { _globalMuted = muted; }, [muted]);
 
   useEffect(() => {
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
@@ -577,6 +589,14 @@ export default function App() {
           className="shrink-0 landscape:w-[42%] flex flex-col landscape:justify-center gap-3 px-5 landscape:px-6 pb-4 landscape:pb-6 border-b landscape:border-b-0 landscape:border-r border-black/[0.07] bg-white/40"
           style={{ paddingTop: `calc(1.1rem + env(safe-area-inset-top, 0px))`, paddingLeft: `env(safe-area-inset-left, 0px)` }}
         >
+          <button
+            onClick={leaveLobby}
+            className="flex items-center gap-1.5 self-start text-[10px] font-display tracking-wider uppercase text-gray-500 hover:text-[color:var(--color-blue)] transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back
+          </button>
+
           <div className="flex landscape:flex-col items-center landscape:items-start justify-between landscape:justify-start gap-3 landscape:gap-2">
             <div>
               <p className="text-[9px] text-[color:var(--color-blue)] tracking-[0.3em] uppercase mb-0.5 opacity-70">Room Code</p>
@@ -656,18 +676,16 @@ export default function App() {
 
   const currentTurnPlayer = gameState.players.find(p => p.isCurrentTurn && !p.folded);
   const infoMsg = (() => {
-    if ((myTurnActive && isBettingPhase) || (myTurnActive && !isBettingPhase))
-      return { text: "Your Turn!", urgent: true };
-    if (showDraw)
-      return { text: "Pick Cards to Discard", urgent: true };
-    if (currentTurnPlayer && !isShowdown) {
+    if (isMemoryReveal)  return { text: "Memorise the Cards!",  urgent: false };
+    if (isDrawReveal)    return { text: "Memorise Drawn Cards",  urgent: false };
+    if (isDiscardReveal) return { text: "Showing Discards…",    urgent: false };
+    if (isShowdown)      return { text: "Showdown!",             urgent: false };
+    if (myTurnActive)    return { text: "Your Turn!", urgent: true };
+    if (showDraw)        return { text: "Pick Cards to Discard", urgent: true };
+    if (currentTurnPlayer) {
       if (currentTurnPlayer.id === playerId) return { text: "Your Turn!", urgent: true };
       return { text: `${currentTurnPlayer.name}'s Turn`, urgent: false };
     }
-    if (isMemoryReveal)  return { text: "Memorise Your Cards!", urgent: false };
-    if (isDrawReveal)    return { text: "New Cards Revealed!",   urgent: false };
-    if (isDiscardReveal) return { text: "Showing Discards…",    urgent: false };
-    if (isShowdown)      return { text: "Showdown!",             urgent: false };
     return { text: actionLog, urgent: false };
   })();
 
@@ -692,7 +710,7 @@ export default function App() {
 
       {/* ── DISCARD REVEAL OVERLAY ── */}
       {isDiscardReveal && discardRevealData && (
-        <DiscardRevealOverlay discards={discardRevealData.discards} timer={timer} />
+        <DiscardRevealOverlay discards={discardRevealData.discards} timer={timer} myPlayerId={playerId} />
       )}
 
       {/* ── SHOWDOWN BANNER ── */}
@@ -734,16 +752,41 @@ export default function App() {
           right: 'calc(0.625rem + env(safe-area-inset-right, 0px))',
         }}
       >
+        {/* Left: exit + mute */}
         <div className="flex items-center gap-1.5 pointer-events-auto">
-          <button onClick={() => setShowExitDialog(true)}
-            className="w-7 h-7 grid place-items-center rounded-full bg-white/80 gold-border shadow-sm shrink-0">
+          <button
+            onClick={() => setShowExitDialog(true)}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-white/90 gold-border shadow-sm shrink-0"
+          >
             <LogOut className="w-3 h-3 text-[color:var(--color-gold)] rotate-180" />
+            <span className="font-display text-[9px] tracking-wider uppercase gold-text font-semibold">Exit Game</span>
           </button>
-          <span className="font-display text-[7px] tracking-[0.25em] text-[color:var(--color-gold)] bg-white/70 px-2 py-0.5 rounded-full border border-black/10 shadow-sm whitespace-nowrap">
+          <button
+            onClick={() => setMuted(m => !m)}
+            className="w-8 h-8 grid place-items-center rounded-full bg-white/80 gold-border shadow-sm shrink-0"
+            title={muted ? "Unmute" : "Mute"}
+          >
+            {muted
+              ? <VolumeX className="w-3.5 h-3.5 text-gray-400" />
+              : <Volume2 className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
+            }
+          </button>
+        </div>
+
+        {/* Right: room code + phase badge + log */}
+        <div className="flex items-start gap-1.5 pointer-events-auto">
+          <span className="font-display text-[7px] tracking-[0.25em] text-[color:var(--color-gold)] bg-white/70 px-2 py-0.5 rounded-full border border-black/10 shadow-sm whitespace-nowrap self-center">
             {roomCode}
           </span>
+          <PhaseBadge phase={phase} timer={timer} />
+          <button
+            onClick={() => setShowLog(l => !l)}
+            className="w-8 h-8 grid place-items-center rounded-full bg-white/90 gold-border shadow-sm shrink-0"
+            title="Game Log"
+          >
+            <ScrollText className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
+          </button>
         </div>
-        <PhaseBadge phase={phase} timer={timer} />
       </div>
 
       {/* ── FELT TABLE OVAL ── */}
@@ -762,8 +805,8 @@ export default function App() {
         {opponents.map((opp, idx) => {
           const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
           const seatSize = opponents.length >= 3 ? "mini" : opponents.length >= 2 ? "compact" : "normal";
-          const cardSize = opponents.length >= 2 ? "xs" : "sm";
-          const cardSpacing = opponents.length >= 3 ? "-space-x-1.5" : "-space-x-1";
+          const cardSize = "sm";
+          const cardSpacing = opponents.length >= 3 ? "-space-x-3" : opponents.length >= 2 ? "-space-x-2" : "-space-x-1";
           return (
             <div key={idx} className="flex flex-col items-center gap-0.5">
               <PlayerSeat
@@ -902,6 +945,42 @@ export default function App() {
             />
           </>
         )}
+      </div>
+
+      {/* ── GAME LOG PANEL ── */}
+      {showLog && (
+        <div
+          className="fixed inset-0 z-[200]"
+          onClick={() => setShowLog(false)}
+        />
+      )}
+      <div
+        className={cn(
+          "fixed top-0 right-0 h-full z-[210] w-[280px] sm:w-[320px] flex flex-col",
+          "bg-white/97 border-l border-[color:var(--color-gold)]/30 shadow-2xl backdrop-blur-xl",
+          "transform transition-transform duration-300 ease-out",
+          showLog ? "translate-x-0" : "translate-x-full",
+        )}
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.07]">
+          <span className="font-display text-xs tracking-widest uppercase gold-text font-semibold">Game Log</span>
+          <button onClick={() => setShowLog(false)} className="w-7 h-7 grid place-items-center rounded-full hover:bg-gray-100">
+            <X className="w-3.5 h-3.5 text-gray-500" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-2 space-y-1.5">
+          {gameLogs.length === 0 ? (
+            <p className="text-[10px] text-gray-400 text-center mt-6 italic">No rounds played yet…</p>
+          ) : gameLogs.map((log, i) => (
+            <div key={i} className={cn(
+              "text-[10px] leading-snug px-2.5 py-2 rounded-lg",
+              i === 0 ? "bg-[color:var(--color-gold)]/10 border border-[color:var(--color-gold)]/25 font-semibold" : "bg-gray-50 border border-black/[0.05]",
+            )}>
+              {log}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ── BET SLIDER ── */}

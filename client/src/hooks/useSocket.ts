@@ -97,6 +97,7 @@ export function useSocket() {
   const [selectedDrawCards, setSelectedDrawCards] = useState<number[]>([]);
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
   const [turnTimer, setTurnTimer] = useState<{ playerId: string; timeLeft: number } | null>(null);
+  const [gameLogs, setGameLogs] = useState<string[]>([]);
 
   useEffect(() => {
     const newSocket = io();
@@ -199,6 +200,8 @@ export function useSocket() {
       setShowdownData(data);
       setMyTurnData(null);
       setUiState('game');
+      const handStr = data.hands?.map((h: any) => `${h.playerName}: ${h.rankName}`).join(' · ');
+      setGameLogs(prev => [`${data.winner.playerName} wins $${data.pot} with ${data.winner.rankName}${handStr ? ' — ' + handStr : ''}`, ...prev].slice(0, 60));
     });
 
     newSocket.on('bluffWin', (data: any) => {
@@ -209,6 +212,11 @@ export function useSocket() {
       });
       setMyTurnData(null);
       setUiState('game');
+      setGameLogs(prev => [`${data.winner} wins $${data.amount} (all others folded)`, ...prev].slice(0, 60));
+    });
+
+    newSocket.on('gameOver', (data: any) => {
+      setGameLogs(prev => [`🏆 GAME OVER — ${data.winnerName} wins with $${data.chips}!`, ...prev].slice(0, 60));
     });
 
     return () => {
@@ -291,6 +299,14 @@ export function useSocket() {
     socket.emit('playerConfirmDiscard', { roomCode });
   }, [hasDiscarded, socket, roomCode]);
 
+  const leaveLobby = useCallback(() => {
+    clearSession();
+    if (socket && roomCode) socket.emit('leaveRoom', { roomCode });
+    setUiState('join');
+    setRoomCode('');
+    setLobbyPlayers([]);
+  }, [socket, roomCode]);
+
   const leaveGame = useCallback(() => {
     clearSession();
     socket?.disconnect();
@@ -318,6 +334,7 @@ export function useSocket() {
     hasDiscarded,
     turnTimer,
 
+    gameLogs,
     createRoom,
     joinRoom,
     startGame,
@@ -325,6 +342,7 @@ export function useSocket() {
     playAction,
     toggleDrawCard,
     confirmDiscard,
+    leaveLobby,
     leaveGame,
   };
 }

@@ -386,6 +386,26 @@ class GameRoom {
         this.showBluffWin(winner);
     }
 
+    eliminateBrokePlayers() {
+        const broke = Array.from(this.players.values()).filter(p => p.chips === 0);
+        broke.forEach(p => {
+            this.io.to(this.roomCode).emit('actionLog', `${p.name} is out of chips and eliminated!`);
+            this.players.delete(p.id);
+        });
+        return broke.length;
+    }
+
+    endGame() {
+        this.clearAllTimers();
+        const players = Array.from(this.players.values());
+        const winner = players.find(p => p.chips > 0) || players[0];
+        const msg = winner
+            ? `🏆 Game Over! ${winner.name} wins with $${winner.chips}!`
+            : 'Game Over!';
+        this.io.to(this.roomCode).emit('gameOver', { winnerName: winner?.name, chips: winner?.chips });
+        setTimeout(() => this.io.to(this.roomCode).emit('roomClosed', msg), 4000);
+    }
+
     showBluffWin(winner) {
         this.clearTurnTimer();
         winner.chips += this.pot;
@@ -398,7 +418,11 @@ class GameRoom {
         this.gamePhase = 'showdown';
         this.broadcastState();
         setTimeout(() => this.broadcastLeaderboard(), 100);
-        setTimeout(() => this.startNewHand(), 5000);
+        setTimeout(() => {
+            this.eliminateBrokePlayers();
+            if (this.players.size <= 1) { this.endGame(); return; }
+            this.startNewHand();
+        }, 5000);
     }
 
     broadcastLeaderboard() {
@@ -698,7 +722,11 @@ class GameRoom {
         this.pot = 0;
         this.broadcastState();
         setTimeout(() => this.broadcastLeaderboard(), 100);
-        setTimeout(() => this.startNewHand(), 7000);
+        setTimeout(() => {
+            this.eliminateBrokePlayers();
+            if (this.players.size <= 1) { this.endGame(); return; }
+            this.startNewHand();
+        }, 7000);
     }
 }
 

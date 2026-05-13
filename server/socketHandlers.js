@@ -110,6 +110,23 @@ function setupSocketHandlers(io, rooms) {
             room.playerConfirmDiscard(socket.id);
         });
 
+        socket.on('leaveRoom', (data) => {
+            const room = rooms.get(data.roomCode);
+            if (!room) return;
+            const isEmpty = room.removePlayer(socket.id);
+            socket.leave(data.roomCode);
+            if (isEmpty) {
+                room.clearAllTimers();
+                rooms.delete(data.roomCode);
+            } else {
+                io.to(data.roomCode).emit('lobbyUpdate', {
+                    players: Array.from(room.players.values()).map(p => ({
+                        id: p.id, name: p.name, chips: p.chips, isHost: p.isHost,
+                    })),
+                });
+            }
+        });
+
         socket.on('nextHand', (data, callback) => {
             const room = rooms.get(data.roomCode);
             if (!room) { callback({ success: false, error: 'Room not found' }); return; }
