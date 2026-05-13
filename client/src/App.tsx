@@ -189,7 +189,7 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "h-9 rounded-xl font-display tracking-wider uppercase text-[9px] font-bold transition-all px-3",
+        "h-12 rounded-xl font-display tracking-wider uppercase text-[12px] font-bold transition-all px-3",
         variant === "primary"
           ? "bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
           : "bg-white/90 text-[color:var(--color-blue)] blue-border hover:bg-white shadow-sm",
@@ -206,16 +206,16 @@ function ActionButton({
 
 function fanTransform(index: number, total: number): string {
   if (total <= 1) return '';
-  const maxAngle = Math.min((total - 1) * 6, 18);
+  const maxAngle = Math.min((total - 1) * 10, 36);
   const step = maxAngle / (total - 1);
   const angle = -maxAngle / 2 + step * index;
-  const lift = Math.abs(angle) * 0.4;
+  const lift = Math.abs(angle) * 0.5;
   return `rotate(${angle}deg) translateY(${lift}px)`;
 }
 
 function DiscardGroup({ entry }: { entry: DiscardEntry }) {
   const cardWidth = 36;
-  const fanOverlap = 18;
+  const fanOverlap = 28;
   const containerW = entry.cards.length <= 1
     ? cardWidth
     : cardWidth + fanOverlap * (entry.cards.length - 1);
@@ -227,11 +227,11 @@ function DiscardGroup({ entry }: { entry: DiscardEntry }) {
       </span>
 
       {entry.cards.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-[62px]">
+        <div className="flex flex-col items-center justify-center h-[82px]">
           <span className="text-[9px] text-gray-500 italic tracking-wide">Stand Pat</span>
         </div>
       ) : (
-        <div className="relative" style={{ width: containerW, height: 62 }}>
+        <div className="relative" style={{ width: containerW, height: 82 }}>
           {entry.cards.map((card, i) => (
             <div
               key={i}
@@ -391,7 +391,10 @@ export default function App() {
   useEffect(() => {
     const phase = gameState?.phase;
     if (!phase || phase === prevPhaseRef.current) return;
-    if (phase === 'memoryReveal' || phase === 'drawReveal' || phase === 'discardReveal') {
+    if (phase === 'memoryReveal') {
+      setFlashAction(null); // clear stale action flash at round start
+      playSound('card_flip.wav');
+    } else if (phase === 'drawReveal' || phase === 'discardReveal') {
       playSound('card_flip.wav');
     }
     prevPhaseRef.current = phase;
@@ -819,7 +822,7 @@ export default function App() {
       {/* ── HERO AREA ── */}
       {myPlayer && (
         <div
-          className="absolute right-[100px] sm:right-[136px] z-20 flex items-start gap-2"
+          className="absolute right-[120px] sm:right-[152px] z-20 flex items-start gap-2"
           style={{
             bottom: 'calc(10% + env(safe-area-inset-bottom, 0px))',
             left:   'calc(1rem + env(safe-area-inset-left, 0px))',
@@ -852,7 +855,7 @@ export default function App() {
 
       {/* ── FIXED ACTION BAR ── */}
       <div
-        className="fixed z-40 flex flex-col gap-1.5 items-stretch w-[92px] sm:w-[120px]"
+        className="fixed z-40 flex flex-col gap-1.5 items-stretch w-[112px] sm:w-[140px]"
         style={{
           bottom: 'calc(0.625rem + env(safe-area-inset-bottom, 0px))',
           right:  'calc(0.625rem + env(safe-area-inset-right, 0px))',
@@ -860,7 +863,7 @@ export default function App() {
       >
         {showDraw && (
           <>
-            <p className="font-display text-[6px] tracking-widest uppercase blue-text text-center bg-white/90 px-1.5 py-0.5 rounded-full blue-border leading-tight shadow-sm">
+            <p className="font-display text-[9px] tracking-widest uppercase blue-text text-center bg-white/90 px-2 py-1 rounded-full blue-border leading-tight shadow-sm">
               Discard {selectedDrawCards.length}/4
             </p>
             <ActionButton
@@ -904,7 +907,7 @@ export default function App() {
       {/* ── BET SLIDER ── */}
       <div
         className={cn(
-          "fixed z-[110] w-[172px] sm:w-[210px]",
+          "fixed z-[110] w-[224px] sm:w-[264px]",
           "bg-white/97 border border-[color:var(--color-gold)]/40 rounded-2xl p-3.5 backdrop-blur-2xl shadow-xl",
           "transform transition-all duration-300 ease-out",
           showBetSlider ? "translate-x-0 opacity-100" : "translate-x-[120%] opacity-0 pointer-events-none",
@@ -914,7 +917,7 @@ export default function App() {
           right:  'calc(0.625rem + env(safe-area-inset-right, 0px))',
         }}
       >
-        <p className="font-display text-[7px] tracking-widest uppercase text-gray-500 mb-1">
+        <p className="font-display text-[9px] tracking-widest uppercase text-gray-500 mb-1">
           {myTurnData?.currentBet === 0 ? "Bet Amount" : "Raise To"}
         </p>
         <div className="pt-4 mb-3">
@@ -939,7 +942,7 @@ export default function App() {
             val = Math.min(val, myTurnData ? myTurnData.maxBet : 100);
             return (
               <button key={idx} onClick={() => setRaiseAmount([val])}
-                className="py-1 text-[7px] font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 uppercase tracking-wider transition-colors">
+                className="py-2.5 text-[11px] font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 uppercase tracking-wider transition-colors">
                 {label}
               </button>
             );
