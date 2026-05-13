@@ -775,9 +775,6 @@ export default function App() {
 
         {/* Right: room code + phase badge + log */}
         <div className="flex items-start gap-1.5 pointer-events-auto">
-          <span className="font-display text-[7px] tracking-[0.25em] text-[color:var(--color-gold)] bg-white/70 px-2 py-0.5 rounded-full border border-black/10 shadow-sm whitespace-nowrap self-center">
-            {roomCode}
-          </span>
           <PhaseBadge phase={phase} timer={timer} />
           <button
             onClick={() => setShowLog(l => !l)}
