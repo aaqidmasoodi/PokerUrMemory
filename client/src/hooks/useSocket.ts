@@ -234,13 +234,14 @@ export function useSocket() {
 
   const joinRoom = useCallback((roomCodeInput: string, playerName: string) => {
     if (!socket) return;
-    socket.emit('joinRoom', { roomCode: roomCodeInput, playerName }, (response: any) => {
+    const normalizedCode = roomCodeInput.trim().toUpperCase();
+    socket.emit('joinRoom', { roomCode: normalizedCode, playerName }, (response: any) => {
       if (response.success) {
-        setRoomCode(roomCodeInput);
+        setRoomCode(normalizedCode);
         setPlayerId(response.playerId);
         setIsHost(response.isHost);
         setUiState('lobby');
-        saveSession(roomCodeInput, playerName);
+        saveSession(normalizedCode, playerName);
       } else {
         alert(response.error || 'Failed to join room');
       }

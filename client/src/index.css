@@ -73,39 +73,43 @@
   --color-chip-blue: var(--chip-blue);
   --color-chip-teal: var(--chip-teal);
   --color-chip-black: var(--chip-black);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
 }
 
 :root {
   --radius: 0.75rem;
-  /* Casino night palette */
-  --background: oklch(0.16 0.025 150);
-  --foreground: oklch(0.96 0.02 90);
-  --card: oklch(0.22 0.03 150);
-  --card-foreground: oklch(0.96 0.02 90);
-  --popover: oklch(0.18 0.025 150);
-  --popover-foreground: oklch(0.96 0.02 90);
-  --primary: oklch(0.78 0.14 85);
-  --primary-foreground: oklch(0.18 0.03 150);
-  --secondary: oklch(0.28 0.04 150);
-  --secondary-foreground: oklch(0.96 0.02 90);
-  --muted: oklch(0.26 0.03 150);
-  --muted-foreground: oklch(0.72 0.03 90);
-  --accent: oklch(0.78 0.14 85);
-  --accent-foreground: oklch(0.18 0.03 150);
+  /* Light steel-blue poker palette */
+  --background: oklch(0.95 0.025 232);
+  --foreground: oklch(0.13 0.05 240);
+  --card: oklch(0.99 0.006 230);
+  --card-foreground: oklch(0.13 0.05 240);
+  --popover: oklch(0.99 0.006 230);
+  --popover-foreground: oklch(0.13 0.05 240);
+  --primary: oklch(0.74 0.14 83);
+  --primary-foreground: oklch(0.99 0.006 230);
+  --secondary: oklch(0.90 0.03 232);
+  --secondary-foreground: oklch(0.13 0.05 240);
+  --muted: oklch(0.92 0.02 232);
+  --muted-foreground: oklch(0.46 0.05 235);
+  --accent: oklch(0.74 0.14 83);
+  --accent-foreground: oklch(0.99 0.006 230);
   --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.32 0.04 150);
-  --input: oklch(0.28 0.04 150);
-  --ring: oklch(0.78 0.14 85);
+  --destructive-foreground: oklch(0.99 0.006 230);
+  --border: oklch(0.84 0.04 232);
+  --input: oklch(0.99 0.006 230);
+  --ring: oklch(0.74 0.14 83);
   /* Felt + gold + chips */
-  --felt: oklch(0.32 0.08 155);
-  --felt-deep: oklch(0.20 0.06 155);
-  --gold: oklch(0.80 0.15 85);
-  --gold-soft: oklch(0.68 0.12 80);
+  --felt: oklch(0.50 0.13 210);
+  --felt-deep: oklch(0.36 0.11 218);
+  --gold: oklch(0.74 0.14 83);
+  --gold-soft: oklch(0.60 0.13 76);
   --chip-red: oklch(0.55 0.22 25);
   --chip-blue: oklch(0.50 0.18 245);
-  --chip-teal: oklch(0.65 0.14 185);
-  --chip-black: oklch(0.20 0.02 150);
+  --chip-teal: oklch(0.60 0.14 185);
+  --chip-black: oklch(0.18 0.04 240);
+  --blue: oklch(0.52 0.22 255);
+  --blue-soft: oklch(0.38 0.20 260);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -213,7 +217,7 @@
   /* Poker table felt with vignette */
   .felt-surface {
     background:
-      radial-gradient(ellipse at center, var(--color-felt) 0%, var(--color-felt-deep) 75%, oklch(0.10 0.04 155) 100%),
+      radial-gradient(ellipse at center, var(--color-felt) 0%, var(--color-felt-deep) 75%, oklch(0.10 0.05 225) 100%),
       repeating-radial-gradient(circle at 50% 50%, transparent 0 2px, color-mix(in oklab, black 6%, transparent) 2px 3px);
     box-shadow:
       inset 0 0 60px rgba(0,0,0,0.55),
@@ -222,7 +226,7 @@
   }
 
   .gold-text {
-    background: linear-gradient(180deg, oklch(0.92 0.13 88), oklch(0.62 0.14 75));
+    background: linear-gradient(180deg, oklch(0.72 0.16 86), oklch(0.50 0.15 73));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -233,6 +237,20 @@
     box-shadow:
       0 0 0 1px color-mix(in oklab, black 40%, transparent),
       0 0 18px -4px color-mix(in oklab, var(--color-gold) 50%, transparent);
+  }
+
+  .blue-text {
+    background: linear-gradient(180deg, oklch(0.58 0.22 252), oklch(0.38 0.20 260));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .blue-border {
+    border: 1px solid color-mix(in oklab, var(--color-blue) 60%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, black 25%, transparent),
+      0 0 14px -4px color-mix(in oklab, var(--color-blue) 45%, transparent);
   }
 
   /* Playing card back pattern */
@@ -252,7 +270,7 @@
 
   .card-face {
     background: linear-gradient(180deg, #fdfaf3 0%, #f3ecd9 100%);
-    color: oklch(0.18 0.03 150);
+    color: oklch(0.18 0.04 240);
     border: 1px solid color-mix(in oklab, var(--color-gold) 70%, transparent);
     box-shadow:
       0 6px 18px rgba(0,0,0,0.55),

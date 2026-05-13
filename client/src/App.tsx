@@ -5,11 +5,30 @@ import { ChipStack } from "./components/poker/ChipStack";
 import { Button } from "./components/ui/button";
 import { Slider } from "./components/ui/slider";
 import { cn } from "./lib/utils";
-import { Clock, Eye, LogOut, Copy, Check } from "lucide-react";
+import { Clock, Eye, LogOut, Copy, Check, RefreshCw } from "lucide-react";
+
+// ─── Random username generator ────────────────────────────────────────────────
+
+const _ADJ = [
+  "Wild","Silent","Dark","Lucky","Iron","Steel","Phantom","Shadow",
+  "Rogue","Slick","Neon","Sharp","Ghost","Swift","Ace","Bold",
+  "Sly","Cold","Crazy","Bluff",
+];
+const _NOUN = [
+  "Shark","Fox","Hustler","Dealer","Maverick","Joker","Trickster",
+  "Gambler","Wolf","Viper","Tiger","King","Cobra","Hawk","Eagle",
+  "Bluffer","Raiser","Caller","Phantom","Ace",
+];
+function randomUsername() {
+  const adj  = _ADJ [Math.floor(Math.random() * _ADJ.length)];
+  const noun = _NOUN[Math.floor(Math.random() * _NOUN.length)];
+  const num  = Math.floor(Math.random() * 90) + 10;
+  return `${adj}${noun}${num}`;
+}
 
 type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "discardReveal" | "drawReveal" | "secondBetting" | "showdown";
 
-// ─── Phase badge (unified timer display — all timers live inside the pill) ────
+// ─── Phase badge ─────────────────────────────────────────────────────────────
 
 function PhaseBadge({
   phase, timer,
@@ -23,22 +42,19 @@ function PhaseBadge({
   const isEye = phase === "memoryReveal" || phase === "drawReveal";
   const isBetting = phase === "firstBetting" || phase === "secondBetting";
 
-  // During betting the bar on the player pill is the timer — don't duplicate it here
   const displayTimer: number | null = isBetting
     ? null
     : (typeof timer === "number" ? timer : null);
 
   const hasTimer = displayTimer != null && displayTimer > 0;
-
   const timerColor = "var(--color-gold)";
 
   return (
     <div className="pointer-events-none">
       <div className={cn(
-        "flex flex-col items-center rounded-2xl bg-black/70 gold-border backdrop-blur-sm",
+        "flex flex-col items-center rounded-2xl bg-white/90 gold-border backdrop-blur-sm shadow-md",
         hasTimer ? "px-3 pt-1.5 pb-2" : "px-2.5 py-1.5",
       )}>
-        {/* Phase label row */}
         <div className="flex items-center gap-1.5">
           {isEye
             ? <Eye className="w-3 h-3 text-[color:var(--color-gold)]" />
@@ -48,7 +64,6 @@ function PhaseBadge({
             {map[phase]}
           </span>
         </div>
-        {/* Big timer number inside the pill */}
         {hasTimer && (
           <span
             className="font-display font-black leading-none tabular-nums text-[38px] sm:text-[52px] mt-0.5"
@@ -62,9 +77,8 @@ function PhaseBadge({
   );
 }
 
-// ─── Player seat with SVG turn-timer ring ─────────────────────────────────────
+// ─── Player seat ─────────────────────────────────────────────────────────────
 
-// Size tiers: "normal" (hero / 1 opp), "compact" (2 opps), "mini" (3 opps)
 const SEAT_CFG = {
   normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1",    avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true  },
   compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5",     avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: false },
@@ -81,18 +95,18 @@ function PlayerSeat({
   const cfg = SEAT_CFG[size];
   const showRing = active && !folded && turnTimeLeft != null;
   const ringColor = !showRing ? "transparent"
-    : turnTimeLeft! > 12 ? "oklch(0.65 0.20 145)"
+    : turnTimeLeft! > 12 ? "oklch(0.55 0.20 145)"
     : turnTimeLeft! > 6  ? "var(--color-gold)"
     : "var(--color-chip-red)";
 
   return (
     <div className="relative shrink-0 flex flex-col gap-0.5">
-      {/* Drain bar — above pill, drains left→right over 20 s */}
+      {/* Drain bar */}
       <div className={cn(
         "h-[3px] rounded-full overflow-hidden transition-opacity duration-300",
         showRing ? "opacity-100" : "opacity-0 pointer-events-none",
       )}>
-        <div className="relative w-full h-full bg-white/[0.10] rounded-full">
+        <div className="relative w-full h-full bg-black/[0.10] rounded-full">
           <div
             className="absolute left-0 top-0 h-full rounded-full"
             style={{
@@ -104,20 +118,19 @@ function PlayerSeat({
         </div>
       </div>
 
-      {/* Active pulsing dot (turn is active, no per-player timer visible) */}
       {active && !folded && turnTimeLeft == null && (
         <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
       )}
 
       {/* Pill */}
       <div className={cn(
-        "flex items-center rounded-full bg-black/60 backdrop-blur-md transition-all",
+        "flex items-center rounded-full bg-white/90 backdrop-blur-md shadow-md transition-all",
         cfg.pill,
-        active && !folded ? "gold-border shadow-[0_0_14px_rgba(212,168,67,0.35)]" : "border border-white/10",
+        active && !folded ? "gold-border shadow-[0_0_14px_rgba(212,168,67,0.35)]" : "border border-black/10",
         folded && "opacity-40 grayscale",
       )}>
         <div className={cn(
-          "shrink-0 rounded-full grid place-items-center font-display font-bold bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)]",
+          "shrink-0 rounded-full grid place-items-center font-display font-bold bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-white",
           cfg.avatar,
         )}>
           {avatar}
@@ -131,7 +144,7 @@ function PlayerSeat({
           </span>
         </div>
         {cfg.showBet && typeof bet === "number" && bet > 0 && (
-          <span className="text-[6px] sm:text-[8px] text-[color:var(--color-gold)]/80 pl-1.5 border-l border-white/10 leading-none whitespace-nowrap">
+          <span className="text-[6px] sm:text-[8px] text-[color:var(--color-gold)] pl-1.5 border-l border-black/10 leading-none whitespace-nowrap">
             <span className="block opacity-60 tracking-wider text-[5px] uppercase">bet</span>
             ${bet}
           </span>
@@ -141,7 +154,7 @@ function PlayerSeat({
   );
 }
 
-// ─── Reusable action button ───────────────────────────────────────────────────
+// ─── Action button ────────────────────────────────────────────────────────────
 
 function ActionButton({
   label, variant = "ghost", onClick, className, disabled,
@@ -155,8 +168,8 @@ function ActionButton({
       className={cn(
         "h-9 rounded-xl font-display tracking-wider uppercase text-[9px] font-bold transition-all px-3",
         variant === "primary"
-          ? "bg-gradient-to-b from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)] border border-black/20 shadow-[0_4px_12px_rgba(0,0,0,0.4)]"
-          : "bg-black/50 text-[color:var(--color-gold)] gold-border hover:bg-black/65",
+          ? "bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
+          : "bg-white/90 text-[color:var(--color-blue)] blue-border hover:bg-white shadow-sm",
         disabled && "opacity-40 cursor-not-allowed",
         className,
       )}
@@ -166,9 +179,7 @@ function ActionButton({
   );
 }
 
-// ─── Exit / custom confirm dialog ────────────────────────────────────────────
-
-// ─── Discard Reveal Overlay ──────────────────────────────────────────────────
+// ─── Discard reveal overlay ───────────────────────────────────────────────────
 
 function fanTransform(index: number, total: number): string {
   if (total <= 1) return '';
@@ -180,21 +191,21 @@ function fanTransform(index: number, total: number): string {
 }
 
 function DiscardGroup({ entry }: { entry: DiscardEntry }) {
-  const cardWidth = 36; // px — corresponds to size="sm" w-8 (32px) + slight gap
-  const fanOverlap = 18; // px horizontal offset per card in the fan
+  const cardWidth = 36;
+  const fanOverlap = 18;
   const containerW = entry.cards.length <= 1
     ? cardWidth
     : cardWidth + fanOverlap * (entry.cards.length - 1);
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <span className="text-[9px] uppercase tracking-widest font-display gold-text bg-black/60 px-2 py-0.5 rounded-full gold-border whitespace-nowrap">
+      <span className="text-[9px] uppercase tracking-widest font-display gold-text bg-white/90 px-2 py-0.5 rounded-full gold-border whitespace-nowrap shadow-sm">
         {entry.playerName}
       </span>
 
       {entry.cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-[62px]">
-          <span className="text-[9px] text-white/40 italic tracking-wide">Stand Pat</span>
+          <span className="text-[9px] text-gray-500 italic tracking-wide">Stand Pat</span>
         </div>
       ) : (
         <div className="relative" style={{ width: containerW, height: 62 }}>
@@ -216,7 +227,7 @@ function DiscardGroup({ entry }: { entry: DiscardEntry }) {
       )}
 
       {entry.cards.length > 0 && (
-        <span className="text-[8px] text-white/35 tracking-wide">
+        <span className="text-[8px] text-gray-500 tracking-wide">
           {entry.cards.length} discarded
         </span>
       )}
@@ -236,7 +247,7 @@ function DiscardRevealOverlay({
     : "grid grid-cols-2 gap-4 sm:gap-6";
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/82 backdrop-blur-sm px-4">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[oklch(0.95_0.025_232)]/95 backdrop-blur-sm px-4">
       <p className="font-display text-[10px] sm:text-xs uppercase tracking-[0.2em] gold-text mb-5">
         Cards Discarded
       </p>
@@ -247,19 +258,20 @@ function DiscardRevealOverlay({
         ))}
       </div>
 
-      {/* Countdown bar */}
-      <div className="mt-6 w-40 sm:w-52 h-[3px] rounded-full bg-white/10 overflow-hidden">
+      <div className="mt-6 w-40 sm:w-52 h-[3px] rounded-full bg-black/10 overflow-hidden">
         <div
           className="h-full rounded-full bg-[color:var(--color-gold)] transition-all duration-1000 ease-linear"
           style={{ width: `${((timer ?? 0) / 10) * 100}%` }}
         />
       </div>
-      <p className="text-[8px] text-white/30 mt-1.5 uppercase tracking-widest">
+      <p className="text-[8px] text-gray-500 mt-1.5 uppercase tracking-widest">
         {timer ?? 0}s
       </p>
     </div>
   );
 }
+
+// ─── Confirm dialog ───────────────────────────────────────────────────────────
 
 function ConfirmDialog({
   title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", onConfirm, onCancel,
@@ -268,13 +280,13 @@ function ConfirmDialog({
   onConfirm: () => void; onCancel: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[oklch(0.13_0.05_240)]/40 backdrop-blur-sm p-6">
       <div
-        className="bg-[oklch(0.16_0.025_150)] border border-[color:var(--color-gold)]/30 rounded-2xl p-6 max-w-[280px] w-full shadow-2xl"
+        className="bg-[oklch(0.99_0.006_230)] border border-[color:var(--color-gold)]/30 rounded-2xl p-6 max-w-[280px] w-full shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         <h3 className="font-display text-base font-bold gold-text mb-2">{title}</h3>
-        <p className="text-xs text-gray-400 mb-6 leading-relaxed">{message}</p>
+        <p className="text-xs text-gray-600 mb-6 leading-relaxed">{message}</p>
         <div className="flex gap-2">
           <ActionButton label={cancelLabel} onClick={onCancel} className="flex-1" />
           <ActionButton label={confirmLabel} variant="primary" onClick={onConfirm} className="flex-1" />
@@ -284,7 +296,7 @@ function ConfirmDialog({
   );
 }
 
-// ─── Decorative card fan for main menu ───────────────────────────────────────
+// ─── Decorative card fan ──────────────────────────────────────────────────────
 
 function CardFan() {
   return (
@@ -312,7 +324,7 @@ export default function App() {
     createRoom, joinRoom, startGame, playAction, toggleDrawCard, confirmDiscard, leaveGame,
   } = useSocket();
 
-  const [playerNameInput, setPlayerNameInput] = useState("Player");
+  const [playerNameInput, setPlayerNameInput] = useState(() => randomUsername());
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [raiseAmount, setRaiseAmount] = useState<number[]>([100]);
   const [showBetSlider, setShowBetSlider] = useState(false);
@@ -326,50 +338,46 @@ export default function App() {
     });
   }
 
-  // ── JOIN / MAIN MENU ─────────────────────────────────────────────────────────
+  // ── JOIN / MAIN MENU ──────────────────────────────────────────────────────────
   if (uiState === "join") {
     return (
-      <div className="h-dvh flex flex-col bg-[var(--color-background)] overflow-hidden select-none">
+      <div className="h-dvh flex flex-col landscape:flex-row bg-[var(--color-background)] overflow-hidden select-none">
         {/* ── Branding hero ── */}
-        <div className="flex-1 relative flex flex-col items-center justify-center gap-3 px-6 min-h-0 overflow-hidden">
-          {/* felt texture + vignette */}
-          <div className="absolute inset-0 felt-surface opacity-[0.08] pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/70 pointer-events-none" />
+        <div className="flex-1 relative flex flex-col items-center justify-center gap-3 landscape:gap-2 px-6 landscape:px-4 min-h-0 overflow-hidden">
+          <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/10 pointer-events-none" />
 
-          {/* App icon / logo */}
-          <div className="relative drop-shadow-2xl">
+          <div className="relative drop-shadow-xl">
             <img
               src="/android-chrome-192x192.png"
               alt="PokerUrMemory"
               draggable={false}
-              className="w-24 h-24 rounded-[22px] shadow-[0_12px_40px_rgba(0,0,0,0.7)]"
+              className="w-24 h-24 landscape:w-16 landscape:h-16 rounded-[22px] landscape:rounded-[16px] shadow-[0_8px_28px_rgba(0,0,0,0.25)]"
             />
           </div>
 
-          {/* Name + tagline */}
           <div className="relative text-center">
-            <h1 className="font-display text-[2.1rem] font-bold gold-text leading-tight tracking-wide">
+            <h1 className="font-display text-[2.1rem] landscape:text-[1.55rem] font-bold blue-text leading-tight tracking-wide">
               PokerUrMemory
             </h1>
-            <p className="text-[11px] text-gray-500 mt-1 tracking-[0.18em] uppercase">
+            <p className="text-[11px] landscape:text-[9px] text-gray-500 mt-1 landscape:mt-0.5 tracking-[0.18em] uppercase">
               5-Card Draw · Memory Twist
             </p>
           </div>
 
-          {/* Decorative card fan */}
-          <div className="relative opacity-70 scale-90 mt-1">
+          <div className="relative opacity-80 scale-90 landscape:scale-75 mt-1 landscape:-mt-1">
             <CardFan />
           </div>
         </div>
 
         {/* ── Form panel ── */}
         <div
-          className="shrink-0 flex flex-col gap-3.5 px-5 pt-5 bg-black/45 border-t border-white/[0.07]"
+          className="shrink-0 landscape:w-[46%] flex flex-col gap-3.5 landscape:gap-2.5 px-5 landscape:px-4 pt-5 landscape:pt-0 landscape:justify-center bg-white/60 border-t landscape:border-t-0 landscape:border-l border-black/[0.07]"
           style={{ paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))` }}
         >
           {/* Name input */}
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[color:var(--color-gold)]/40 text-[10px] font-display uppercase tracking-widest pointer-events-none">
+            <span className="absolute left-4 landscape:left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-blue)] text-[10px] landscape:text-[9px] font-display uppercase tracking-widest pointer-events-none opacity-70">
               Name
             </span>
             <input
@@ -377,23 +385,30 @@ export default function App() {
               placeholder="Your name"
               value={playerNameInput}
               onChange={e => setPlayerNameInput(e.target.value)}
-              className="w-full bg-white/[0.06] border border-white/[0.12] rounded-2xl pl-16 pr-4 py-4 text-white placeholder:text-white/25 focus:border-[color:var(--color-gold)]/60 outline-none"
+              className="w-full bg-white border border-black/[0.12] rounded-2xl landscape:rounded-xl pl-16 landscape:pl-14 pr-11 py-4 landscape:py-3 text-foreground placeholder:text-foreground/30 focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
             />
+            <button
+              onClick={() => setPlayerNameInput(randomUsername())}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 grid place-items-center rounded-full text-[color:var(--color-blue)]/60 hover:text-[color:var(--color-blue)] hover:bg-[color:var(--color-blue)]/8 transition-colors"
+              title="Random name"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* Primary CTA */}
           <button
             onClick={() => createRoom(playerNameInput || "Player")}
-            className="w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-gradient-to-b from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)] border border-black/20 shadow-[0_6px_20px_rgba(0,0,0,0.45)] active:scale-[0.97] transition-transform"
+            className="w-full h-14 landscape:h-11 rounded-2xl landscape:rounded-xl font-display tracking-wider uppercase text-[11px] landscape:text-[10px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow-[0_4px_16px_rgba(0,0,0,0.18)] active:scale-[0.97] transition-transform"
           >
             Create New Game
           </button>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 opacity-25 -my-0.5">
-            <div className="flex-1 h-px bg-white" />
-            <span className="text-[9px] tracking-[0.3em] font-display uppercase text-gray-300">or join</span>
-            <div className="flex-1 h-px bg-white" />
+          <div className="flex items-center gap-3 -my-0.5 landscape:my-0">
+            <div className="flex-1 h-px bg-black/15" />
+            <span className="text-[9px] landscape:text-[8px] tracking-[0.3em] font-display uppercase text-gray-400">or join</span>
+            <div className="flex-1 h-px bg-black/15" />
           </div>
 
           {/* Room-code input */}
@@ -403,13 +418,13 @@ export default function App() {
             value={roomCodeInput}
             onChange={e => setRoomCodeInput(e.target.value.toUpperCase())}
             maxLength={6}
-            className="w-full bg-white/[0.06] border border-white/[0.12] rounded-2xl px-4 py-4 text-white placeholder:text-white/20 focus:border-[color:var(--color-gold)]/60 outline-none uppercase text-center tracking-[0.45em]"
+            className="w-full bg-white border border-black/[0.12] rounded-2xl landscape:rounded-xl px-4 landscape:px-3 py-4 landscape:py-3 text-foreground placeholder:text-foreground/25 focus:border-[color:var(--color-blue)]/70 outline-none uppercase text-center tracking-[0.45em] landscape:tracking-[0.4em] shadow-sm"
           />
 
           {/* Secondary CTA */}
           <button
             onClick={() => joinRoom(roomCodeInput, playerNameInput || "Player")}
-            className="w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-black/50 text-[color:var(--color-gold)] gold-border active:scale-[0.97] transition-transform"
+            className="w-full h-14 landscape:h-11 rounded-2xl landscape:rounded-xl font-display tracking-wider uppercase text-[11px] landscape:text-[10px] font-bold bg-white text-[color:var(--color-blue)] blue-border shadow-sm active:scale-[0.97] transition-transform"
           >
             Join Game
           </button>
@@ -418,119 +433,138 @@ export default function App() {
     );
   }
 
-  // ── LOBBY ────────────────────────────────────────────────────────────────────
+  // ── LOBBY ─────────────────────────────────────────────────────────────────────
   if (uiState === "lobby") {
+    const playerList = (
+      <div
+        className="flex-1 overflow-y-auto overscroll-contain px-4 landscape:px-3 pt-3 space-y-2.5"
+        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+      >
+        {lobbyPlayers.map((p, i) => (
+          <div key={i} className="flex items-center gap-3 bg-white/80 px-4 landscape:px-3 py-3 landscape:py-2.5 rounded-2xl border border-black/[0.07] shadow-sm">
+            <div className="w-10 h-10 landscape:w-9 landscape:h-9 rounded-full bg-gradient-to-br from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white flex items-center justify-center font-bold text-base landscape:text-sm shrink-0">
+              {p.name.charAt(0).toUpperCase()}
+            </div>
+            <span className="font-semibold text-sm text-foreground truncate flex-1">
+              {p.name}{p.id === playerId ? <span className="text-gray-400 text-xs ml-1">(You)</span> : ""}
+            </span>
+            {p.isHost && (
+              <span className="text-[8px] font-display tracking-widest uppercase blue-text bg-[color:var(--color-blue)]/10 px-2.5 py-1 rounded-full border border-[color:var(--color-blue)]/25 shrink-0">
+                Host
+              </span>
+            )}
+          </div>
+        ))}
+        {Array.from({ length: Math.max(0, 2 - lobbyPlayers.length) }).map((_, i) => (
+          <div key={`ghost-${i}`} className="flex items-center gap-3 px-4 landscape:px-3 py-3 landscape:py-2.5 rounded-2xl border border-dashed border-black/[0.10]">
+            <div className="w-10 h-10 landscape:w-9 landscape:h-9 rounded-full border border-dashed border-black/10 flex items-center justify-center shrink-0">
+              <span className="text-gray-300 text-2xl leading-none">+</span>
+            </div>
+            <span className="text-gray-400 text-sm">Waiting for player…</span>
+          </div>
+        ))}
+      </div>
+    );
+
+    const actionPanel = (
+      <div className="shrink-0 space-y-2">
+        {isHost ? (
+          <>
+            <p className="text-[10px] text-gray-500 text-center leading-relaxed">
+              {lobbyPlayers.length < 2 ? "Need at least 2 players to start" : "All set — start whenever you're ready!"}
+            </p>
+            <button
+              onClick={startGame}
+              disabled={lobbyPlayers.length < 2}
+              className={cn(
+                "w-full h-12 landscape:h-10 rounded-2xl landscape:rounded-xl font-display tracking-wider uppercase text-[11px] landscape:text-[10px] font-bold transition-all",
+                lobbyPlayers.length >= 2
+                  ? "bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow-[0_4px_14px_rgba(0,0,0,0.18)] active:scale-[0.97]"
+                  : "bg-black/5 text-black/20 cursor-not-allowed",
+              )}
+            >
+              Start Game
+            </button>
+          </>
+        ) : (
+          <div className="flex flex-col items-center gap-2 py-1">
+            <div className="flex items-center gap-2">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-blue)]/60 animate-pulse"
+                  style={{ animationDelay: `${i * 0.28}s` }} />
+              ))}
+            </div>
+            <span className="text-xs text-gray-500 tracking-wide">Waiting for host to start…</span>
+          </div>
+        )}
+      </div>
+    );
+
     return (
-      <div className="h-dvh flex flex-col bg-[var(--color-background)] overflow-hidden select-none">
-        {/* ── Header: room code + copy ── */}
+      <div className="h-dvh flex flex-col landscape:flex-row bg-[var(--color-background)] overflow-hidden select-none">
+
+        {/* ── Left panel (portrait: top / landscape: sidebar) ── */}
         <div
-          className="shrink-0 flex items-center justify-between px-5 pb-4 border-b border-white/[0.07]"
+          className="shrink-0 landscape:w-[42%] flex flex-col landscape:justify-center gap-3 px-5 landscape:px-6 pb-4 landscape:pb-6 border-b landscape:border-b-0 landscape:border-r border-black/[0.07] bg-white/40"
           style={{ paddingTop: `calc(1.1rem + env(safe-area-inset-top, 0px))` }}
         >
-          <div>
-            <p className="text-[9px] text-[color:var(--color-gold)]/50 tracking-[0.3em] uppercase mb-0.5">Room Code</p>
-            <p className="font-display text-[2.4rem] font-bold gold-text tracking-widest leading-none">{roomCode}</p>
+          <div className="flex landscape:flex-col items-center landscape:items-start justify-between landscape:justify-start gap-3 landscape:gap-2">
+            <div>
+              <p className="text-[9px] text-[color:var(--color-blue)] tracking-[0.3em] uppercase mb-0.5 opacity-70">Room Code</p>
+              <p className="font-display text-[2rem] landscape:text-[2.4rem] font-bold blue-text tracking-widest leading-none">
+                {roomCode}
+              </p>
+              <p className="text-[8px] text-gray-400 mt-1 tracking-wide">not case-sensitive</p>
+            </div>
+            <button
+              onClick={copyRoomCode}
+              className="flex items-center gap-2 px-4 py-3 landscape:py-3.5 text-[10px] font-display tracking-widest uppercase blue-border rounded-2xl text-[color:var(--color-blue)] bg-white shadow-sm active:bg-gray-50 transition-colors shrink-0 min-w-[80px] justify-center"
+            >
+              {copied
+                ? <><Check className="w-4 h-4 shrink-0" /> Copied</>
+                : <><Copy className="w-4 h-4 shrink-0" /> Copy</>}
+            </button>
           </div>
-          <button
-            onClick={copyRoomCode}
-            className="flex items-center gap-2 px-4 py-3.5 text-[10px] font-display tracking-widest uppercase gold-border rounded-2xl text-[color:var(--color-gold)] bg-black/40 active:bg-black/70 transition-colors shrink-0 min-w-[84px] justify-center"
-          >
-            {copied
-              ? <><Check className="w-4 h-4 shrink-0" /> Copied</>
-              : <><Copy className="w-4 h-4 shrink-0" /> Copy</>}
-          </button>
-        </div>
 
-        {/* ── Players list ── */}
-        <div
-          className="flex-1 overflow-y-auto overscroll-contain px-5 pt-4 space-y-3"
-          style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
-        >
           {/* Progress pips */}
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[10px] text-gray-600 uppercase tracking-[0.22em]">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] text-gray-500 uppercase tracking-[0.22em]">
               Players&nbsp;{lobbyPlayers.length}&nbsp;/&nbsp;4
             </p>
             <div className="flex gap-1.5">
               {[0, 1, 2, 3].map(i => (
                 <div key={i} className={cn(
-                  "w-7 h-1.5 rounded-full transition-all duration-300",
-                  i < lobbyPlayers.length ? "bg-[color:var(--color-gold)]" : "bg-white/10",
+                  "w-6 h-1.5 rounded-full transition-all duration-300",
+                  i < lobbyPlayers.length ? "bg-[color:var(--color-blue)]" : "bg-black/10",
                 )} />
               ))}
             </div>
           </div>
 
-          {/* Filled slots */}
-          {lobbyPlayers.map((p, i) => (
-            <div key={i} className="flex items-center gap-3 bg-white/[0.05] px-4 py-3.5 rounded-2xl border border-white/[0.07]">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)] flex items-center justify-center font-bold text-lg shrink-0">
-                {p.name.charAt(0).toUpperCase()}
-              </div>
-              <span className="font-semibold text-base text-white truncate flex-1">
-                {p.name}{p.id === playerId ? <span className="text-white/40 text-sm ml-1">(You)</span> : ""}
-              </span>
-              {p.isHost && (
-                <span className="text-[8px] font-display tracking-widest uppercase gold-text bg-[color:var(--color-gold)]/10 px-2.5 py-1 rounded-full border border-[color:var(--color-gold)]/20 shrink-0">
-                  Host
-                </span>
-              )}
-            </div>
-          ))}
-
-          {/* Empty ghost slots (visual hint) */}
-          {Array.from({ length: Math.max(0, 2 - lobbyPlayers.length) }).map((_, i) => (
-            <div key={`ghost-${i}`} className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border border-dashed border-white/[0.09]">
-              <div className="w-11 h-11 rounded-full border border-dashed border-white/10 flex items-center justify-center shrink-0">
-                <span className="text-white/20 text-2xl leading-none">+</span>
-              </div>
-              <span className="text-white/20 text-sm">Waiting for player…</span>
-            </div>
-          ))}
+          <div
+            className="hidden landscape:block"
+            style={{ paddingBottom: `env(safe-area-inset-bottom, 0px)` }}
+          >
+            {actionPanel}
+          </div>
         </div>
 
-        {/* ── Bottom action ── */}
-        <div
-          className="shrink-0 px-5 pt-4 border-t border-white/[0.07] bg-black/20 space-y-3"
-          style={{ paddingBottom: `calc(1.25rem + env(safe-area-inset-bottom, 0px))` }}
-        >
-          {isHost ? (
-            <>
-              <p className="text-[11px] text-gray-500 text-center leading-relaxed">
-                {lobbyPlayers.length < 2
-                  ? "Need at least 2 players to start"
-                  : "All set — start whenever you're ready!"}
-              </p>
-              <button
-                onClick={startGame}
-                disabled={lobbyPlayers.length < 2}
-                className={cn(
-                  "w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold transition-all",
-                  lobbyPlayers.length >= 2
-                    ? "bg-gradient-to-b from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] text-[color:var(--color-felt-deep)] border border-black/20 shadow-[0_6px_20px_rgba(0,0,0,0.45)] active:scale-[0.97]"
-                    : "bg-white/5 text-white/20 cursor-not-allowed",
-                )}
-              >
-                Start Game
-              </button>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-3 py-2">
-              <div className="flex items-center gap-2">
-                {[0, 1, 2].map(i => (
-                  <div key={i} className="w-2 h-2 rounded-full bg-[color:var(--color-gold)]/50 animate-pulse"
-                    style={{ animationDelay: `${i * 0.28}s` }} />
-                ))}
-              </div>
-              <span className="text-sm text-gray-400 tracking-wide">Waiting for host to start…</span>
-            </div>
-          )}
+        {/* ── Right panel ── */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {playerList}
+
+          <div
+            className="landscape:hidden shrink-0 px-4 pt-3 border-t border-black/[0.07]"
+            style={{ paddingBottom: `calc(1.25rem + env(safe-area-inset-bottom, 0px))` }}
+          >
+            {actionPanel}
+          </div>
         </div>
       </div>
     );
   }
 
-  // ── GAME SCREEN ──────────────────────────────────────────────────────────────
+  // ── GAME SCREEN ───────────────────────────────────────────────────────────────
   if (!gameState) return null;
 
   const myPlayer = gameState.players.find(p => p.id === playerId);
@@ -549,14 +583,12 @@ export default function App() {
   const showBetting   = myTurnActive && isBettingPhase && !showBetSlider && !!myTurnData;
 
   const potChipVariant = gameState.pot >= 500 ? "gold" : gameState.pot >= 200 ? "blue" : "red";
-
-  // Per-seat turn time
   const heroTurnTimeLeft = turnTimer?.playerId === playerId ? turnTimer.timeLeft : null;
 
   return (
-    <main className="h-dvh w-full bg-[radial-gradient(ellipse_at_top,oklch(0.22_0.04_150)_0%,oklch(0.10_0.02_150)_100%)] text-foreground overflow-hidden relative">
+    <main className="h-dvh w-full bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)] text-foreground overflow-hidden relative">
 
-      {/* ── EXIT DIALOG ─────────────────────────────────────────────────────── */}
+      {/* ── EXIT DIALOG ── */}
       {showExitDialog && (
         <ConfirmDialog
           title="Leave Game?"
@@ -567,69 +599,64 @@ export default function App() {
         />
       )}
 
-      {/* ── REVEAL OVERLAY — absolute z-5, BEHIND cards (z-10/z-20) ─────────── */}
+      {/* ── REVEAL DIM OVERLAY ── */}
       {isRevealPhase && (
-        <div className="absolute inset-0 z-[5] bg-black/55 pointer-events-none" />
+        <div className="absolute inset-0 z-[5] bg-black/25 pointer-events-none" />
       )}
 
-      {/* ── DISCARD REVEAL OVERLAY ───────────────────────────────────────────── */}
+      {/* ── DISCARD REVEAL OVERLAY ── */}
       {isDiscardReveal && discardRevealData && (
         <DiscardRevealOverlay discards={discardRevealData.discards} timer={timer} />
       )}
 
-      {/* ── SHOWDOWN BANNER ──────────────────────────────────────────────────── */}
+      {/* ── SHOWDOWN BANNER ── */}
       {isShowdown && showdownData && (
         <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center">
-          <div className="bg-black/90 border-y border-[color:var(--color-gold)]/40 backdrop-blur-md py-4 w-full text-center">
+          <div className="bg-white/95 border-y border-[color:var(--color-gold)]/40 backdrop-blur-md py-4 w-full text-center shadow-lg">
             <h2 className="font-display text-base sm:text-3xl font-bold gold-text mb-2">
               {showdownData.winner.playerName || showdownData.winner} Wins!
             </h2>
             {showdownData.isBluff ? (
-              <p className="text-gray-300 italic text-xs">Opponent folded</p>
+              <p className="text-gray-500 italic text-xs">Opponent folded</p>
             ) : showdownData.hands ? (
               <div className="flex flex-wrap justify-center gap-x-3 gap-y-1.5 px-4">
                 {showdownData.hands.map((h: any, i: number) => {
                   const isWinner = h.playerId === showdownData.winner.playerId;
                   return (
                     <div key={i} className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] sm:text-xs",
-                      isWinner ? "bg-[color:var(--color-gold)]/20 border border-[color:var(--color-gold)]/50" : "bg-white/5")}>
-                      <span className="font-bold text-white">{h.playerName}:</span>
+                      isWinner ? "bg-[color:var(--color-gold)]/15 border border-[color:var(--color-gold)]/40" : "bg-black/5")}>
+                      <span className="font-bold text-foreground">{h.playerName}:</span>
                       <span className="text-[color:var(--color-chip-teal)] font-bold">{h.rankName}</span>
                     </div>
                   );
                 })}
               </div>
             ) : null}
-            <p className="text-[color:var(--color-gold)]/70 animate-pulse mt-2 font-display tracking-widest text-[8px] uppercase">
+            <p className="text-[color:var(--color-gold)] animate-pulse mt-2 font-display tracking-widest text-[8px] uppercase opacity-80">
               Next hand starting...
             </p>
           </div>
         </div>
       )}
 
-      {/* ── FIXED TOP BAR ─────────────────────────────────────────────────────── */}
+      {/* ── FIXED TOP BAR ── */}
       <div className="fixed top-2.5 left-2.5 right-2.5 z-30 flex items-start justify-between pointer-events-none">
-        {/* Left: exit + room code */}
         <div className="flex items-center gap-1.5 pointer-events-auto">
           <button onClick={() => setShowExitDialog(true)}
-            className="w-7 h-7 grid place-items-center rounded-full bg-black/50 gold-border shrink-0">
+            className="w-7 h-7 grid place-items-center rounded-full bg-white/80 gold-border shadow-sm shrink-0">
             <LogOut className="w-3 h-3 text-[color:var(--color-gold)] rotate-180" />
           </button>
-          <span className="font-display text-[7px] tracking-[0.25em] text-[color:var(--color-gold)]/70 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 whitespace-nowrap">
+          <span className="font-display text-[7px] tracking-[0.25em] text-[color:var(--color-gold)] bg-white/70 px-2 py-0.5 rounded-full border border-black/10 shadow-sm whitespace-nowrap">
             {roomCode}
           </span>
         </div>
-        {/* Right: phase badge — reveal/draw timers only; betting uses the player drain bar */}
-        <PhaseBadge
-          phase={phase}
-          timer={timer}
-        />
+        <PhaseBadge phase={phase} timer={timer} />
       </div>
 
-      {/* ── FELT TABLE OVAL ───────────────────────────────────────────────────── */}
-      <div className="felt-surface absolute inset-x-[4%] top-[7%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.8)]" />
+      {/* ── FELT TABLE OVAL ── */}
+      <div className="felt-surface absolute inset-x-[4%] top-[7%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.5)]" />
 
-      {/* ── OPPONENTS — top-7%, fanned; size scales with player count ─────────── */}
+      {/* ── OPPONENTS ── */}
       <div className={cn(
         "absolute top-[7%] left-0 right-0 flex items-start z-10",
         opponents.length <= 1 ? "justify-center px-4" :
@@ -638,7 +665,6 @@ export default function App() {
       )}>
         {opponents.map((opp, idx) => {
           const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
-          // Scale everything down as more opponents appear
           const seatSize = opponents.length >= 3 ? "mini" : opponents.length >= 2 ? "compact" : "normal";
           const cardSize = opponents.length >= 2 ? "xs" : "sm";
           const cardSpacing = opponents.length >= 3 ? "-space-x-1.5" : "-space-x-1";
@@ -666,10 +692,9 @@ export default function App() {
         })}
       </div>
 
-      {/* ── CENTER — pot pill & action log ────────────────────────────────────── */}
+      {/* ── CENTER — pot + action log ── */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1.5">
-        {/* Simple horizontal pot pill — chip dot + amount, never deforms */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/65 gold-border backdrop-blur-md shadow-xl whitespace-nowrap">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 gold-border backdrop-blur-md shadow-md whitespace-nowrap">
           <div
             className="w-3.5 h-3.5 rounded-full shrink-0 shadow-md"
             style={{ backgroundColor: potChipVariant === "gold" ? "var(--color-gold)" : potChipVariant === "blue" ? "var(--color-chip-blue)" : "var(--color-chip-red)" }}
@@ -678,12 +703,12 @@ export default function App() {
             ${gameState.pot.toLocaleString()}
           </span>
         </div>
-        <div className="text-[7px] sm:text-[10px] text-gray-300 bg-black/30 px-2 py-1 rounded-xl border border-white/10 max-w-[160px] sm:max-w-[260px] text-center leading-tight">
+        <div className="text-[7px] sm:text-[10px] text-gray-700 bg-white/75 px-2 py-1 rounded-xl border border-black/[0.08] max-w-[160px] sm:max-w-[260px] text-center leading-tight shadow-sm">
           {actionLog}
         </div>
       </div>
 
-      {/* ── HERO AREA — z-20, above reveal overlay ────────────────────────────── */}
+      {/* ── HERO AREA ── */}
       {myPlayer && (
         <div className="absolute bottom-[10%] left-4 right-[100px] sm:right-[136px] z-20 flex items-center gap-2">
           <PlayerSeat
@@ -709,11 +734,11 @@ export default function App() {
         </div>
       )}
 
-      {/* ── FIXED ACTION BAR — bottom-right ───────────────────────────────────── */}
+      {/* ── FIXED ACTION BAR ── */}
       <div className="fixed bottom-2.5 right-2.5 z-40 flex flex-col gap-1.5 items-stretch w-[92px] sm:w-[120px]">
         {showDraw && (
           <>
-            <p className="font-display text-[6px] tracking-widest uppercase gold-text text-center bg-black/60 px-1.5 py-0.5 rounded-full gold-border leading-tight">
+            <p className="font-display text-[6px] tracking-widest uppercase blue-text text-center bg-white/90 px-1.5 py-0.5 rounded-full blue-border leading-tight shadow-sm">
               Discard {selectedDrawCards.length}/4
             </p>
             <ActionButton
@@ -754,17 +779,16 @@ export default function App() {
         )}
       </div>
 
-      {/* ── BET SLIDER — slides in from right ────────────────────────────────── */}
+      {/* ── BET SLIDER ── */}
       <div className={cn(
         "fixed z-[110] bottom-2.5 right-2.5 w-[172px] sm:w-[210px]",
-        "bg-black/95 border border-[color:var(--color-gold)]/50 rounded-2xl p-3.5 backdrop-blur-2xl shadow-2xl",
+        "bg-white/97 border border-[color:var(--color-gold)]/40 rounded-2xl p-3.5 backdrop-blur-2xl shadow-xl",
         "transform transition-all duration-300 ease-out",
         showBetSlider ? "translate-x-0 opacity-100" : "translate-x-[120%] opacity-0 pointer-events-none",
       )}>
         <p className="font-display text-[7px] tracking-widest uppercase text-gray-500 mb-1">
           {myTurnData?.currentBet === 0 ? "Bet Amount" : "Raise To"}
         </p>
-        {/* Chip stack amount display */}
         <div className="pt-4 mb-3">
           <ChipStack amount={raiseAmount[0]} variant="red" size="sm" />
         </div>
@@ -787,7 +811,7 @@ export default function App() {
             val = Math.min(val, myTurnData ? myTurnData.maxBet : 100);
             return (
               <button key={idx} onClick={() => setRaiseAmount([val])}
-                className="py-1 text-[7px] font-semibold rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white uppercase tracking-wider transition-colors">
+                className="py-1 text-[7px] font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 uppercase tracking-wider transition-colors">
                 {label}
               </button>
             );

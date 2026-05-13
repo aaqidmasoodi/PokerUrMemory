@@ -26,7 +26,7 @@ function setupSocketHandlers(io, rooms) {
         });
 
         socket.on('joinRoom', (data, callback) => {
-            const room = rooms.get(data.roomCode);
+            const room = rooms.get(data.roomCode?.toUpperCase());
 
             if (!room) {
                 callback({ success: false, error: 'Room not found' });
@@ -38,8 +38,9 @@ function setupSocketHandlers(io, rooms) {
                 return;
             }
 
+            const normalizedCode = data.roomCode.toUpperCase();
             room.addPlayer(socket.id, data.playerName);
-            socket.join(data.roomCode);
+            socket.join(normalizedCode);
 
             callback({
                 success: true,
@@ -47,13 +48,13 @@ function setupSocketHandlers(io, rooms) {
                 isHost: false,
             });
 
-            io.to(data.roomCode).emit('playerJoined', {
+            io.to(normalizedCode).emit('playerJoined', {
                 playerId: socket.id,
                 playerName: data.playerName,
                 playerCount: room.getPlayerCount(),
             });
 
-            io.to(data.roomCode).emit('lobbyUpdate', {
+            io.to(normalizedCode).emit('lobbyUpdate', {
                 players: Array.from(room.players.values()).map(p => ({
                     id: p.id,
                     name: p.name,
@@ -123,7 +124,7 @@ function setupSocketHandlers(io, rooms) {
         // Reconnection: client sends this after a page refresh if it has a stored session
         socket.on('playerReconnect', (data, callback) => {
             const cb = typeof callback === 'function' ? callback : () => {};
-            const room = rooms.get(data.roomCode);
+            const room = rooms.get(data.roomCode?.toUpperCase());
 
             if (!room) {
                 cb({ success: false, error: 'Room not found' });
