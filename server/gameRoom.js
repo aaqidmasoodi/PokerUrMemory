@@ -621,9 +621,9 @@ class GameRoom {
         const currentPlayer = playerArray[this.currentPlayerIndex];
         if (!currentPlayer || currentPlayer.folded) return;
 
-        this.turnTimeLeft = 20;
+        this.turnTimeLeft = 30;
         const playerId = currentPlayer.id;
-        this.io.to(this.roomCode).emit('turnTimer', { playerId, timeLeft: 20 });
+        this.io.to(this.roomCode).emit('turnTimer', { playerId, timeLeft: 30 });
 
         this.turnTimer = setInterval(() => {
             this.turnTimeLeft--;

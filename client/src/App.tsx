@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSocket, type DiscardEntry } from "./hooks/useSocket";
 import { PlayingCard } from "./components/poker/PlayingCard";
 import { ChipStack } from "./components/poker/ChipStack";
@@ -80,9 +80,9 @@ function PhaseBadge({
 // ─── Player seat ─────────────────────────────────────────────────────────────
 
 const SEAT_CFG = {
-  normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1",    avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true  },
-  compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5",     avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: false },
-  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 py-[1px]", avatar: "w-4 h-4 text-[6px]",                         name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: false },
+  normal:  { pill: "gap-1.5 pl-1 pr-2.5 pt-1 pb-2.5", avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true,  timerH: "h-[6px]" },
+  compact: { pill: "gap-1 pl-0.5 pr-2 pt-0.5 pb-1.5",  avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: false, timerH: "h-[4px]" },
+  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 pt-[1px] pb-[4px]", avatar: "w-4 h-4 text-[6px]",                   name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: false, timerH: "h-[3px]" },
 } as const;
 
 function PlayerSeat({
@@ -94,37 +94,20 @@ function PlayerSeat({
 }) {
   const cfg = SEAT_CFG[size];
   const showRing = active && !folded && turnTimeLeft != null;
-  const ringColor = !showRing ? "transparent"
-    : turnTimeLeft! > 12 ? "oklch(0.55 0.20 145)"
-    : turnTimeLeft! > 6  ? "var(--color-gold)"
-    : "var(--color-chip-red)";
+  const timerColor = !showRing ? "transparent"
+    : turnTimeLeft! > 18 ? "#22c55e"
+    : turnTimeLeft! > 10 ? "var(--color-gold)"
+    : "#ef4444";
 
   return (
-    <div className="relative shrink-0 flex flex-col gap-0.5">
-      {/* Drain bar */}
-      <div className={cn(
-        "h-[3px] rounded-full overflow-hidden transition-opacity duration-300",
-        showRing ? "opacity-100" : "opacity-0 pointer-events-none",
-      )}>
-        <div className="relative w-full h-full bg-black/[0.10] rounded-full">
-          <div
-            className="absolute left-0 top-0 h-full rounded-full"
-            style={{
-              width: showRing ? `${(turnTimeLeft! / 20) * 100}%` : "100%",
-              backgroundColor: ringColor,
-              transition: "width 0.9s linear, background-color 0.5s ease",
-            }}
-          />
-        </div>
-      </div>
-
+    <div className="relative shrink-0 flex flex-col">
       {active && !folded && turnTimeLeft == null && (
         <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
       )}
 
       {/* Pill */}
       <div className={cn(
-        "flex items-center rounded-full bg-white/90 backdrop-blur-md shadow-md transition-all",
+        "relative flex items-center rounded-full bg-white/90 backdrop-blur-md shadow-md transition-all overflow-hidden",
         cfg.pill,
         active && !folded ? "gold-border shadow-[0_0_14px_rgba(212,168,67,0.35)]" : "border border-black/10",
         folded && "opacity-40 grayscale",
@@ -149,6 +132,21 @@ function PlayerSeat({
             ${bet}
           </span>
         )}
+
+        {/* Integrated timer bar — clipped by pill's overflow-hidden + rounded-full */}
+        <div className={cn("absolute bottom-0 left-0 right-0 bg-black/[0.07]", cfg.timerH)}>
+          {showRing && (
+            <div
+              className={cn("h-full", cfg.timerH)}
+              style={{
+                width: `${(turnTimeLeft! / 30) * 100}%`,
+                backgroundColor: timerColor,
+                boxShadow: turnTimeLeft! <= 10 ? `0 0 8px ${timerColor}cc` : 'none',
+                transition: "width 0.9s linear, background-color 0.5s ease",
+              }}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -330,6 +328,12 @@ export default function App() {
   const [showBetSlider, setShowBetSlider] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!meta) return;
+    meta.content = uiState === "game" ? "#4e7fa4" : "#e8eef5";
+  }, [uiState]);
 
   function copyRoomCode() {
     navigator.clipboard?.writeText(roomCode).then(() => {
