@@ -343,7 +343,7 @@ export default function App() {
     return (
       <div className="h-dvh flex flex-col landscape:flex-row bg-[var(--color-background)] overflow-hidden select-none">
         {/* ── Branding hero ── */}
-        <div className="flex-1 relative flex flex-col items-center justify-center gap-3 landscape:gap-2 px-6 landscape:px-4 min-h-0 overflow-hidden">
+        <div className="flex-1 relative flex flex-col items-center justify-center gap-3 landscape:gap-2 px-6 landscape:px-4 min-h-0 overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingLeft: 'env(safe-area-inset-left, 0px)' }}>
           <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/10 pointer-events-none" />
 
@@ -373,7 +373,7 @@ export default function App() {
         {/* ── Form panel ── */}
         <div
           className="shrink-0 landscape:w-[46%] flex flex-col gap-3.5 landscape:gap-2.5 px-5 landscape:px-4 pt-5 landscape:pt-0 landscape:justify-center bg-white/60 border-t landscape:border-t-0 landscape:border-l border-black/[0.07]"
-          style={{ paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))` }}
+          style={{ paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`, paddingRight: `env(safe-area-inset-right, 0px)` }}
         >
           {/* Name input */}
           <div className="relative">
@@ -506,7 +506,7 @@ export default function App() {
         {/* ── Left panel (portrait: top / landscape: sidebar) ── */}
         <div
           className="shrink-0 landscape:w-[42%] flex flex-col landscape:justify-center gap-3 px-5 landscape:px-6 pb-4 landscape:pb-6 border-b landscape:border-b-0 landscape:border-r border-black/[0.07] bg-white/40"
-          style={{ paddingTop: `calc(1.1rem + env(safe-area-inset-top, 0px))` }}
+          style={{ paddingTop: `calc(1.1rem + env(safe-area-inset-top, 0px))`, paddingLeft: `env(safe-area-inset-left, 0px)` }}
         >
           <div className="flex landscape:flex-col items-center landscape:items-start justify-between landscape:justify-start gap-3 landscape:gap-2">
             <div>
@@ -550,7 +550,7 @@ export default function App() {
         </div>
 
         {/* ── Right panel ── */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0" style={{ paddingRight: `env(safe-area-inset-right, 0px)` }}>
           {playerList}
 
           <div
@@ -640,7 +640,14 @@ export default function App() {
       )}
 
       {/* ── FIXED TOP BAR ── */}
-      <div className="fixed top-2.5 left-2.5 right-2.5 z-30 flex items-start justify-between pointer-events-none">
+      <div
+        className="fixed z-30 flex items-start justify-between pointer-events-none"
+        style={{
+          top:   'calc(0.625rem + env(safe-area-inset-top, 0px))',
+          left:  'calc(0.625rem + env(safe-area-inset-left, 0px))',
+          right: 'calc(0.625rem + env(safe-area-inset-right, 0px))',
+        }}
+      >
         <div className="flex items-center gap-1.5 pointer-events-auto">
           <button onClick={() => setShowExitDialog(true)}
             className="w-7 h-7 grid place-items-center rounded-full bg-white/80 gold-border shadow-sm shrink-0">
@@ -657,12 +664,15 @@ export default function App() {
       <div className="felt-surface absolute inset-x-[4%] top-[7%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.5)]" />
 
       {/* ── OPPONENTS ── */}
-      <div className={cn(
-        "absolute top-[7%] left-0 right-0 flex items-start z-10",
-        opponents.length <= 1 ? "justify-center px-4" :
-        opponents.length === 2 ? "justify-around px-2" :
-        "justify-between px-3",
-      )}>
+      <div
+        className={cn(
+          "absolute left-0 right-0 flex items-start z-10",
+          opponents.length <= 1 ? "justify-center px-4" :
+          opponents.length === 2 ? "justify-around px-2" :
+          "justify-between px-3",
+        )}
+        style={{ top: 'calc(7% + env(safe-area-inset-top, 0px))' }}
+      >
         {opponents.map((opp, idx) => {
           const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
           const seatSize = opponents.length >= 3 ? "mini" : opponents.length >= 2 ? "compact" : "normal";
@@ -710,7 +720,13 @@ export default function App() {
 
       {/* ── HERO AREA ── */}
       {myPlayer && (
-        <div className="absolute bottom-[10%] left-4 right-[100px] sm:right-[136px] z-20 flex items-center gap-2">
+        <div
+          className="absolute right-[100px] sm:right-[136px] z-20 flex items-center gap-2"
+          style={{
+            bottom: 'calc(10% + env(safe-area-inset-bottom, 0px))',
+            left:   'calc(1rem + env(safe-area-inset-left, 0px))',
+          }}
+        >
           <PlayerSeat
             name={myPlayer.name} chips={myPlayer.chips} bet={myPlayer.currentBet}
             avatar={myPlayer.name.charAt(0).toUpperCase()}
@@ -735,7 +751,13 @@ export default function App() {
       )}
 
       {/* ── FIXED ACTION BAR ── */}
-      <div className="fixed bottom-2.5 right-2.5 z-40 flex flex-col gap-1.5 items-stretch w-[92px] sm:w-[120px]">
+      <div
+        className="fixed z-40 flex flex-col gap-1.5 items-stretch w-[92px] sm:w-[120px]"
+        style={{
+          bottom: 'calc(0.625rem + env(safe-area-inset-bottom, 0px))',
+          right:  'calc(0.625rem + env(safe-area-inset-right, 0px))',
+        }}
+      >
         {showDraw && (
           <>
             <p className="font-display text-[6px] tracking-widest uppercase blue-text text-center bg-white/90 px-1.5 py-0.5 rounded-full blue-border leading-tight shadow-sm">
@@ -780,12 +802,18 @@ export default function App() {
       </div>
 
       {/* ── BET SLIDER ── */}
-      <div className={cn(
-        "fixed z-[110] bottom-2.5 right-2.5 w-[172px] sm:w-[210px]",
-        "bg-white/97 border border-[color:var(--color-gold)]/40 rounded-2xl p-3.5 backdrop-blur-2xl shadow-xl",
-        "transform transition-all duration-300 ease-out",
-        showBetSlider ? "translate-x-0 opacity-100" : "translate-x-[120%] opacity-0 pointer-events-none",
-      )}>
+      <div
+        className={cn(
+          "fixed z-[110] w-[172px] sm:w-[210px]",
+          "bg-white/97 border border-[color:var(--color-gold)]/40 rounded-2xl p-3.5 backdrop-blur-2xl shadow-xl",
+          "transform transition-all duration-300 ease-out",
+          showBetSlider ? "translate-x-0 opacity-100" : "translate-x-[120%] opacity-0 pointer-events-none",
+        )}
+        style={{
+          bottom: 'calc(0.625rem + env(safe-area-inset-bottom, 0px))',
+          right:  'calc(0.625rem + env(safe-area-inset-right, 0px))',
+        }}
+      >
         <p className="font-display text-[7px] tracking-widest uppercase text-gray-500 mb-1">
           {myTurnData?.currentBet === 0 ? "Bet Amount" : "Raise To"}
         </p>
