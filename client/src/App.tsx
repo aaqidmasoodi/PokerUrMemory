@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSocket, type DiscardEntry } from "./hooks/useSocket";
 import { PlayingCard } from "./components/poker/PlayingCard";
 import { ChipStack } from "./components/poker/ChipStack";
@@ -80,17 +80,19 @@ function PhaseBadge({
 // ─── Player seat ─────────────────────────────────────────────────────────────
 
 const SEAT_CFG = {
-  normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1",       avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true,  ringPad: 5, numCls: "text-[15px]" },
-  compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5",         avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: false, ringPad: 3, numCls: "text-[11px]" },
-  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 py-[1px]",   avatar: "w-4 h-4 text-[6px]",                           name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: false, ringPad: 2, numCls: "text-[10px]" },
+  normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1",       avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true,  ringPad: 5, numCls: "text-[15px]", flashCls: "text-[11px] sm:text-[13px]" },
+  compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5",         avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: false, ringPad: 3, numCls: "text-[11px]", flashCls: "text-[8px]"              },
+  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 py-[1px]",   avatar: "w-4 h-4 text-[6px]",                           name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: false, ringPad: 2, numCls: "text-[10px]", flashCls: "text-[7px]"              },
 } as const;
 
 function PlayerSeat({
   name, chips, bet, active, avatar, folded, turnTimeLeft, size = "normal",
+  flashLabel, flashColor,
 }: {
   name: string; chips: number; bet?: number; active?: boolean;
   avatar: string; folded?: boolean; turnTimeLeft?: number | null;
   size?: "normal" | "compact" | "mini";
+  flashLabel?: string; flashColor?: string;
 }) {
   const cfg = SEAT_CFG[size];
   const showRing = active && !folded && turnTimeLeft != null;
@@ -134,13 +136,25 @@ function PlayerSeat({
           )}>
             {avatar}
           </div>
-          <div className="flex flex-col leading-none">
-            <span className={cn("font-display font-semibold uppercase truncate text-foreground/90", cfg.name)}>
+          {/* Name + chips — stay in DOM to hold pill width; hidden behind flash overlay */}
+          <div className="relative flex flex-col leading-none">
+            <span className={cn(
+              "font-display font-semibold uppercase truncate text-foreground/90 transition-opacity duration-150",
+              cfg.name, flashLabel && "opacity-0",
+            )}>
               {name}
             </span>
-            <span className={cn("font-bold gold-text", cfg.chips)}>
+            <span className={cn("font-bold gold-text transition-opacity duration-150", cfg.chips, flashLabel && "opacity-0")}>
               ${chips.toLocaleString()}
             </span>
+            {flashLabel && (
+              <span
+                className={cn("absolute inset-0 flex items-center font-display font-black uppercase tracking-wide", cfg.flashCls)}
+                style={{ color: flashColor }}
+              >
+                {flashLabel}
+              </span>
+            )}
           </div>
           {cfg.showBet && typeof bet === "number" && bet > 0 && (
             <span className="text-[6px] sm:text-[8px] text-[color:var(--color-gold)] pl-1.5 border-l border-black/10 leading-none whitespace-nowrap">
@@ -154,8 +168,8 @@ function PlayerSeat({
       {/* Large countdown number — very readable, colour-coded */}
       {showRing && (
         <span
-          className={cn("font-display font-black leading-none tabular-nums", cfg.numCls)}
-          style={{ color: timerColor, textShadow: `0 0 10px ${timerColor}66` }}
+          className={cn("font-display font-black leading-none tabular-nums text-white", cfg.numCls)}
+          style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
         >
           {turnTimeLeft}s
         </span>
@@ -346,6 +360,32 @@ export default function App() {
     if (!meta) return;
     meta.content = uiState === "game" ? "#4e7fa4" : "#e8eef5";
   }, [uiState]);
+
+  const [flashAction, setFlashAction] = useState<{ playerId: string; label: string; color: string } | null>(null);
+  const gsRef = useRef(gameState);
+  gsRef.current = gameState;
+
+  useEffect(() => {
+    const gs = gsRef.current;
+    if (!gs || !actionLog) return;
+    for (const p of gs.players) {
+      if (!actionLog.startsWith(p.name + ' ')) continue;
+      const rest = actionLog.slice(p.name.length + 1).toLowerCase();
+      let label = '', color = '';
+      if      (rest.startsWith('folds') || rest.startsWith('timed out')) { label = 'FOLD';    color = '#ef4444'; }
+      else if (rest.startsWith('checks'))    { label = 'CHECK';   color = '#22c55e'; }
+      else if (rest.startsWith('calls'))     { label = 'CALL';    color = '#3b82f6'; }
+      else if (rest.startsWith('bets'))      { label = 'BET';     color = '#f59e0b'; }
+      else if (rest.startsWith('raises'))    { label = 'RAISE';   color = '#f59e0b'; }
+      else if (rest.startsWith('goes all'))  { label = 'ALL IN!'; color = '#dc2626'; }
+      if (label) {
+        setFlashAction({ playerId: p.id, label, color });
+        const t = setTimeout(() => setFlashAction(null), 2500);
+        return () => clearTimeout(t);
+      }
+      break;
+    }
+  }, [actionLog]);
 
   function copyRoomCode() {
     navigator.clipboard?.writeText(roomCode).then(() => {
@@ -601,6 +641,23 @@ export default function App() {
   const potChipVariant = gameState.pot >= 500 ? "gold" : gameState.pot >= 200 ? "blue" : "red";
   const heroTurnTimeLeft = turnTimer?.playerId === playerId ? turnTimer.timeLeft : null;
 
+  const currentTurnPlayer = gameState.players.find(p => p.isCurrentTurn && !p.folded);
+  const infoMsg = (() => {
+    if ((myTurnActive && isBettingPhase) || (myTurnActive && !isBettingPhase))
+      return { text: "Your Turn!", urgent: true };
+    if (showDraw)
+      return { text: "Pick Cards to Discard", urgent: true };
+    if (currentTurnPlayer && !isShowdown) {
+      if (currentTurnPlayer.id === playerId) return { text: "Your Turn!", urgent: true };
+      return { text: `${currentTurnPlayer.name}'s Turn`, urgent: false };
+    }
+    if (isMemoryReveal)  return { text: "Memorise Your Cards!", urgent: false };
+    if (isDrawReveal)    return { text: "New Cards Revealed!",   urgent: false };
+    if (isDiscardReveal) return { text: "Showing Discards…",    urgent: false };
+    if (isShowdown)      return { text: "Showdown!",             urgent: false };
+    return { text: actionLog, urgent: false };
+  })();
+
   return (
     <main className="h-dvh w-full bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)] text-foreground overflow-hidden relative">
 
@@ -703,6 +760,8 @@ export default function App() {
                 folded={opp.folded}
                 turnTimeLeft={oppTurnTimeLeft}
                 size={seatSize}
+                flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
+                flashColor={flashAction?.playerId === opp.id ? flashAction.color : undefined}
               />
               <div className={cn("flex", cardSpacing)}>
                 {opp.hand.map((c, ci) => (
@@ -729,8 +788,21 @@ export default function App() {
             ${gameState.pot.toLocaleString()}
           </span>
         </div>
-        <div className="text-[7px] sm:text-[10px] text-gray-700 bg-white/75 px-2 py-1 rounded-xl border border-black/[0.08] max-w-[160px] sm:max-w-[260px] text-center leading-tight shadow-sm">
-          {actionLog}
+        <div className={cn(
+          "px-4 py-2 rounded-2xl text-center shadow-md max-w-[200px] sm:max-w-[280px] transition-colors duration-300",
+          infoMsg.urgent
+            ? "bg-[color:var(--color-blue)] border border-[color:var(--color-blue-soft)]"
+            : "bg-white/90 border border-black/[0.08]",
+        )}>
+          <p className={cn(
+            "font-display font-bold leading-tight text-[13px] sm:text-[15px]",
+            infoMsg.urgent ? "text-white" : "text-foreground/90",
+          )}>
+            {infoMsg.urgent && (
+              <span className="inline-block w-2 h-2 rounded-full bg-white mr-1.5 align-middle animate-ping opacity-75" />
+            )}
+            {infoMsg.text}
+          </p>
         </div>
       </div>
 
@@ -748,6 +820,8 @@ export default function App() {
             avatar={myPlayer.name.charAt(0).toUpperCase()}
             active={myTurnActive} folded={myPlayer.folded}
             turnTimeLeft={heroTurnTimeLeft}
+            flashLabel={flashAction?.playerId === myPlayer.id ? flashAction.label : undefined}
+            flashColor={flashAction?.playerId === myPlayer.id ? flashAction.color : undefined}
           />
           <div className="flex gap-0.5 sm:gap-1">
             {myPlayer.hand.map((c, i) => {
