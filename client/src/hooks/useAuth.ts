@@ -42,7 +42,7 @@ export function useAuth() {
     let lastUserId: string | null = null;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         if (session?.user) {
           // Guard before any setState — prevents re-renders from duplicate events
           // (Supabase fires both SIGNED_IN and INITIAL_SESSION on every page load)
