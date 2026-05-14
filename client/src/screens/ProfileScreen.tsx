@@ -35,7 +35,12 @@ export function ProfileScreen({
   return (
     <div
       className="h-dvh flex flex-col bg-[var(--color-background)] overflow-hidden select-none"
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      style={{
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
     >
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
 
@@ -48,12 +53,18 @@ export function ProfileScreen({
         <h2 className="font-display text-base font-bold blue-text flex-1 text-center pr-10">Profile</h2>
       </div>
 
-      <div className="relative flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-5">
-        {/* Avatar + stats */}
-        <div className="flex flex-col items-center gap-3 pb-3 border-b border-black/[0.07]">
+      {/* Body — single col portrait, two col landscape */}
+      <div className="relative flex-1 flex flex-col [@media(orientation:landscape)]:flex-row overflow-hidden">
+
+        {/* Left / Top — Avatar + stats */}
+        <div className="flex flex-col items-center gap-3
+          px-5 py-5
+          [@media(orientation:landscape)]:w-[40%] [@media(orientation:landscape)]:justify-center
+          [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]
+          shrink-0">
+
           <Avatar url={profile.avatar_url} name={profile.username} size="lg" className="border-4 border-white shadow-md" />
 
-          {/* Stats pills */}
           <div className="flex gap-3">
             {[
               { label: 'Games', value: profile.total_games },
@@ -68,48 +79,50 @@ export function ProfileScreen({
           </div>
         </div>
 
-        {/* Edit fields */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-display tracking-widest uppercase text-[color:var(--color-blue)] opacity-70">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              maxLength={20}
-              className="w-full bg-white border border-black/[0.12] rounded-2xl px-4 py-3.5 text-foreground focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-display tracking-widest uppercase text-[color:var(--color-blue)] opacity-70">Country</label>
-            <div className="relative">
-              {countryCode && (
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl pointer-events-none">{getFlagEmoji(countryCode)}</span>
-              )}
-              <select
-                value={countryCode}
-                onChange={e => setCountryCode(e.target.value)}
-                className={`w-full bg-white border border-black/[0.12] rounded-2xl py-3.5 text-foreground focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm appearance-none ${countryCode ? 'pl-10 pr-4' : 'px-4'}`}
-              >
-                <option value="">No country selected</option>
-                {COUNTRIES.map(c => (
-                  <option key={c.code} value={c.code}>{getFlagEmoji(c.code)} {c.name}</option>
-                ))}
-              </select>
+        {/* Right / Bottom — Edit fields */}
+        <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 [@media(orientation:landscape)]:justify-center">
+          <div className="flex flex-col gap-4 w-full max-w-sm mx-auto [@media(orientation:landscape)]:mx-0">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-display tracking-widest uppercase text-[color:var(--color-blue)] opacity-70">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                maxLength={20}
+                className="w-full bg-white border border-black/[0.12] rounded-2xl px-4 py-3.5 text-foreground focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
+              />
             </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-display tracking-widest uppercase text-[color:var(--color-blue)] opacity-70">Country</label>
+              <div className="relative">
+                {countryCode && (
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl pointer-events-none">{getFlagEmoji(countryCode)}</span>
+                )}
+                <select
+                  value={countryCode}
+                  onChange={e => setCountryCode(e.target.value)}
+                  className={`w-full bg-white border border-black/[0.12] rounded-2xl py-3.5 text-foreground focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm appearance-none ${countryCode ? 'pl-10 pr-4' : 'px-4'}`}
+                >
+                  <option value="">No country selected</option>
+                  {COUNTRIES.map(c => (
+                    <option key={c.code} value={c.code}>{getFlagEmoji(c.code)} {c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {error && <p className="text-xs text-red-500">{error}</p>}
+
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="w-full h-13 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow active:scale-[0.97] transition-transform disabled:opacity-50"
+            >
+              {loading ? 'Saving…' : saved ? 'Saved ✓' : 'Save Changes'}
+            </button>
           </div>
         </div>
-
-        {error && <p className="text-xs text-red-500 text-center">{error}</p>}
-
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="w-full h-13 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow active:scale-[0.97] transition-transform disabled:opacity-50"
-        >
-          {loading ? 'Saving…' : saved ? 'Saved ✓' : 'Save Changes'}
-        </button>
       </div>
     </div>
   );

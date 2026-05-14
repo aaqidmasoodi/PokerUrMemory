@@ -18,45 +18,60 @@ function CardFan() {
 
 export function LandingScreen({ onLogin }: { onLogin: () => void }) {
   return (
-    <div className="h-dvh flex flex-col items-center justify-center bg-[var(--color-background)] overflow-hidden select-none px-6 gap-8"
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-
+    <div
+      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row bg-[var(--color-background)] overflow-hidden select-none"
+      style={{
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingLeft: 'env(safe-area-inset-left, 0px)',
+        paddingRight: 'env(safe-area-inset-right, 0px)',
+      }}
+    >
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/10 pointer-events-none" />
 
-      {/* Branding */}
-      <div className="relative flex flex-col items-center gap-4">
+      {/* Left / Top — Branding */}
+      <div className="relative flex flex-col items-center justify-center gap-4 flex-1 px-6 pt-10 pb-4 [@media(orientation:landscape)]:pt-0 [@media(orientation:landscape)]:pb-0">
         <img
           src="/android-chrome-192x192.png"
           alt="PokerUrMemory"
           draggable={false}
-          className="w-24 h-24 rounded-[22px] shadow-[0_8px_28px_rgba(0,0,0,0.25)]"
+          className="w-20 h-20 [@media(orientation:landscape)]:w-16 [@media(orientation:landscape)]:h-16 rounded-[22px] shadow-[0_8px_28px_rgba(0,0,0,0.25)]"
         />
         <div className="text-center">
-          <h1 className="font-display text-[2.2rem] font-bold blue-text leading-tight tracking-wide">
+          <h1 className="font-display text-[2.2rem] [@media(orientation:landscape)]:text-[1.7rem] font-bold blue-text leading-tight tracking-wide">
             PokerUrMemory
           </h1>
           <p className="text-[11px] text-gray-500 mt-1 tracking-[0.18em] uppercase">
             5-Card Draw · Memory Twist
           </p>
         </div>
-        <div className="opacity-80 mt-1">
+        <div className="opacity-80 [@media(orientation:landscape)]:hidden">
           <CardFan />
         </div>
       </div>
 
-      {/* Google login */}
-      <div className="relative w-full max-w-xs flex flex-col gap-3">
-        <button
-          onClick={onLogin}
-          className="w-full h-14 rounded-2xl font-semibold text-sm bg-white border border-black/[0.12] shadow-md flex items-center justify-center gap-3 active:scale-[0.97] transition-transform"
-        >
-          <GoogleIcon />
-          Continue with Google
-        </button>
-        <p className="text-center text-[10px] text-gray-400 tracking-wide">
-          No account needed — sign in to play
-        </p>
+      {/* Divider */}
+      <div className="hidden [@media(orientation:landscape)]:block w-px self-stretch my-8 bg-black/[0.08]" />
+
+      {/* Right / Bottom — Login */}
+      <div className="relative flex flex-col items-center justify-center gap-4 flex-1 px-8 pb-10 pt-2 [@media(orientation:landscape)]:pt-0 [@media(orientation:landscape)]:pb-0">
+        {/* Card fan shown only in landscape, inside the right column */}
+        <div className="hidden [@media(orientation:landscape)]:block opacity-80 mb-2">
+          <CardFan />
+        </div>
+        <div className="w-full max-w-xs flex flex-col gap-3">
+          <button
+            onClick={onLogin}
+            className="w-full h-14 rounded-2xl font-semibold text-sm bg-white border border-black/[0.12] shadow-md flex items-center justify-center gap-3 active:scale-[0.97] transition-transform"
+          >
+            <GoogleIcon />
+            Continue with Google
+          </button>
+          <p className="text-center text-[10px] text-gray-400 tracking-wide">
+            No account needed — sign in to play
+          </p>
+        </div>
       </div>
     </div>
   );
