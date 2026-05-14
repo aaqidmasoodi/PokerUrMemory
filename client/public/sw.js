@@ -2,10 +2,18 @@
 // For a multiplayer game, we use network-first: always try the network,
 // fall back to cache only if the network is unavailable.
 
-const CACHE = 'pokermemory-v1';
+const CACHE = 'pokermemory-v2';
+const PREV_CACHES = ['pokermemory-v1'];
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', event => event.waitUntil(clients.claim()));
+self.addEventListener('activate', event => event.waitUntil(
+  Promise.all([
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => PREV_CACHES.includes(k)).map(k => caches.delete(k)))
+    ),
+    clients.claim(),
+  ])
+));
 
 self.addEventListener('fetch', event => {
   // Only handle GET requests for same-origin assets
