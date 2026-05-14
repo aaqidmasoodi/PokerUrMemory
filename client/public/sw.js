@@ -2,8 +2,8 @@
 // For a multiplayer game, we use network-first: always try the network,
 // fall back to cache only if the network is unavailable.
 
-const CACHE = 'pokermemory-v2';
-const PREV_CACHES = ['pokermemory-v1'];
+const CACHE = 'pokermemory-v3';
+const PREV_CACHES = ['pokermemory-v1', 'pokermemory-v2'];
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil(
