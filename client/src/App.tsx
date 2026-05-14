@@ -1,30 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { useSocket, type DiscardEntry } from "./hooks/useSocket";
+import { useAuth } from "./hooks/useAuth";
+import { LandingScreen } from "./screens/LandingScreen";
+import { OnboardingScreen } from "./screens/OnboardingScreen";
+import { MainMenuScreen } from "./screens/MainMenuScreen";
+import { MatchmakingScreen } from "./screens/MatchmakingScreen";
+import { ProfileScreen } from "./screens/ProfileScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
 import { PlayingCard } from "./components/poker/PlayingCard";
 import { ChipStack } from "./components/poker/ChipStack";
 import { Button } from "./components/ui/button";
 import { Slider } from "./components/ui/slider";
 import { cn } from "./lib/utils";
-import { Clock, Eye, LogOut, Copy, Check, RefreshCw, Volume2, VolumeX, ScrollText, ArrowLeft, X } from "lucide-react";
+import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X } from "lucide-react";
 
-// ─── Random username generator ────────────────────────────────────────────────
-
-const _ADJ = [
-  "Wild","Silent","Dark","Lucky","Iron","Steel","Phantom","Shadow",
-  "Rogue","Slick","Neon","Sharp","Ghost","Swift","Ace","Bold",
-  "Sly","Cold","Crazy","Bluff",
-];
-const _NOUN = [
-  "Shark","Fox","Hustler","Dealer","Maverick","Joker","Trickster",
-  "Gambler","Wolf","Viper","Tiger","King","Cobra","Hawk","Eagle",
-  "Bluffer","Raiser","Caller","Phantom","Ace",
-];
-function randomUsername() {
-  const adj  = _ADJ [Math.floor(Math.random() * _ADJ.length)];
-  const noun = _NOUN[Math.floor(Math.random() * _NOUN.length)];
-  const num  = Math.floor(Math.random() * 90) + 10;
-  return `${adj}${noun}${num}`;
-}
 
 type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "discardReveal" | "drawReveal" | "secondBetting" | "showdown";
 
@@ -327,40 +316,23 @@ function ConfirmDialog({
   );
 }
 
-// ─── Decorative card fan ──────────────────────────────────────────────────────
-
-function CardFan() {
-  return (
-    <div className="relative h-28 w-44 flex-shrink-0">
-      <div className="absolute top-5 left-3 -rotate-[18deg] origin-bottom">
-        <PlayingCard card={{ rank: "A", suit: "♠" }} faceUp size="sm" />
-      </div>
-      <div className="absolute top-1 left-1/2 -translate-x-1/2 z-10">
-        <PlayingCard card={{ rank: "K", suit: "♥" }} faceUp size="sm" />
-      </div>
-      <div className="absolute top-5 right-3 rotate-[18deg] origin-bottom">
-        <PlayingCard card={{ rank: "Q", suit: "♦" }} faceUp size="sm" />
-      </div>
-    </div>
-  );
-}
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const { authState, user, profile, signInWithGoogle, signOut, createProfile, updateProfile } = useAuth();
   const {
-    uiState, roomCode, playerId, isHost, lobbyPlayers, gameState,
+    inGame, playerId, gameState,
     myTurnData, actionLog, timer, showdownData, discardRevealData, selectedDrawCards, hasDiscarded,
     turnTimer, gameLogs,
-    createRoom, joinRoom, startGame, playAction, toggleDrawCard, confirmDiscard, leaveLobby, leaveGame,
+    matchTimedOut, findGame, cancelSearch,
+    playAction, toggleDrawCard, confirmDiscard, leaveGame,
   } = useSocket();
 
-  const [playerNameInput, setPlayerNameInput] = useState(() => randomUsername());
-  const [roomCodeInput, setRoomCodeInput] = useState("");
+  const [appScreen, setAppScreen] = useState<'menu' | 'matchmaking' | 'profile' | 'settings'>('menu');
   const [raiseAmount, setRaiseAmount] = useState<number[]>([100]);
   const [showBetSlider, setShowBetSlider] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [muted, setMuted] = useState(false);
   const [showLog, setShowLog] = useState(false);
 
@@ -369,8 +341,24 @@ export default function App() {
   useEffect(() => {
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!meta) return;
-    meta.content = uiState === "game" ? "#4e7fa4" : "#e8eef5";
-  }, [uiState]);
+    meta.content = inGame ? "#4e7fa4" : "#e8eef5";
+  }, [inGame]);
+
+  // Reset to menu when a game ends
+  const prevInGame = useRef(false);
+  useEffect(() => {
+    if (prevInGame.current && !inGame) setAppScreen('menu');
+    prevInGame.current = inGame;
+  }, [inGame]);
+
+  // Start/stop matchmaking when the screen is shown
+  useEffect(() => {
+    if (appScreen === 'matchmaking' && !inGame && profile) {
+      findGame(profile.id, profile.username);
+      return () => cancelSearch();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appScreen, inGame]);
 
   const [flashAction, setFlashAction] = useState<{ playerId: string; label: string; color: string } | null>(null);
   const gsRef = useRef(gameState);
@@ -404,7 +392,7 @@ export default function App() {
     const phase = gameState?.phase;
     if (!phase || phase === prevPhaseRef.current) return;
     if (phase === 'memoryReveal') {
-      setFlashAction(null); // clear stale action flash at round start
+      setFlashAction(null);
       playSound('card_flip.wav');
     } else if (phase === 'drawReveal' || phase === 'discardReveal') {
       playSound('card_flip.wav');
@@ -412,244 +400,48 @@ export default function App() {
     prevPhaseRef.current = phase;
   }, [gameState?.phase]);
 
-  function copyRoomCode() {
-    navigator.clipboard?.writeText(roomCode).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }
-
-  // ── JOIN / MAIN MENU ──────────────────────────────────────────────────────────
-  if (uiState === "join") {
-    return (
-      <div className="h-dvh flex flex-col landscape:flex-row bg-[var(--color-background)] overflow-hidden select-none">
-        {/* ── Branding hero ── */}
-        <div className="flex-1 relative flex flex-col items-center justify-center gap-3 landscape:gap-2 px-6 landscape:px-4 min-h-0 overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingLeft: 'env(safe-area-inset-left, 0px)' }}>
-          <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/10 pointer-events-none" />
-
-          <div className="relative drop-shadow-xl">
-            <img
-              src="/android-chrome-192x192.png"
-              alt="PokerUrMemory"
-              draggable={false}
-              className="w-24 h-24 landscape:w-16 landscape:h-16 rounded-[22px] landscape:rounded-[16px] shadow-[0_8px_28px_rgba(0,0,0,0.25)]"
-            />
-          </div>
-
-          <div className="relative text-center">
-            <h1 className="font-display text-[2.1rem] landscape:text-[1.55rem] font-bold blue-text leading-tight tracking-wide">
-              PokerUrMemory
-            </h1>
-            <p className="text-[11px] landscape:text-[9px] text-gray-500 mt-1 landscape:mt-0.5 tracking-[0.18em] uppercase">
-              5-Card Draw · Memory Twist
-            </p>
-          </div>
-
-          <div className="relative opacity-80 scale-90 landscape:scale-75 mt-1 landscape:-mt-1">
-            <CardFan />
-          </div>
-        </div>
-
-        {/* ── Form panel ── */}
-        <div
-          className="shrink-0 landscape:w-[46%] flex flex-col gap-3.5 landscape:gap-2.5 px-5 landscape:px-4 pt-5 landscape:pt-0 landscape:justify-center bg-white/60 border-t landscape:border-t-0 landscape:border-l border-black/[0.07]"
-          style={{ paddingBottom: `calc(1.5rem + env(safe-area-inset-bottom, 0px))`, paddingRight: `env(safe-area-inset-right, 0px)` }}
-        >
-          {/* Name input */}
-          <div className="relative">
-            <span className="absolute left-4 landscape:left-3.5 top-1/2 -translate-y-1/2 text-[color:var(--color-blue)] text-[10px] landscape:text-[9px] font-display uppercase tracking-widest pointer-events-none opacity-70">
-              Name
-            </span>
-            <input
-              type="text"
-              placeholder="Your name"
-              value={playerNameInput}
-              onChange={e => setPlayerNameInput(e.target.value)}
-              className="w-full bg-white border border-black/[0.12] rounded-2xl landscape:rounded-xl pl-16 landscape:pl-14 pr-11 py-4 landscape:py-3 text-foreground placeholder:text-foreground/30 focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
-            />
-            <button
-              onClick={() => setPlayerNameInput(randomUsername())}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 grid place-items-center rounded-full text-[color:var(--color-blue)]/60 hover:text-[color:var(--color-blue)] hover:bg-[color:var(--color-blue)]/8 transition-colors"
-              title="Random name"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* Primary CTA */}
-          <button
-            onClick={() => createRoom(playerNameInput || "Player")}
-            className="w-full h-14 landscape:h-11 rounded-2xl landscape:rounded-xl font-display tracking-wider uppercase text-[11px] landscape:text-[10px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow-[0_4px_16px_rgba(0,0,0,0.18)] active:scale-[0.97] transition-transform"
-          >
-            Create New Game
-          </button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3 -my-0.5 landscape:my-0">
-            <div className="flex-1 h-px bg-black/15" />
-            <span className="text-[9px] landscape:text-[8px] tracking-[0.3em] font-display uppercase text-gray-400">or join</span>
-            <div className="flex-1 h-px bg-black/15" />
-          </div>
-
-          {/* Room-code input */}
-          <input
-            type="text"
-            placeholder="ROOM CODE"
-            value={roomCodeInput}
-            onChange={e => setRoomCodeInput(e.target.value.toUpperCase())}
-            maxLength={6}
-            className="w-full bg-white border border-black/[0.12] rounded-2xl landscape:rounded-xl px-4 landscape:px-3 py-4 landscape:py-3 text-foreground placeholder:text-foreground/25 focus:border-[color:var(--color-blue)]/70 outline-none uppercase text-center tracking-[0.45em] landscape:tracking-[0.4em] shadow-sm"
-          />
-
-          {/* Secondary CTA */}
-          <button
-            onClick={() => joinRoom(roomCodeInput, playerNameInput || "Player")}
-            className="w-full h-14 landscape:h-11 rounded-2xl landscape:rounded-xl font-display tracking-wider uppercase text-[11px] landscape:text-[10px] font-bold bg-white text-[color:var(--color-blue)] blue-border shadow-sm active:scale-[0.97] transition-transform"
-          >
-            Join Game
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── LOBBY ─────────────────────────────────────────────────────────────────────
-  if (uiState === "lobby") {
-    const playerList = (
-      <div
-        className="flex-1 overflow-y-auto overscroll-contain px-4 landscape:px-3 pt-3 space-y-2.5"
-        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+  // ── AUTH SCREENS ──────────────────────────────────────────────────────────────
+  if (authState === 'loading') return (
+    <div className="h-dvh flex flex-col items-center justify-center gap-6 bg-[var(--color-background)]">
+      <div className="w-8 h-8 border-2 border-[color:var(--color-blue)]/30 border-t-[color:var(--color-blue)] rounded-full animate-spin" />
+      <button
+        onClick={signOut}
+        className="text-xs text-gray-400 hover:text-red-500 transition-colors"
       >
-        {lobbyPlayers.map((p, i) => (
-          <div key={i} className="flex items-center gap-3 bg-white/80 px-4 landscape:px-3 py-3 landscape:py-2.5 rounded-2xl border border-black/[0.07] shadow-sm">
-            <div className="w-10 h-10 landscape:w-9 landscape:h-9 rounded-full bg-gradient-to-br from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white flex items-center justify-center font-bold text-base landscape:text-sm shrink-0">
-              {p.name.charAt(0).toUpperCase()}
-            </div>
-            <span className="font-semibold text-sm text-foreground truncate flex-1">
-              {p.name}{p.id === playerId ? <span className="text-gray-400 text-xs ml-1">(You)</span> : ""}
-            </span>
-            {p.isHost && (
-              <span className="text-[8px] font-display tracking-widest uppercase blue-text bg-[color:var(--color-blue)]/10 px-2.5 py-1 rounded-full border border-[color:var(--color-blue)]/25 shrink-0">
-                Host
-              </span>
-            )}
-          </div>
-        ))}
-        {Array.from({ length: Math.max(0, 2 - lobbyPlayers.length) }).map((_, i) => (
-          <div key={`ghost-${i}`} className="flex items-center gap-3 px-4 landscape:px-3 py-3 landscape:py-2.5 rounded-2xl border border-dashed border-black/[0.10]">
-            <div className="w-10 h-10 landscape:w-9 landscape:h-9 rounded-full border border-dashed border-black/10 flex items-center justify-center shrink-0">
-              <span className="text-gray-300 text-2xl leading-none">+</span>
-            </div>
-            <span className="text-gray-400 text-sm">Waiting for player…</span>
-          </div>
-        ))}
-      </div>
-    );
+        Sign out
+      </button>
+    </div>
+  );
+  if (authState === 'landing') return <LandingScreen onLogin={signInWithGoogle} />;
+  if (authState === 'onboarding' && user) return <OnboardingScreen user={user} onComplete={createProfile} />;
 
-    const actionPanel = (
-      <div className="shrink-0 space-y-2">
-        {isHost ? (
-          <>
-            <p className="text-[10px] text-gray-500 text-center leading-relaxed">
-              {lobbyPlayers.length < 2 ? "Need at least 2 players to start" : "All set — start whenever you're ready!"}
-            </p>
-            <button
-              onClick={startGame}
-              disabled={lobbyPlayers.length < 2}
-              className={cn(
-                "w-full h-12 landscape:h-10 rounded-2xl landscape:rounded-xl font-display tracking-wider uppercase text-[11px] landscape:text-[10px] font-bold transition-all",
-                lobbyPlayers.length >= 2
-                  ? "bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow-[0_4px_14px_rgba(0,0,0,0.18)] active:scale-[0.97]"
-                  : "bg-black/5 text-black/20 cursor-not-allowed",
-              )}
-            >
-              Start Game
-            </button>
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-2 py-1">
-            <div className="flex items-center gap-2">
-              {[0, 1, 2].map(i => (
-                <div key={i} className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-blue)]/60 animate-pulse"
-                  style={{ animationDelay: `${i * 0.28}s` }} />
-              ))}
-            </div>
-            <span className="text-xs text-gray-500 tracking-wide">Waiting for host to start…</span>
-          </div>
-        )}
-      </div>
+  // ── NON-GAME SCREENS ──────────────────────────────────────────────────────────
+  if (!inGame) {
+    if (appScreen === 'matchmaking') return (
+      <MatchmakingScreen
+        timedOut={matchTimedOut}
+        onCancel={() => setAppScreen('menu')}
+      />
     );
-
+    if (appScreen === 'profile') return (
+      <ProfileScreen profile={profile!} onSave={updateProfile} onBack={() => setAppScreen('menu')} />
+    );
+    if (appScreen === 'settings') return (
+      <SettingsScreen
+        profile={profile!}
+        muted={muted}
+        onToggleMute={() => setMuted(m => !m)}
+        onBack={() => setAppScreen('menu')}
+        onSignOut={signOut}
+      />
+    );
     return (
-      <div className="h-dvh flex flex-col landscape:flex-row bg-[var(--color-background)] overflow-hidden select-none">
-
-        {/* ── Left panel (portrait: top / landscape: sidebar) ── */}
-        <div
-          className="shrink-0 landscape:w-[42%] flex flex-col landscape:justify-center gap-3 px-5 landscape:px-6 pb-4 landscape:pb-6 border-b landscape:border-b-0 landscape:border-r border-black/[0.07] bg-white/40"
-          style={{ paddingTop: `calc(1.1rem + env(safe-area-inset-top, 0px))`, paddingLeft: `env(safe-area-inset-left, 0px)` }}
-        >
-          <button
-            onClick={leaveLobby}
-            className="flex items-center gap-1.5 self-start text-[10px] font-display tracking-wider uppercase text-gray-500 hover:text-[color:var(--color-blue)] transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Back
-          </button>
-
-          <div className="flex landscape:flex-col items-center landscape:items-start justify-between landscape:justify-start gap-3 landscape:gap-2">
-            <div>
-              <p className="text-[9px] text-[color:var(--color-blue)] tracking-[0.3em] uppercase mb-0.5 opacity-70">Room Code</p>
-              <p className="font-display text-[2rem] landscape:text-[2.4rem] font-bold blue-text tracking-widest leading-none">
-                {roomCode}
-              </p>
-              <p className="text-[8px] text-gray-400 mt-1 tracking-wide">not case-sensitive</p>
-            </div>
-            <button
-              onClick={copyRoomCode}
-              className="flex items-center gap-2 px-4 py-3 landscape:py-3.5 text-[10px] font-display tracking-widest uppercase blue-border rounded-2xl text-[color:var(--color-blue)] bg-white shadow-sm active:bg-gray-50 transition-colors shrink-0 min-w-[80px] justify-center"
-            >
-              {copied
-                ? <><Check className="w-4 h-4 shrink-0" /> Copied</>
-                : <><Copy className="w-4 h-4 shrink-0" /> Copy</>}
-            </button>
-          </div>
-
-          {/* Progress pips */}
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] text-gray-500 uppercase tracking-[0.22em]">
-              Players&nbsp;{lobbyPlayers.length}&nbsp;/&nbsp;4
-            </p>
-            <div className="flex gap-1.5">
-              {[0, 1, 2, 3].map(i => (
-                <div key={i} className={cn(
-                  "w-6 h-1.5 rounded-full transition-all duration-300",
-                  i < lobbyPlayers.length ? "bg-[color:var(--color-blue)]" : "bg-black/10",
-                )} />
-              ))}
-            </div>
-          </div>
-
-          <div
-            className="hidden landscape:block"
-            style={{ paddingBottom: `env(safe-area-inset-bottom, 0px)` }}
-          >
-            {actionPanel}
-          </div>
-        </div>
-
-        {/* ── Right panel ── */}
-        <div className="flex-1 flex flex-col min-h-0" style={{ paddingRight: `env(safe-area-inset-right, 0px)` }}>
-          {playerList}
-
-          <div
-            className="landscape:hidden shrink-0 px-4 pt-3 border-t border-black/[0.07]"
-            style={{ paddingBottom: `calc(1.25rem + env(safe-area-inset-bottom, 0px))` }}
-          >
-            {actionPanel}
-          </div>
-        </div>
-      </div>
+      <MainMenuScreen
+        profile={profile!}
+        onStartGame={() => setAppScreen('matchmaking')}
+        onProfile={() => setAppScreen('profile')}
+        onSettings={() => setAppScreen('settings')}
+      />
     );
   }
 

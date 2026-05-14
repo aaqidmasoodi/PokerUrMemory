@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 export type Phase = 'waiting' | 'memoryReveal' | 'firstBetting' | 'draw' | 'discardReveal' | 'drawReveal' | 'secondBetting' | 'showdown';
@@ -57,43 +57,21 @@ export interface DiscardRevealData {
   discards: DiscardEntry[];
 }
 
-export type UIState = 'join' | 'lobby' | 'game';
-
-const SESSION_KEY = 'pokermemory_session';
-
-function saveSession(roomCode: string, playerName: string) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ roomCode, playerName }));
-}
-
-function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-}
-
-function loadSession(): { roomCode: string; playerName: string } | null {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
 export function useSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
-
-  const [uiState, setUiState] = useState<UIState>('join');
+  const [inGame, setInGame] = useState(false);
   const [roomCode, setRoomCode] = useState<string>('');
   const [playerId, setPlayerId] = useState<string>('');
   const [isHost, setIsHost] = useState<boolean>(false);
-  const [lobbyPlayers, setLobbyPlayers] = useState<any[]>([]);
+  const [matchTimedOut, setMatchTimedOut] = useState(false);
+  const pendingMatchRef = useRef<{ userId: string; username: string } | null>(null);
 
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [myTurnData, setMyTurnData] = useState<YourTurnData | null>(null);
-  const [actionLog, setActionLog] = useState<string>('Waiting for game to start...');
+  const [actionLog, setActionLog] = useState<string>('');
   const [timer, setTimer] = useState<number | null>(null);
   const [showdownData, setShowdownData] = useState<any | null>(null);
   const [discardRevealData, setDiscardRevealData] = useState<DiscardRevealData | null>(null);
-
   const [selectedDrawCards, setSelectedDrawCards] = useState<number[]>([]);
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
   const [turnTimer, setTurnTimer] = useState<{ playerId: string; timeLeft: number } | null>(null);
@@ -103,34 +81,29 @@ export function useSocket() {
     const newSocket = io();
     setSocket(newSocket);
 
-    // Attempt reconnect on every new connection (handles page refresh)
-    newSocket.on('connect', () => {
-      const session = loadSession();
-      if (session) {
-        newSocket.emit('playerReconnect', session, (res: any) => {
-          if (res?.success) {
-            setRoomCode(session.roomCode);
-            setPlayerId(res.playerId);
-            setIsHost(res.isHost);
-            setUiState('game');
-          } else {
-            // Session is stale — clear it and stay on join screen
-            clearSession();
-          }
-        });
-      }
+    newSocket.on('matchFound', ({ roomCode: rc }: { roomCode: string }) => {
+      const pending = pendingMatchRef.current;
+      if (!pending) return;
+      newSocket.emit('joinMatchedGame', { roomCode: rc, userId: pending.userId, username: pending.username }, (res: any) => {
+        if (res?.success) {
+          setRoomCode(rc.toUpperCase());
+          setPlayerId(res.playerId);
+          setIsHost(res.isHost);
+          pendingMatchRef.current = null;
+        }
+      });
+    });
+
+    newSocket.on('matchTimeout', () => {
+      pendingMatchRef.current = null;
+      setMatchTimedOut(true);
     });
 
     newSocket.on('roomClosed', (msg: string) => {
-      clearSession();
       alert(msg);
-      setUiState('join');
+      setInGame(false);
       setRoomCode('');
       setGameState(null);
-    });
-
-    newSocket.on('lobbyUpdate', (data: any) => {
-      setLobbyPlayers(data.players);
     });
 
     newSocket.on('gameState', (state: GameState) => {
@@ -138,7 +111,7 @@ export function useSocket() {
       setTimer(state.timeLeft > 0 ? state.timeLeft : null);
 
       if (state.phase !== 'waiting' && state.phase !== 'showdown') {
-        setUiState('game');
+        setInGame(true);
         setShowdownData(null);
       }
 
@@ -161,9 +134,7 @@ export function useSocket() {
     });
 
     newSocket.on('yourTurnNotification', () => {
-      // Vibrate on mobile (Android Chrome; iOS Safari ignores this)
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-      // Flash the page title so the player notices even in background tabs
       const original = document.title;
       document.title = '🃏 Your Turn! — PokerUrMemory';
       setTimeout(() => { document.title = original; }, 3000);
@@ -190,7 +161,7 @@ export function useSocket() {
       setMyTurnData(null);
     });
 
-    newSocket.on('drawRevealStart', (_data: any) => {
+    newSocket.on('drawRevealStart', () => {
       setDiscardRevealData(null);
       setHasDiscarded(true);
       setMyTurnData(null);
@@ -199,19 +170,15 @@ export function useSocket() {
     newSocket.on('showdown', (data: any) => {
       setShowdownData(data);
       setMyTurnData(null);
-      setUiState('game');
+      setInGame(true);
       const handStr = data.hands?.map((h: any) => `${h.playerName}: ${h.rankName}`).join(' · ');
       setGameLogs(prev => [`${data.winner.playerName} wins $${data.pot} with ${data.winner.rankName}${handStr ? ' — ' + handStr : ''}`, ...prev].slice(0, 60));
     });
 
     newSocket.on('bluffWin', (data: any) => {
-      setShowdownData({
-        isBluff: true,
-        winner: { playerName: data.winner },
-        amount: data.amount,
-      });
+      setShowdownData({ isBluff: true, winner: { playerName: data.winner }, amount: data.amount });
       setMyTurnData(null);
-      setUiState('game');
+      setInGame(true);
       setGameLogs(prev => [`${data.winner} wins $${data.amount} (all others folded)`, ...prev].slice(0, 60));
     });
 
@@ -219,59 +186,31 @@ export function useSocket() {
       setGameLogs(prev => [`🏆 GAME OVER — ${data.winnerName} wins with $${data.chips}!`, ...prev].slice(0, 60));
     });
 
-    return () => {
-      newSocket.close();
-    };
+    return () => { newSocket.close(); };
   }, []);
 
-  const createRoom = useCallback((playerName: string) => {
+  const findGame = useCallback((userId: string, username: string) => {
     if (!socket) return;
-    socket.emit('createRoom', { playerName }, (response: any) => {
-      if (response.success) {
-        setRoomCode(response.roomCode);
-        setPlayerId(response.playerId);
-        setIsHost(response.isHost);
-        setUiState('lobby');
-        setLobbyPlayers([{ name: playerName, isHost: true, id: response.playerId }]);
-        saveSession(response.roomCode, playerName);
-      } else {
-        alert('Failed to create room');
-      }
-    });
+    pendingMatchRef.current = { userId, username };
+    setMatchTimedOut(false);
+    socket.emit('findGame', { userId, username });
   }, [socket]);
 
-  const joinRoom = useCallback((roomCodeInput: string, playerName: string) => {
+  const cancelSearch = useCallback(() => {
     if (!socket) return;
-    const normalizedCode = roomCodeInput.trim().toUpperCase();
-    socket.emit('joinRoom', { roomCode: normalizedCode, playerName }, (response: any) => {
-      if (response.success) {
-        setRoomCode(normalizedCode);
-        setPlayerId(response.playerId);
-        setIsHost(response.isHost);
-        setUiState('lobby');
-        saveSession(normalizedCode, playerName);
-      } else {
-        alert(response.error || 'Failed to join room');
-      }
-    });
+    pendingMatchRef.current = null;
+    setMatchTimedOut(false);
+    socket.emit('cancelSearch');
   }, [socket]);
-
-  const startGame = useCallback(() => {
-    if (!socket) return;
-    socket.emit('startGame', { roomCode }, (response: any) => {
-      if (!response.success) alert(response.error);
-    });
-  }, [socket, roomCode]);
 
   const nextHand = useCallback(() => {
     if (!socket) return;
-    socket.emit('nextHand', { roomCode }, (response: any) => {
-      if (!response.success) alert(response.error);
-      else setShowdownData(null);
+    socket.emit('nextHand', { roomCode }, (res: any) => {
+      if (res?.success) setShowdownData(null);
     });
   }, [socket, roomCode]);
 
-  const playAction = useCallback((action: string, amount: number = 0) => {
+  const playAction = useCallback((action: string, amount = 0) => {
     if (!socket) return;
     socket.emit('playerAction', { roomCode, action, amount });
     setMyTurnData(null);
@@ -279,14 +218,10 @@ export function useSocket() {
 
   const toggleDrawCard = useCallback((index: number) => {
     if (hasDiscarded || gameState?.phase !== 'draw') return;
-
     setSelectedDrawCards(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(index)) {
-        newSet.delete(index);
-      } else if (newSet.size < 4) {
-        newSet.add(index);
-      }
+      if (newSet.has(index)) { newSet.delete(index); }
+      else if (newSet.size < 4) { newSet.add(index); }
       const arr = Array.from(newSet);
       socket?.emit('playerSelectCards', { roomCode, selectedIndices: arr });
       return arr;
@@ -299,31 +234,22 @@ export function useSocket() {
     socket.emit('playerConfirmDiscard', { roomCode });
   }, [hasDiscarded, socket, roomCode]);
 
-  const leaveLobby = useCallback(() => {
-    clearSession();
-    if (socket && roomCode) socket.emit('leaveRoom', { roomCode });
-    setUiState('join');
-    setRoomCode('');
-    setLobbyPlayers([]);
-  }, [socket, roomCode]);
-
   const leaveGame = useCallback(() => {
-    clearSession();
-    socket?.disconnect();
-    setUiState('join');
+    socket?.emit('leaveRoom', { roomCode });
+    setInGame(false);
     setRoomCode('');
     setGameState(null);
     setMyTurnData(null);
     setShowdownData(null);
-  }, [socket]);
+    setGameLogs([]);
+  }, [socket, roomCode]);
 
   return {
     socket,
-    uiState,
+    inGame,
     roomCode,
     playerId,
     isHost,
-    lobbyPlayers,
     gameState,
     myTurnData,
     actionLog,
@@ -333,16 +259,14 @@ export function useSocket() {
     selectedDrawCards,
     hasDiscarded,
     turnTimer,
-
     gameLogs,
-    createRoom,
-    joinRoom,
-    startGame,
+    matchTimedOut,
+    findGame,
+    cancelSearch,
     nextHand,
     playAction,
     toggleDrawCard,
     confirmDiscard,
-    leaveLobby,
     leaveGame,
   };
 }

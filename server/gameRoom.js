@@ -47,13 +47,19 @@ class GameRoom {
         this.playersConfirmed = new Set();
         this.discardPool = new Map();
         this.discardRevealInterval = null;
+        // Matchmaking fields
+        this.gameSessionId = null;
+        this.expectedPlayerCount = 0;
+        this.matchedUserIds = [];
+        this.onGameOver = null;
     }
 
-    addPlayer(socketId, name) {
+    addPlayer(socketId, name, userId = null) {
         if (this.players.size >= 4) return false;
         this.players.set(socketId, {
             id: socketId,
             name: name,
+            userId: userId,
             chips: 100,
             hand: [],
             currentBet: 0,
@@ -403,6 +409,9 @@ class GameRoom {
             ? `🏆 Game Over! ${winner.name} wins with $${winner.chips}!`
             : 'Game Over!';
         this.io.to(this.roomCode).emit('gameOver', { winnerName: winner?.name, chips: winner?.chips });
+        if (this.onGameOver) {
+            this.onGameOver(players);
+        }
         setTimeout(() => this.io.to(this.roomCode).emit('roomClosed', msg), 4000);
     }
 
