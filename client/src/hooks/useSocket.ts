@@ -232,7 +232,7 @@ export function useSocket() {
 
     newSocket.on('playerLeft', ({ playerName }: { playerName?: string }) => {
       setDisconnectNotice(prev =>
-        prev ? { playerName: prev.playerName, reconnecting: false } : null
+        prev ? { playerName: playerName ?? prev.playerName, reconnecting: false } : null
       );
       setTimeout(() => setDisconnectNotice(null), 3000);
     });
