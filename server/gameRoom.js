@@ -3,6 +3,7 @@ const { evaluateHand, compareTieBreakers } = require('./handEvaluator');
 const SUITS = ['♠', '♥', '♦', '♣'];
 const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 const ANTE = 5;
+const MAX_BET = 20;
 
 function createDeck() {
     const deck = [];
@@ -77,7 +78,15 @@ class GameRoom {
         if (player && player.disconnectTimeout) {
             clearTimeout(player.disconnectTimeout);
         }
+        const wasHost = player?.isHost ?? false;
         this.players.delete(socketId);
+
+        if (wasHost && this.players.size > 0) {
+            const newHost = this.players.values().next().value;
+            newHost.isHost = true;
+            this.io.to(this.roomCode).emit('actionLog', `${newHost.name} is now the host.`);
+        }
+
         return this.players.size === 0;
     }
 
@@ -269,8 +278,7 @@ class GameRoom {
             }
 
             case 'bet': {
-                // amount = total desired bet (client sends total, not additional)
-                const totalBet = Math.min(amount, player.chips + player.currentBet);
+                const totalBet = Math.min(amount, player.chips + player.currentBet, MAX_BET);
                 const additional = totalBet - player.currentBet;
                 if (additional < 1) return;
                 player.chips -= additional;
@@ -300,8 +308,7 @@ class GameRoom {
             }
 
             case 'raise': {
-                // amount = total desired bet; only deduct the additional amount
-                const totalBet = Math.min(amount, player.chips + player.currentBet);
+                const totalBet = Math.min(amount, player.chips + player.currentBet, MAX_BET);
                 const additional = totalBet - player.currentBet;
                 if (additional < 1) return;
                 player.chips -= additional;
@@ -309,7 +316,6 @@ class GameRoom {
                 this.pot += additional;
                 this.currentBet = Math.max(this.currentBet, player.currentBet);
                 this.io.to(this.roomCode).emit('actionLog', `${player.name} raises to $${totalBet}.`);
-                // Everyone must re-act after a raise
                 this.playersActedThisRound = 1;
                 this.nextPlayer();
                 break;
@@ -329,13 +335,19 @@ class GameRoom {
             }
 
             case 'allIn': {
-                const allInAmount = player.chips;
-                player.chips = 0;
-                player.currentBet += allInAmount;
-                player.isAllIn = true;
-                this.pot += allInAmount;
+                const maxAdditional = Math.min(player.chips, MAX_BET - player.currentBet);
+                if (maxAdditional <= 0) {
+                    // Already at cap — treat as check
+                    this.io.to(this.roomCode).emit('actionLog', `${player.name} checks.`);
+                    this.nextPlayer();
+                    break;
+                }
+                player.chips -= maxAdditional;
+                player.currentBet += maxAdditional;
+                player.isAllIn = player.chips === 0;
+                this.pot += maxAdditional;
                 this.currentBet = Math.max(this.currentBet, player.currentBet);
-                this.io.to(this.roomCode).emit('actionLog', `${player.name} goes ALL IN for $${allInAmount}!`);
+                this.io.to(this.roomCode).emit('actionLog', `${player.name} goes ALL IN for $${maxAdditional}!`);
                 this.nextPlayer();
                 break;
             }
@@ -352,6 +364,9 @@ class GameRoom {
         } while (attempts < this.players.size && this.players.get(playerArray[this.currentPlayerIndex])?.folded);
 
         if (this.shouldEndBettingRound()) {
+            if (this.getActivePlayers().some(p => p.currentBet >= MAX_BET)) {
+                this.io.to(this.roomCode).emit('actionLog', `Bet limit of $${MAX_BET} reached — moving to next phase.`);
+            }
             this.endBettingRound();
             return;
         }
@@ -363,6 +378,9 @@ class GameRoom {
     shouldEndBettingRound() {
         const activePlayers = this.getActivePlayers();
         if (activePlayers.length <= 1) return true;
+
+        // End immediately when any player hits the $20 bet cap
+        if (activePlayers.some(p => p.currentBet >= MAX_BET)) return true;
 
         if (this.playersActedThisRound >= activePlayers.length) {
             if (this.currentBet === 0) return true;
@@ -623,21 +641,35 @@ class GameRoom {
         const currentPlayer = playerArray[this.currentPlayerIndex];
         if (!currentPlayer) return;
 
+        // Immediately fold a disconnected player rather than making everyone wait 30s
+        if (currentPlayer.disconnected) {
+            this.io.to(this.roomCode).emit('actionLog', `${currentPlayer.name} disconnected and folded.`);
+            currentPlayer.folded = true;
+            this.playersActedThisRound++;
+            this.broadcastState();
+            const activePlayers = this.getActivePlayers();
+            if (activePlayers.length === 1) {
+                this.handleSinglePlayerLeft(activePlayers[0]);
+            } else {
+                this.nextPlayer();
+            }
+            return;
+        }
+
         this.io.to(currentPlayer.id).emit('yourTurnNotification', {
             message: 'YOUR TURN!',
             phase: this.gamePhase,
         });
 
-        // Total all-in amount (chips + already-committed bet)
-        const maxBetTotal = currentPlayer.chips + currentPlayer.currentBet;
+        const maxBetTotal = Math.min(currentPlayer.chips + currentPlayer.currentBet, MAX_BET);
+        const atCap = currentPlayer.currentBet >= MAX_BET;
 
         this.io.to(currentPlayer.id).emit('yourTurn', {
             canCheck: currentPlayer.currentBet >= this.currentBet,
-            canCall: this.currentBet > 0 && currentPlayer.currentBet < this.currentBet && !currentPlayer.isAllIn,
-            canRaise: currentPlayer.chips > 0 && !currentPlayer.isAllIn,
+            canCall: this.currentBet > 0 && currentPlayer.currentBet < this.currentBet && !currentPlayer.isAllIn && !atCap,
+            canRaise: currentPlayer.chips > 0 && !currentPlayer.isAllIn && !atCap && this.currentBet < MAX_BET,
             currentBet: this.currentBet,
             playerBet: currentPlayer.currentBet,
-            // minRaise/minBet are total-bet values (client sends total, not additional)
             minRaise: Math.min(Math.max(this.currentBet * 2, this.currentBet + 1), maxBetTotal),
             maxBet: maxBetTotal,
             minBet: Math.min(this.currentBet + 1, maxBetTotal),

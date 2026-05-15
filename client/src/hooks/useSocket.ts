@@ -65,6 +65,9 @@ export function useSocket() {
   const [isHost, setIsHost] = useState<boolean>(false);
   const [matchTimedOut, setMatchTimedOut] = useState(false);
   const pendingMatchRef = useRef<{ userId: string; username: string } | null>(null);
+  const playerIdRef = useRef<string>('');
+  const roomCodeRef = useRef<string>('');
+  const currentUserRef = useRef<{ userId: string } | null>(null);
 
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [myTurnData, setMyTurnData] = useState<YourTurnData | null>(null);
@@ -76,18 +79,49 @@ export function useSocket() {
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
   const [turnTimer, setTurnTimer] = useState<{ playerId: string; timeLeft: number } | null>(null);
   const [gameLogs, setGameLogs] = useState<string[]>([]);
+  const [disconnectNotice, setDisconnectNotice] = useState<{ playerName: string; reconnecting: boolean } | null>(null);
+  const [roomClosedMsg, setRoomClosedMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const newSocket = io();
     setSocket(newSocket);
+
+    let initialConnectDone = false;
+    newSocket.on('connect', () => {
+      if (!initialConnectDone) { initialConnectDone = true; return; }
+      // Socket reconnected — attempt to rejoin if we were in a room
+      if (roomCodeRef.current && currentUserRef.current) {
+        newSocket.emit('rejoinGame', {
+          userId: currentUserRef.current.userId,
+          roomCode: roomCodeRef.current,
+        }, (res: any) => {
+          if (res?.success) {
+            setPlayerId(res.playerId);
+            playerIdRef.current = res.playerId;
+            setIsHost(res.isHost);
+          } else {
+            // Room is gone — reset to menu
+            setInGame(false);
+            setRoomCode('');
+            setGameState(null);
+            setDisconnectNotice(null);
+            roomCodeRef.current = '';
+            currentUserRef.current = null;
+          }
+        });
+      }
+    });
 
     newSocket.on('matchFound', ({ roomCode: rc }: { roomCode: string }) => {
       const pending = pendingMatchRef.current;
       if (!pending) return;
       newSocket.emit('joinMatchedGame', { roomCode: rc, userId: pending.userId, username: pending.username }, (res: any) => {
         if (res?.success) {
-          setRoomCode(rc.toUpperCase());
+          const upperRc = rc.toUpperCase();
+          setRoomCode(upperRc);
+          roomCodeRef.current = upperRc;
           setPlayerId(res.playerId);
+          playerIdRef.current = res.playerId;
           setIsHost(res.isHost);
           pendingMatchRef.current = null;
         }
@@ -100,15 +134,21 @@ export function useSocket() {
     });
 
     newSocket.on('roomClosed', (msg: string) => {
-      alert(msg);
       setInGame(false);
       setRoomCode('');
       setGameState(null);
+      setDisconnectNotice(null);
+      roomCodeRef.current = '';
+      currentUserRef.current = null;
+      setRoomClosedMsg(msg);
     });
 
     newSocket.on('gameState', (state: GameState) => {
       setGameState(state);
       setTimer(state.timeLeft > 0 ? state.timeLeft : null);
+
+      const me = state.players.find(p => p.id === playerIdRef.current);
+      if (me) setIsHost(me.isHost);
 
       if (state.phase !== 'waiting' && state.phase !== 'showdown') {
         setInGame(true);
@@ -186,12 +226,29 @@ export function useSocket() {
       setGameLogs(prev => [`🏆 GAME OVER — ${data.winnerName} wins with $${data.chips}!`, ...prev].slice(0, 60));
     });
 
+    newSocket.on('playerDisconnected', ({ playerName }: { playerId: string; playerName: string }) => {
+      setDisconnectNotice({ playerName, reconnecting: true });
+    });
+
+    newSocket.on('playerLeft', ({ playerName }: { playerName?: string }) => {
+      setDisconnectNotice(prev =>
+        prev ? { playerName: prev.playerName, reconnecting: false } : null
+      );
+      setTimeout(() => setDisconnectNotice(null), 3000);
+    });
+
+    newSocket.on('playerRejoined', ({ playerName }: { playerName: string }) => {
+      setDisconnectNotice(null);
+      setActionLog(`${playerName} reconnected.`);
+    });
+
     return () => { newSocket.close(); };
   }, []);
 
   const findGame = useCallback((userId: string, username: string) => {
     if (!socket) return;
     pendingMatchRef.current = { userId, username };
+    currentUserRef.current = { userId };
     setMatchTimedOut(false);
     socket.emit('findGame', { userId, username });
   }, [socket]);
@@ -234,6 +291,10 @@ export function useSocket() {
     socket.emit('playerConfirmDiscard', { roomCode });
   }, [hasDiscarded, socket, roomCode]);
 
+  const dismissRoomClosed = useCallback(() => {
+    setRoomClosedMsg(null);
+  }, []);
+
   const leaveGame = useCallback(() => {
     socket?.emit('leaveRoom', { roomCode });
     setInGame(false);
@@ -242,6 +303,9 @@ export function useSocket() {
     setMyTurnData(null);
     setShowdownData(null);
     setGameLogs([]);
+    setDisconnectNotice(null);
+    roomCodeRef.current = '';
+    currentUserRef.current = null;
   }, [socket, roomCode]);
 
   return {
@@ -261,6 +325,9 @@ export function useSocket() {
     turnTimer,
     gameLogs,
     matchTimedOut,
+    disconnectNotice,
+    roomClosedMsg,
+    dismissRoomClosed,
     findGame,
     cancelSearch,
     nextHand,

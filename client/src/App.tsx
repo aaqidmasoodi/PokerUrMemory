@@ -7,15 +7,17 @@ import { MainMenuScreen } from "./screens/MainMenuScreen";
 import { MatchmakingScreen } from "./screens/MatchmakingScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
+import { RulesScreen, RulesBody } from "./screens/RulesScreen";
 import { PlayingCard } from "./components/poker/PlayingCard";
 import { ChipStack } from "./components/poker/ChipStack";
 import { Button } from "./components/ui/button";
 import { Slider } from "./components/ui/slider";
 import { cn } from "./lib/utils";
-import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X } from "lucide-react";
+import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X, WifiOff, BookOpen } from "lucide-react";
 
 
 type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "discardReveal" | "drawReveal" | "secondBetting" | "showdown";
+type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules';
 
 let _globalMuted = false;
 function playSound(file: string, volume = 0.55) {
@@ -82,12 +84,12 @@ const SEAT_CFG = {
 
 function PlayerSeat({
   name, chips, bet, active, avatar, folded, turnTimeLeft, size = "normal",
-  flashLabel, flashColor,
+  flashLabel, flashColor, disconnected,
 }: {
   name: string; chips: number; bet?: number; active?: boolean;
   avatar: string; folded?: boolean; turnTimeLeft?: number | null;
   size?: "normal" | "compact" | "mini";
-  flashLabel?: string; flashColor?: string;
+  flashLabel?: string; flashColor?: string; disconnected?: boolean;
 }) {
   const cfg = SEAT_CFG[size];
   const showRing = active && !folded && turnTimeLeft != null;
@@ -114,8 +116,11 @@ function PlayerSeat({
     <div className="shrink-0 flex flex-col items-center gap-1">
       {/* Ring wrapper + pill */}
       <div className="relative" style={ringStyle}>
-        {/* Pulsing dot when it's this player's turn but no per-player timer yet */}
-        {active && !folded && !showRing && (
+        {/* Pulsing dot — gold for active turn, amber for disconnected */}
+        {disconnected && (
+          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] animate-pulse z-10" />
+        )}
+        {!disconnected && active && !folded && !showRing && (
           <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
         )}
 
@@ -123,7 +128,7 @@ function PlayerSeat({
         <div className={cn(
           "flex items-center rounded-full bg-white shadow-md",
           cfg.pill,
-          folded && "opacity-40 grayscale",
+          (folded || disconnected) && "opacity-40 grayscale",
         )}>
           <div
             className={cn(
@@ -133,7 +138,7 @@ function PlayerSeat({
             )}
             style={showRing ? { backgroundColor: timerColor } : undefined}
           >
-            {showRing ? <span className="font-black tabular-nums">{turnTimeLeft}</span> : avatar}
+            {showRing ? <span className="font-black tabular-nums">{turnTimeLeft}</span> : disconnected ? <WifiOff className="w-3 h-3" /> : avatar}
           </div>
           {/* Name + chips — stay in DOM to hold pill width; hidden behind flash overlay */}
           <div className="relative flex flex-col leading-none">
@@ -324,12 +329,13 @@ export default function App() {
   const {
     inGame, playerId, gameState,
     myTurnData, actionLog, timer, showdownData, discardRevealData, selectedDrawCards, hasDiscarded,
-    turnTimer, gameLogs,
+    turnTimer, gameLogs, disconnectNotice, roomClosedMsg, dismissRoomClosed,
     matchTimedOut, findGame, cancelSearch,
     playAction, toggleDrawCard, confirmDiscard, leaveGame,
   } = useSocket();
 
-  const [appScreen, setAppScreen] = useState<'menu' | 'matchmaking' | 'profile' | 'settings'>('menu');
+  const [appScreen, setAppScreen] = useState<AppScreen>('menu');
+  const [showRules, setShowRules] = useState(false);
   const [raiseAmount, setRaiseAmount] = useState<number[]>([100]);
   const [showBetSlider, setShowBetSlider] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
@@ -417,6 +423,24 @@ export default function App() {
 
   // ── NON-GAME SCREENS ──────────────────────────────────────────────────────────
   if (!inGame) {
+    if (roomClosedMsg) return (
+      <div className="h-dvh flex flex-col items-center justify-center bg-[var(--color-background)] p-6">
+        <div className="bg-white border border-[color:var(--color-gold)]/30 rounded-2xl p-6 max-w-[280px] w-full shadow-2xl text-center">
+          <div className="w-10 h-10 rounded-full bg-[color:var(--color-gold)]/10 border border-[color:var(--color-gold)]/30 grid place-items-center mx-auto mb-4">
+            <LogOut className="w-4 h-4 text-[color:var(--color-gold)]" />
+          </div>
+          <h3 className="font-display text-base font-bold gold-text mb-2">Game Over</h3>
+          <p className="text-xs text-gray-500 leading-relaxed mb-6">{roomClosedMsg}</p>
+          <ActionButton
+            label="Back to Menu"
+            variant="primary"
+            className="w-full"
+            onClick={() => { dismissRoomClosed(); setAppScreen('menu'); }}
+          />
+        </div>
+      </div>
+    );
+
     if (appScreen === 'matchmaking') return (
       <MatchmakingScreen
         timedOut={matchTimedOut}
@@ -435,12 +459,16 @@ export default function App() {
         onSignOut={signOut}
       />
     );
+    if (appScreen === 'rules') return (
+      <RulesScreen onBack={() => setAppScreen('menu')} />
+    );
     return (
       <MainMenuScreen
         profile={profile!}
         onStartGame={() => setAppScreen('matchmaking')}
         onProfile={() => setAppScreen('profile')}
         onSettings={() => setAppScreen('settings')}
+        onRules={() => setAppScreen('rules')}
       />
     );
   }
@@ -535,6 +563,29 @@ export default function App() {
         </div>
       )}
 
+      {/* ── DISCONNECT NOTICE ── */}
+      {disconnectNotice && (
+        <div
+          className={cn(
+            "fixed left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg",
+            "font-display text-[10px] tracking-widest uppercase whitespace-nowrap",
+            "transition-all duration-300",
+            disconnectNotice.reconnecting
+              ? "bg-amber-50 border border-amber-300 text-amber-800"
+              : "bg-red-50 border border-red-300 text-red-700",
+          )}
+          style={{ top: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
+        >
+          <span className={cn(
+            "w-1.5 h-1.5 rounded-full shrink-0",
+            disconnectNotice.reconnecting ? "bg-amber-400 animate-pulse" : "bg-red-400",
+          )} />
+          {disconnectNotice.reconnecting
+            ? `${disconnectNotice.playerName} disconnected...`
+            : `${disconnectNotice.playerName} left the game`}
+        </div>
+      )}
+
       {/* ── FIXED TOP BAR ── */}
       <div
         className="fixed z-30 flex items-start justify-between pointer-events-none"
@@ -565,9 +616,16 @@ export default function App() {
           </button>
         </div>
 
-        {/* Right: room code + phase badge + log */}
+        {/* Right: phase badge + rules + log */}
         <div className="flex items-start gap-1.5 pointer-events-auto">
           <PhaseBadge phase={phase} timer={timer} />
+          <button
+            onClick={() => setShowRules(r => !r)}
+            className="w-8 h-8 grid place-items-center rounded-full bg-white/90 gold-border shadow-sm shrink-0"
+            title="Rules"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
+          </button>
           <button
             onClick={() => setShowLog(l => !l)}
             className="w-8 h-8 grid place-items-center rounded-full bg-white/90 gold-border shadow-sm shrink-0"
@@ -601,8 +659,9 @@ export default function App() {
               <PlayerSeat
                 name={opp.name} chips={opp.chips} bet={opp.currentBet}
                 avatar={opp.name.charAt(0).toUpperCase()}
-                active={opp.isCurrentTurn && !isShowdown}
+                active={opp.isCurrentTurn && !isShowdown && !opp.disconnected}
                 folded={opp.folded}
+                disconnected={opp.disconnected}
                 turnTimeLeft={oppTurnTimeLeft}
                 size={seatSize}
                 flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
@@ -769,6 +828,33 @@ export default function App() {
               {log}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── RULES PANEL ── */}
+      {showRules && (
+        <div
+          className="fixed inset-0 z-[200]"
+          onClick={() => setShowRules(false)}
+        />
+      )}
+      <div
+        className={cn(
+          "fixed top-0 right-0 h-full z-[210] w-[300px] sm:w-[360px] flex flex-col",
+          "bg-white/97 border-l border-[color:var(--color-gold)]/30 shadow-2xl backdrop-blur-xl",
+          "transform transition-transform duration-300 ease-out",
+          showRules ? "translate-x-0" : "translate-x-full",
+        )}
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.07]">
+          <span className="font-display text-xs tracking-widest uppercase gold-text font-semibold">How to Play</span>
+          <button onClick={() => setShowRules(false)} className="w-7 h-7 grid place-items-center rounded-full hover:bg-gray-100">
+            <X className="w-3.5 h-3.5 text-gray-500" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          <RulesBody />
         </div>
       </div>
 

@@ -162,20 +162,73 @@ function setupSocketHandlers(io, rooms) {
       if (typeof callback === 'function') callback({ success: true });
     });
 
+    socket.on('rejoinGame', ({ userId, roomCode: rc }, callback) => {
+      const cb = typeof callback === 'function' ? callback : () => {};
+      const roomKey = rc?.toUpperCase();
+      const room = rooms.get(roomKey);
+
+      if (!room) { cb({ success: false, error: 'Room not found' }); return; }
+
+      const entry = Array.from(room.players.entries()).find(([, p]) => p.userId === userId);
+      if (!entry) { cb({ success: false, error: 'Player not in room' }); return; }
+
+      const [oldSocketId, player] = entry;
+
+      if (player.disconnectTimeout) {
+        clearTimeout(player.disconnectTimeout);
+        player.disconnectTimeout = null;
+      }
+      player.disconnected = false;
+      player.id = socket.id;
+
+      // Rebuild Map to preserve insertion order while swapping the key
+      const newPlayers = new Map();
+      for (const [id, p] of room.players) {
+        newPlayers.set(id === oldSocketId ? socket.id : id, p);
+      }
+      room.players = newPlayers;
+
+      socket.join(roomKey);
+      io.to(roomKey).emit('playerRejoined', { playerName: player.name });
+      room.broadcastState();
+
+      cb({ success: true, playerId: socket.id, isHost: player.isHost });
+      console.log(`[reconnect] ${player.name} rejoined room ${roomKey}`);
+    });
+
     socket.on('leaveRoom', (data) => {
       const room = rooms.get(data.roomCode);
       if (!room) return;
+
+      const leavingName = room.getPlayer(socket.id)?.name ?? 'Opponent';
+      const wasActiveGame = room.gamePhase !== 'waiting';
+
       const isEmpty = room.removePlayer(socket.id);
       socket.leave(data.roomCode);
+
       if (isEmpty) {
         room.clearAllTimers();
         rooms.delete(data.roomCode);
+        return;
+      }
+
+      // Always tell remaining players someone left
+      io.to(data.roomCode).emit('playerLeft', {
+        playerId: socket.id,
+        playerName: leavingName,
+        playerCount: room.getPlayerCount(),
+      });
+
+      if (wasActiveGame && room.getPlayerCount() < 2) {
+        // Can't continue — end the game immediately
+        room.clearAllTimers();
+        setTimeout(() => {
+          rooms.delete(data.roomCode);
+          io.to(data.roomCode).emit('roomClosed', `${leavingName} left. Game over!`);
+        }, 3000);
       } else {
-        io.to(data.roomCode).emit('lobbyUpdate', {
-          players: Array.from(room.players.values()).map(p => ({
-            id: p.id, name: p.name, chips: p.chips, isHost: p.isHost,
-          })),
-        });
+        // Game can continue with remaining players
+        room.broadcastState();
       }
     });
 
@@ -192,22 +245,33 @@ function setupSocketHandlers(io, rooms) {
         if (!player) return;
 
         player.disconnected = true;
+
+        // Auto-confirm draw for disconnected player so the phase doesn't stall
+        if (room.gamePhase === 'draw') {
+          room.playerConfirmDiscard(socket.id);
+        }
+
         player.disconnectTimeout = setTimeout(() => {
+          const playerName = room.getPlayer(socket.id)?.name ?? player.name;
+          const wasActiveGame = room.gamePhase !== 'waiting';
           const isEmpty = room.removePlayer(socket.id);
+
           if (isEmpty) {
             room.clearAllTimers();
             rooms.delete(roomCode);
             io.to(roomCode).emit('roomClosed', 'All players left, room closed.');
+          } else if (wasActiveGame && room.getPlayerCount() < 2) {
+            // Not enough players to keep playing
+            room.clearAllTimers();
+            rooms.delete(roomCode);
+            io.to(roomCode).emit('roomClosed', `${playerName} never came back. Game over!`);
           } else {
             io.to(roomCode).emit('playerLeft', {
               playerId: socket.id,
+              playerName,
               playerCount: room.getPlayerCount(),
             });
-            io.to(roomCode).emit('lobbyUpdate', {
-              players: Array.from(room.players.values()).map(p => ({
-                id: p.id, name: p.name, chips: p.chips, isHost: p.isHost,
-              })),
-            });
+            room.broadcastState();
           }
         }, RECONNECT_GRACE_MS);
 

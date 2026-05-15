@@ -1,6 +1,6 @@
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
-import { User, Settings, Spade } from 'lucide-react';
+import { User, Settings, Spade, BookOpen } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function MainMenuScreen({
@@ -8,11 +8,13 @@ export function MainMenuScreen({
   onStartGame,
   onProfile,
   onSettings,
+  onRules,
 }: {
   profile: Profile;
   onStartGame: () => void;
   onProfile: () => void;
   onSettings: () => void;
+  onRules: () => void;
 }) {
   const winRate = profile.total_games > 0
     ? Math.round((profile.wins / profile.total_games) * 100)
@@ -106,6 +108,14 @@ export function MainMenuScreen({
               Settings
             </button>
           </div>
+
+          <button
+            onClick={onRules}
+            className="w-full h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white/80 text-foreground border border-black/[0.10] shadow-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
+            How to Play
+          </button>
         </div>
       </div>
     </div>
