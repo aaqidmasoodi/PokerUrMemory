@@ -357,9 +357,15 @@ export default function App() {
     meta.content = inGame ? "#4e7fa4" : "#e8eef5";
   }, [inGame]);
 
-  // Reset to menu when a game ends
+  // Track game start for smooth transition
+  const [gameJustStarted, setGameJustStarted] = useState(false);
   const prevInGame = useRef(false);
   useEffect(() => {
+    if (prevInGame.current === false && inGame === true) {
+      setGameJustStarted(true);
+      const t = setTimeout(() => setGameJustStarted(false), 800);
+      return () => clearTimeout(t);
+    }
     if (prevInGame.current && !inGame) setAppScreen('menu');
     prevInGame.current = inGame;
   }, [inGame]);
@@ -510,6 +516,14 @@ export default function App() {
 
     return (
       <>
+        {gameJustStarted && !gameState && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center bg-[var(--color-background)]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-[color:var(--color-blue)] border-t-transparent rounded-full animate-spin" />
+              <p className="font-display text-sm tracking-wider uppercase text-gray-500">Starting game…</p>
+            </div>
+          </div>
+        )}
         {screen}
         {incomingInvite && (
           <IncomingInviteModal

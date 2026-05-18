@@ -50,8 +50,9 @@ export function LobbyScreen({
     setStarting(true);
     setError(null);
     const res = await onStart();
-    setStarting(false);
-    if (!res.success) setError(res.error ?? 'Could not start game');
+    // Keep showing "Starting..." briefly while game initializes
+    // The game screen will appear when inGame becomes true (via matchFound event)
+    // This prevents an abrupt visual jump
   };
 
   const handleLeave = () => {
