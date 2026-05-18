@@ -273,6 +273,37 @@ function setupSocketHandlers(io, rooms) {
       if (lobby.hostUserId !== me.userId) { cb({ success: false, error: 'Only the host can start' }); return; }
       if (lobby.members.size < 2) { cb({ success: false, error: 'Need at least 2 players' }); return; }
 
+      // Validate all member socket IDs are still connected
+      const connectedMembers = [];
+      for (const [userId, member] of lobby.members) {
+        const socketId = member.socketId;
+        const connectedSocket = io.sockets.sockets.get(socketId);
+        if (connectedSocket) {
+          connectedMembers.push({ userId, member });
+        } else {
+          console.log(`[lobby] Removing disconnected member ${member.username} (socket ${socketId} not found)`);
+        }
+      }
+
+      // Update lobby members to only include connected ones
+      if (connectedMembers.length < 2) {
+        lobby.members.clear();
+        for (const { userId, member } of connectedMembers) {
+          lobby.members.set(userId, member);
+        }
+        if (lobby.members.size < 2) {
+          cb({ success: false, error: 'Not enough connected players' });
+          broadcastLobby(io, lobby);
+          return;
+        }
+        // If host disconnected, promote new host
+        if (!lobby.members.has(lobby.hostUserId)) {
+          lobby.hostUserId = lobby.members.keys().next().value;
+        }
+        broadcastLobby(io, lobby);
+        return;
+      }
+
       const roomCode = generateRoomCode(rooms);
       const room = new GameRoom(roomCode, null, io);
       room.expectedPlayerCount = lobby.members.size;

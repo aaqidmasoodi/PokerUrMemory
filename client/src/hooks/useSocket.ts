@@ -280,6 +280,7 @@ export function useSocket() {
     // ── Lobby / invites ────────────────────────────────────────────────────────
     newSocket.on('lobby:update', (data: Lobby | null) => {
       setLobby(data);
+      if (data === null) setLobbyTransitioning(false);
     });
 
     newSocket.on('lobby:incomingInvite', (data: IncomingInvite) => {
@@ -380,6 +381,7 @@ export function useSocket() {
   const leaveLobby = useCallback(() => {
     socket?.emit('lobby:leave');
     setLobby(null);
+    setLobbyTransitioning(false);
   }, [socket]);
 
   const inviteToLobby = useCallback((toUserId: string): Promise<{ success: boolean; error?: string }> => {

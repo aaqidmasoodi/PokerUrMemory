@@ -51,7 +51,11 @@ export function LobbyScreen({
   const handleStart = async () => {
     setStarting(true);
     setError(null);
-    await onStart();
+    const res = await onStart();
+    setStarting(false);
+    if (!res.success) {
+      setError(res.error ?? 'Could not start game');
+    }
   };
 
   const handleLeave = () => {

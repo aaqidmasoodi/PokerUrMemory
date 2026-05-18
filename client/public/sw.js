@@ -2,8 +2,8 @@
 // For a multiplayer game, we use network-first: always try the network,
 // fall back to cache only if the network is unavailable.
 
-const CACHE = 'pokermemory-v6';
-const PREV_CACHES = ['pokermemory-v1', 'pokermemory-v2', 'pokermemory-v3', 'pokermemory-v4', 'pokermemory-v5'];
+const CACHE = 'pokermemory-v7';
+const PREV_CACHES = ['pokermemory-v1', 'pokermemory-v2', 'pokermemory-v3', 'pokermemory-v4', 'pokermemory-v5', 'pokermemory-v6'];
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil(
@@ -26,9 +26,12 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Cache successful responses for offline fallback
-        const clone = response.clone();
-        caches.open(CACHE).then(cache => cache.put(event.request, clone));
+        // Only cache complete successful responses (status 200)
+        // Cache API doesn't support 206 Partial Content
+        if (response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE).then(cache => cache.put(event.request, clone)).catch(() => {});
+        }
         return response;
       })
       .catch(() => caches.match(event.request))
