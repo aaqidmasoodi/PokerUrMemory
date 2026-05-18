@@ -11,8 +11,19 @@ export function RulesScreen({ onBack }: { onBack: () => void }) {
         paddingRight: 'env(safe-area-inset-right, 0px)',
       }}
     >
-      {/* Header */}
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-b border-black/[0.07] bg-white/60 backdrop-blur-sm">
+      {/* Header — background bleeds edge-to-edge, content sits inside safe area */}
+      <div
+        className="shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white/60 backdrop-blur-sm"
+        style={{
+          marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
+          marginLeft: 'calc(-1 * env(safe-area-inset-left, 0px))',
+          marginRight: 'calc(-1 * env(safe-area-inset-right, 0px))',
+          paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))',
+          paddingBottom: '0.75rem',
+          paddingLeft: 'calc(1rem + env(safe-area-inset-left, 0px))',
+          paddingRight: 'calc(1rem + env(safe-area-inset-right, 0px))',
+        }}
+      >
         <button
           onClick={onBack}
           className="w-8 h-8 grid place-items-center rounded-full bg-white border border-black/[0.08] shadow-sm active:scale-95 transition-transform"
@@ -45,7 +56,7 @@ export function RulesBody() {
           PokerUrMemory
         </h2>
         <p className="text-[13px] [@media(orientation:landscape)]:text-[15px] leading-relaxed opacity-90">
-          Some people play Bridge to keep their memories sharp. PokerUrMemory does so too — and is more fun.
+          Some people play Bridge to keep their memories sharp. PokerUrMemory does so too: and is more fun.
           It adapts Five Card Draw Poker to make memorising cards entertaining.
         </p>
       </div>
@@ -63,11 +74,11 @@ export function RulesBody() {
       <RuleSection
         icon={<Eye className="w-4 h-4 [@media(orientation:landscape)]:w-5 [@media(orientation:landscape)]:h-5" />}
         color="gold"
-        title="The Deal — Memorise!"
+        title="The Deal: Memorise!"
         steps={[
           'Each player receives 5 cards: 4 are shown face up briefly, then hidden. One card stays hidden the whole time.',
           'Memorise your cards and your opponents\' before they flip face down.',
-          'You have 20 seconds — then betting begins.',
+          'You have 20 seconds: then betting begins.',
         ]}
       />
 
@@ -91,9 +102,9 @@ export function RulesBody() {
         title="The Draw"
         steps={[
           'After the first betting round, you may discard up to 4 cards and draw new ones.',
-          'All discarded cards are shown face up to every player — another memory moment.',
+          'All discarded cards are shown face up to every player: another memory moment.',
           'If you draw 2 or more cards, one replacement is briefly shown face up.',
-          'A single drawn card stays hidden — mystery kept!',
+          'A single drawn card stays hidden: mystery kept!',
           'Stand pat (keep all 5) if you\'re happy with your hand.',
         ]}
       />

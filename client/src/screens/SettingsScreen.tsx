@@ -1,4 +1,4 @@
-import { ArrowLeft, Volume2, VolumeX, LogOut } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, LogOut } from 'lucide-react';
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
 import { Avatar } from '../components/Avatar';
@@ -28,13 +28,28 @@ export function SettingsScreen({
     >
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
 
-      {/* Header */}
-      <div className="relative shrink-0 flex items-center gap-3 px-5 pt-4 pb-3 border-b border-black/[0.07]">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-[10px] font-display tracking-wider uppercase text-gray-500 hover:text-[color:var(--color-blue)] transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back
+      {/* Header — background bleeds edge-to-edge, content sits inside safe area */}
+      <div
+        className="relative shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white/60 backdrop-blur-sm"
+        style={{
+          marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
+          marginLeft: 'calc(-1 * env(safe-area-inset-left, 0px))',
+          marginRight: 'calc(-1 * env(safe-area-inset-right, 0px))',
+          paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))',
+          paddingBottom: '0.75rem',
+          paddingLeft: 'calc(1rem + env(safe-area-inset-left, 0px))',
+          paddingRight: 'calc(1rem + env(safe-area-inset-right, 0px))',
+        }}
+      >
+        <button
+          onClick={onBack}
+          className="w-8 h-8 grid place-items-center rounded-full bg-white border border-black/[0.08] shadow-sm active:scale-95 transition-transform"
+        >
+          <ChevronLeft className="w-4 h-4 text-foreground" />
         </button>
-        <h2 className="font-display text-base font-bold blue-text flex-1 text-center pr-10">Settings</h2>
+        <h1 className="font-display text-sm [@media(orientation:landscape)]:text-base font-bold blue-text tracking-wider uppercase">
+          Settings
+        </h1>
       </div>
 
       {/* Body — single col portrait, two col landscape */}

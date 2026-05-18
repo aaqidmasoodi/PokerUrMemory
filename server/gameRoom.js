@@ -186,7 +186,7 @@ class GameRoom {
         this.broadcastState();
         this.notifyCurrentPlayer();
 
-        this.io.to(this.roomCode).emit('actionLog', `Memory phase over. Cards hidden. Antes posted — pot: $${this.pot}. Betting begins!`);
+        this.io.to(this.roomCode).emit('actionLog', `Memory phase over. Cards hidden. Antes posted: pot: $${this.pot}. Betting begins!`);
     }
 
     getPlayerPublicState(socketId, forPlayerId) {
@@ -365,7 +365,7 @@ class GameRoom {
 
         if (this.shouldEndBettingRound()) {
             if (this.getActivePlayers().some(p => p.currentBet >= MAX_BET)) {
-                this.io.to(this.roomCode).emit('actionLog', `Bet limit of $${MAX_BET} reached — moving to next phase.`);
+                this.io.to(this.roomCode).emit('actionLog', `Bet limit of $${MAX_BET} reached: moving to next phase.`);
             }
             this.endBettingRound();
             return;

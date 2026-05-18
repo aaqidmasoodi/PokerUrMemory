@@ -4,6 +4,24 @@ export function getFlagEmoji(code: string) {
   ).join('');
 }
 
+// IP-based geolocation. ipapi.co is HTTPS, CORS-enabled, no key required for low volume.
+// Returns null on failure so callers can proceed without blocking sign-up.
+export async function detectCountryCode(): Promise<string | null> {
+  try {
+    const res = await fetch('https://ipapi.co/country_code/');
+    if (!res.ok) return null;
+    const code = (await res.text()).trim().toUpperCase();
+    return /^[A-Z]{2}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getCountryName(code: string | null | undefined): string | null {
+  if (!code) return null;
+  return COUNTRIES.find(c => c.code === code.toUpperCase())?.name ?? null;
+}
+
 export const COUNTRIES = [
   { code: 'AF', name: 'Afghanistan' },
   { code: 'AL', name: 'Albania' },

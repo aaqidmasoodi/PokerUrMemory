@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Profile } from '../lib/supabase';
-import { COUNTRIES, getFlagEmoji } from '../lib/countries';
-import { ArrowLeft } from 'lucide-react';
+import { getCountryName, getFlagEmoji } from '../lib/countries';
+import { ChevronLeft } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function ProfileScreen({
@@ -14,7 +14,6 @@ export function ProfileScreen({
   onBack: () => void;
 }) {
   const [username, setUsername] = useState(profile.username);
-  const [countryCode, setCountryCode] = useState(profile.country_code ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
@@ -27,7 +26,7 @@ export function ProfileScreen({
     if (!username.trim()) { setError('Username cannot be empty'); return; }
     setLoading(true);
     setError('');
-    const err = await onSave({ username: username.trim(), country_code: countryCode || null });
+    const err = await onSave({ username: username.trim() });
     setLoading(false);
     if (err) { setError(err); } else { setSaved(true); setTimeout(() => setSaved(false), 2000); }
   }
@@ -44,13 +43,28 @@ export function ProfileScreen({
     >
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
 
-      {/* Header */}
-      <div className="relative shrink-0 flex items-center gap-3 px-5 pt-4 pb-3 border-b border-black/[0.07]">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-[10px] font-display tracking-wider uppercase text-gray-500 hover:text-[color:var(--color-blue)] transition-colors">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back
+      {/* Header — background bleeds edge-to-edge, content sits inside safe area */}
+      <div
+        className="relative shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white/60 backdrop-blur-sm"
+        style={{
+          marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
+          marginLeft: 'calc(-1 * env(safe-area-inset-left, 0px))',
+          marginRight: 'calc(-1 * env(safe-area-inset-right, 0px))',
+          paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))',
+          paddingBottom: '0.75rem',
+          paddingLeft: 'calc(1rem + env(safe-area-inset-left, 0px))',
+          paddingRight: 'calc(1rem + env(safe-area-inset-right, 0px))',
+        }}
+      >
+        <button
+          onClick={onBack}
+          className="w-8 h-8 grid place-items-center rounded-full bg-white border border-black/[0.08] shadow-sm active:scale-95 transition-transform"
+        >
+          <ChevronLeft className="w-4 h-4 text-foreground" />
         </button>
-        <h2 className="font-display text-base font-bold blue-text flex-1 text-center pr-10">Profile</h2>
+        <h1 className="font-display text-sm [@media(orientation:landscape)]:text-base font-bold blue-text tracking-wider uppercase">
+          Profile
+        </h1>
       </div>
 
       {/* Body — single col portrait, two col landscape */}
@@ -94,21 +108,16 @@ export function ProfileScreen({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-display tracking-widest uppercase text-[color:var(--color-blue)] opacity-70">Country</label>
-              <div className="relative">
-                {countryCode && (
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl pointer-events-none">{getFlagEmoji(countryCode)}</span>
+              <label className="text-[10px] font-display tracking-widest uppercase text-[color:var(--color-blue)] opacity-70">Country · Auto-detected</label>
+              <div className="w-full bg-white/70 border border-black/[0.10] rounded-2xl px-4 py-3.5 shadow-sm flex items-center gap-3 text-foreground">
+                {profile.country_code ? (
+                  <>
+                    <span className="text-xl leading-none">{getFlagEmoji(profile.country_code)}</span>
+                    <span className="text-sm">{getCountryName(profile.country_code) ?? profile.country_code}</span>
+                  </>
+                ) : (
+                  <span className="text-gray-400 text-sm">Unknown</span>
                 )}
-                <select
-                  value={countryCode}
-                  onChange={e => setCountryCode(e.target.value)}
-                  className={`w-full bg-white border border-black/[0.12] rounded-2xl py-3.5 text-foreground focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm appearance-none ${countryCode ? 'pl-10 pr-4' : 'px-4'}`}
-                >
-                  <option value="">No country selected</option>
-                  {COUNTRIES.map(c => (
-                    <option key={c.code} value={c.code}>{getFlagEmoji(c.code)} {c.name}</option>
-                  ))}
-                </select>
               </div>
             </div>
 

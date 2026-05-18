@@ -57,6 +57,25 @@ export interface DiscardRevealData {
   discards: DiscardEntry[];
 }
 
+export interface LobbyMember {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+}
+
+export interface Lobby {
+  id: string;
+  hostUserId: string;
+  members: LobbyMember[];
+}
+
+export interface IncomingInvite {
+  lobbyId: string;
+  fromUserId: string;
+  fromUsername: string;
+  fromAvatarUrl: string | null;
+}
+
 export function useSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [inGame, setInGame] = useState(false);
@@ -67,7 +86,7 @@ export function useSocket() {
   const pendingMatchRef = useRef<{ userId: string; username: string } | null>(null);
   const playerIdRef = useRef<string>('');
   const roomCodeRef = useRef<string>('');
-  const currentUserRef = useRef<{ userId: string } | null>(null);
+  const currentUserRef = useRef<{ userId: string; username: string } | null>(null);
 
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [myTurnData, setMyTurnData] = useState<YourTurnData | null>(null);
@@ -81,6 +100,9 @@ export function useSocket() {
   const [gameLogs, setGameLogs] = useState<string[]>([]);
   const [disconnectNotice, setDisconnectNotice] = useState<{ playerName: string; reconnecting: boolean } | null>(null);
   const [roomClosedMsg, setRoomClosedMsg] = useState<string | null>(null);
+  const [lobby, setLobby] = useState<Lobby | null>(null);
+  const [incomingInvite, setIncomingInvite] = useState<IncomingInvite | null>(null);
+  const [inviteDeclinedNotice, setInviteDeclinedNotice] = useState<{ byUsername: string } | null>(null);
 
   useEffect(() => {
     const newSocket = io();
@@ -88,6 +110,13 @@ export function useSocket() {
 
     let initialConnectDone = false;
     newSocket.on('connect', () => {
+      // Always re-register on (re)connect so the server can route invites again
+      if (currentUserRef.current) {
+        newSocket.emit('auth:register', {
+          userId: currentUserRef.current.userId,
+          username: currentUserRef.current.username,
+        });
+      }
       if (!initialConnectDone) { initialConnectDone = true; return; }
       // Socket reconnected — attempt to rejoin if we were in a room
       if (roomCodeRef.current && currentUserRef.current) {
@@ -113,9 +142,11 @@ export function useSocket() {
     });
 
     newSocket.on('matchFound', ({ roomCode: rc }: { roomCode: string }) => {
-      const pending = pendingMatchRef.current;
-      if (!pending) return;
-      newSocket.emit('joinMatchedGame', { roomCode: rc, userId: pending.userId, username: pending.username }, (res: any) => {
+      // Identity comes from the matchmaking queue (pendingMatchRef) or, for
+      // lobby-started games, from the registered current user.
+      const ident = pendingMatchRef.current ?? currentUserRef.current;
+      if (!ident) return;
+      newSocket.emit('joinMatchedGame', { roomCode: rc, userId: ident.userId, username: ident.username }, (res: any) => {
         if (res?.success) {
           const upperRc = rc.toUpperCase();
           setRoomCode(upperRc);
@@ -124,6 +155,7 @@ export function useSocket() {
           playerIdRef.current = res.playerId;
           setIsHost(res.isHost);
           pendingMatchRef.current = null;
+          setLobby(null);
         }
       });
     });
@@ -176,7 +208,7 @@ export function useSocket() {
     newSocket.on('yourTurnNotification', () => {
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       const original = document.title;
-      document.title = '🃏 Your Turn! — PokerUrMemory';
+      document.title = '🃏 Your Turn: PokerUrMemory';
       setTimeout(() => { document.title = original; }, 3000);
     });
 
@@ -212,7 +244,7 @@ export function useSocket() {
       setMyTurnData(null);
       setInGame(true);
       const handStr = data.hands?.map((h: any) => `${h.playerName}: ${h.rankName}`).join(' · ');
-      setGameLogs(prev => [`${data.winner.playerName} wins $${data.pot} with ${data.winner.rankName}${handStr ? ' — ' + handStr : ''}`, ...prev].slice(0, 60));
+      setGameLogs(prev => [`${data.winner.playerName} wins $${data.pot} with ${data.winner.rankName}${handStr ? ': ' + handStr : ''}`, ...prev].slice(0, 60));
     });
 
     newSocket.on('bluffWin', (data: any) => {
@@ -223,7 +255,7 @@ export function useSocket() {
     });
 
     newSocket.on('gameOver', (data: any) => {
-      setGameLogs(prev => [`🏆 GAME OVER — ${data.winnerName} wins with $${data.chips}!`, ...prev].slice(0, 60));
+      setGameLogs(prev => [`🏆 GAME OVER: ${data.winnerName} wins with $${data.chips}!`, ...prev].slice(0, 60));
     });
 
     newSocket.on('playerDisconnected', ({ playerName }: { playerId: string; playerName: string }) => {
@@ -242,13 +274,27 @@ export function useSocket() {
       setActionLog(`${playerName} reconnected.`);
     });
 
+    // ── Lobby / invites ────────────────────────────────────────────────────────
+    newSocket.on('lobby:update', (data: Lobby | null) => {
+      setLobby(data);
+    });
+
+    newSocket.on('lobby:incomingInvite', (data: IncomingInvite) => {
+      setIncomingInvite(data);
+    });
+
+    newSocket.on('lobby:inviteDeclined', ({ byUsername }: { byUsername: string }) => {
+      setInviteDeclinedNotice({ byUsername });
+      setTimeout(() => setInviteDeclinedNotice(null), 3000);
+    });
+
     return () => { newSocket.close(); };
   }, []);
 
   const findGame = useCallback((userId: string, username: string) => {
     if (!socket) return;
     pendingMatchRef.current = { userId, username };
-    currentUserRef.current = { userId };
+    currentUserRef.current = { userId, username };
     setMatchTimedOut(false);
     socket.emit('findGame', { userId, username });
   }, [socket]);
@@ -295,6 +341,68 @@ export function useSocket() {
     setRoomClosedMsg(null);
   }, []);
 
+  const registerUser = useCallback((userId: string, username: string, avatarUrl: string | null) => {
+    currentUserRef.current = { userId, username };
+    socket?.emit('auth:register', { userId, username, avatarUrl });
+  }, [socket]);
+
+  const createLobby = useCallback((): Promise<{ success: boolean; lobby?: Lobby; error?: string }> => {
+    const emit = () => new Promise<{ success: boolean; lobby?: Lobby; error?: string }>(resolve => {
+      if (!socket) return resolve({ success: false, error: 'Not connected' });
+      socket.emit('lobby:create', null, (res: any) => resolve(res ?? { success: false }));
+    });
+    return (async () => {
+      let res = await emit();
+      // Defensive: if the user record was lost (server restart, race) re-register and retry once
+      if (!res.success && res.error === 'Not registered' && currentUserRef.current) {
+        socket?.emit('auth:register', {
+          userId: currentUserRef.current.userId,
+          username: currentUserRef.current.username,
+        });
+        res = await emit();
+      }
+      if (res.success && res.lobby) setLobby(res.lobby);
+      return res;
+    })();
+  }, [socket]);
+
+  const leaveLobby = useCallback(() => {
+    socket?.emit('lobby:leave');
+    setLobby(null);
+  }, [socket]);
+
+  const inviteToLobby = useCallback((toUserId: string): Promise<{ success: boolean; error?: string }> => {
+    return new Promise(resolve => {
+      if (!socket) return resolve({ success: false, error: 'Not connected' });
+      socket.emit('lobby:invite', { toUserId }, (res: any) => resolve(res ?? { success: false }));
+    });
+  }, [socket]);
+
+  const acceptInvite = useCallback((lobbyId: string): Promise<{ success: boolean; lobby?: Lobby; error?: string }> => {
+    return new Promise(resolve => {
+      if (!socket) return resolve({ success: false, error: 'Not connected' });
+      socket.emit('lobby:acceptInvite', { lobbyId }, (res: any) => {
+        if (res?.success && res.lobby) setLobby(res.lobby);
+        setIncomingInvite(null);
+        resolve(res ?? { success: false });
+      });
+    });
+  }, [socket]);
+
+  const declineInvite = useCallback((lobbyId: string, fromUserId: string) => {
+    socket?.emit('lobby:declineInvite', { lobbyId, fromUserId });
+    setIncomingInvite(null);
+  }, [socket]);
+
+  const startLobby = useCallback((): Promise<{ success: boolean; roomCode?: string; error?: string }> => {
+    return new Promise(resolve => {
+      if (!socket) return resolve({ success: false, error: 'Not connected' });
+      socket.emit('lobby:start', null, (res: any) => resolve(res ?? { success: false }));
+    });
+  }, [socket]);
+
+  const dismissInvite = useCallback(() => setIncomingInvite(null), []);
+
   const leaveGame = useCallback(() => {
     socket?.emit('leaveRoom', { roomCode });
     setInGame(false);
@@ -335,5 +443,16 @@ export function useSocket() {
     toggleDrawCard,
     confirmDiscard,
     leaveGame,
+    lobby,
+    incomingInvite,
+    inviteDeclinedNotice,
+    registerUser,
+    createLobby,
+    leaveLobby,
+    inviteToLobby,
+    acceptInvite,
+    declineInvite,
+    startLobby,
+    dismissInvite,
   };
 }

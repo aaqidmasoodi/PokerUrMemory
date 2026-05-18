@@ -1,5 +1,6 @@
 const { GameRoom } = require('./gameRoom');
 const { recordGameResult, supabase } = require('./supabase');
+const crypto = require('crypto');
 
 // ── In-memory matchmaking queue ───────────────────────────────────────────────
 // Each entry: { socketId, userId, username, queueTimeout }
@@ -7,6 +8,67 @@ const waitingPlayers = [];
 const GATHER_WINDOW_MS = 3000;  // after 2 players found, wait up to 3s for more
 const QUEUE_TIMEOUT_MS = 20000; // 20s personal timeout per player
 let gatherTimer = null;
+
+// ── User socket registry (for invite routing) ─────────────────────────────────
+// Each user has at most one active socket. Re-registering replaces the old one.
+const userSockets = new Map();    // userId -> socketId
+const socketUsers = new Map();    // socketId -> { userId, username, avatarUrl }
+
+// ── Lobby state ───────────────────────────────────────────────────────────────
+// lobby = { id, hostUserId, members: Map<userId, { socketId, username, avatarUrl }>, invites: Set<userId> }
+const lobbies = new Map();        // lobbyId -> lobby
+const userLobby = new Map();      // userId -> lobbyId
+
+function newLobbyId() {
+  return crypto.randomBytes(6).toString('hex');
+}
+
+function serializeLobby(lobby) {
+  return {
+    id: lobby.id,
+    hostUserId: lobby.hostUserId,
+    members: Array.from(lobby.members.entries()).map(([userId, m]) => ({
+      userId, username: m.username, avatarUrl: m.avatarUrl,
+    })),
+  };
+}
+
+function broadcastLobby(io, lobby) {
+  const payload = serializeLobby(lobby);
+  for (const m of lobby.members.values()) {
+    io.to(m.socketId).emit('lobby:update', payload);
+  }
+}
+
+function destroyLobby(lobbyId) {
+  const lobby = lobbies.get(lobbyId);
+  if (!lobby) return;
+  for (const userId of lobby.members.keys()) userLobby.delete(userId);
+  lobbies.delete(lobbyId);
+}
+
+function leaveLobby(io, userId) {
+  const lobbyId = userLobby.get(userId);
+  if (!lobbyId) return null;
+  const lobby = lobbies.get(lobbyId);
+  if (!lobby) { userLobby.delete(userId); return null; }
+
+  lobby.members.delete(userId);
+  userLobby.delete(userId);
+
+  if (lobby.members.size === 0) {
+    destroyLobby(lobbyId);
+    return null;
+  }
+
+  // Promote a new host if the old host left
+  if (lobby.hostUserId === userId) {
+    lobby.hostUserId = lobby.members.keys().next().value;
+  }
+
+  broadcastLobby(io, lobby);
+  return lobby;
+}
 
 function removeWaiting(socketId) {
   const idx = waitingPlayers.findIndex(p => p.socketId === socketId);
@@ -73,6 +135,166 @@ const RECONNECT_GRACE_MS = 60_000;
 function setupSocketHandlers(io, rooms) {
   io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
+
+    // ── User registration (for invite routing) ────────────────────────────────
+
+    socket.on('auth:register', ({ userId, username, avatarUrl }) => {
+      if (!userId || !username) return;
+
+      // If this user had another live socket, evict it from the registry.
+      // (Don't disconnect it — they may be on two tabs, the older tab just loses invite routing.)
+      const prevSocketId = userSockets.get(userId);
+      if (prevSocketId && prevSocketId !== socket.id) {
+        socketUsers.delete(prevSocketId);
+      }
+
+      userSockets.set(userId, socket.id);
+      socketUsers.set(socket.id, { userId, username, avatarUrl: avatarUrl ?? null });
+
+      // If they were in a lobby on a previous socket, refresh that lobby's record
+      const lobbyId = userLobby.get(userId);
+      if (lobbyId) {
+        const lobby = lobbies.get(lobbyId);
+        if (lobby && lobby.members.has(userId)) {
+          const m = lobby.members.get(userId);
+          m.socketId = socket.id;
+          m.username = username;
+          m.avatarUrl = avatarUrl ?? null;
+          broadcastLobby(io, lobby);
+        }
+      }
+    });
+
+    // ── Lobby: create ─────────────────────────────────────────────────────────
+
+    socket.on('lobby:create', (_, callback) => {
+      const cb = typeof callback === 'function' ? callback : () => {};
+      const me = socketUsers.get(socket.id);
+      if (!me) { cb({ success: false, error: 'Not registered' }); return; }
+
+      // If user is already in a lobby, leave it first
+      if (userLobby.has(me.userId)) leaveLobby(io, me.userId);
+
+      const lobby = {
+        id: newLobbyId(),
+        hostUserId: me.userId,
+        members: new Map([[me.userId, { socketId: socket.id, username: me.username, avatarUrl: me.avatarUrl }]]),
+      };
+      lobbies.set(lobby.id, lobby);
+      userLobby.set(me.userId, lobby.id);
+
+      cb({ success: true, lobby: serializeLobby(lobby) });
+    });
+
+    // ── Lobby: leave ──────────────────────────────────────────────────────────
+
+    socket.on('lobby:leave', () => {
+      const me = socketUsers.get(socket.id);
+      if (!me) return;
+      leaveLobby(io, me.userId);
+      socket.emit('lobby:update', null);
+    });
+
+    // ── Lobby: invite a friend ────────────────────────────────────────────────
+
+    socket.on('lobby:invite', ({ toUserId }, callback) => {
+      const cb = typeof callback === 'function' ? callback : () => {};
+      const me = socketUsers.get(socket.id);
+      if (!me) { cb({ success: false, error: 'Not registered' }); return; }
+
+      const lobbyId = userLobby.get(me.userId);
+      const lobby = lobbyId ? lobbies.get(lobbyId) : null;
+      if (!lobby) { cb({ success: false, error: 'Not in a lobby' }); return; }
+      if (lobby.hostUserId !== me.userId) { cb({ success: false, error: 'Only the host can invite' }); return; }
+      if (lobby.members.size >= 4) { cb({ success: false, error: 'Lobby is full' }); return; }
+      if (lobby.members.has(toUserId)) { cb({ success: false, error: 'Already in lobby' }); return; }
+
+      const targetSocketId = userSockets.get(toUserId);
+      if (!targetSocketId) { cb({ success: false, error: 'User is offline' }); return; }
+
+      io.to(targetSocketId).emit('lobby:incomingInvite', {
+        lobbyId: lobby.id,
+        fromUserId: me.userId,
+        fromUsername: me.username,
+        fromAvatarUrl: me.avatarUrl,
+      });
+
+      cb({ success: true });
+    });
+
+    // ── Lobby: accept invite ──────────────────────────────────────────────────
+
+    socket.on('lobby:acceptInvite', ({ lobbyId }, callback) => {
+      const cb = typeof callback === 'function' ? callback : () => {};
+      const me = socketUsers.get(socket.id);
+      if (!me) { cb({ success: false, error: 'Not registered' }); return; }
+
+      const lobby = lobbies.get(lobbyId);
+      if (!lobby) { cb({ success: false, error: 'Lobby no longer exists' }); return; }
+      if (lobby.members.size >= 4) { cb({ success: false, error: 'Lobby is full' }); return; }
+
+      // Leave any previous lobby first
+      if (userLobby.has(me.userId) && userLobby.get(me.userId) !== lobbyId) {
+        leaveLobby(io, me.userId);
+      }
+
+      lobby.members.set(me.userId, {
+        socketId: socket.id, username: me.username, avatarUrl: me.avatarUrl,
+      });
+      userLobby.set(me.userId, lobby.id);
+
+      broadcastLobby(io, lobby);
+      cb({ success: true, lobby: serializeLobby(lobby) });
+    });
+
+    // ── Lobby: decline invite ─────────────────────────────────────────────────
+
+    socket.on('lobby:declineInvite', ({ lobbyId, fromUserId }) => {
+      const me = socketUsers.get(socket.id);
+      if (!me) return;
+      const inviterSocketId = userSockets.get(fromUserId);
+      if (inviterSocketId) {
+        io.to(inviterSocketId).emit('lobby:inviteDeclined', {
+          lobbyId, byUserId: me.userId, byUsername: me.username,
+        });
+      }
+    });
+
+    // ── Lobby: start (host kicks off the game) ────────────────────────────────
+
+    socket.on('lobby:start', (_, callback) => {
+      const cb = typeof callback === 'function' ? callback : () => {};
+      const me = socketUsers.get(socket.id);
+      if (!me) { cb({ success: false, error: 'Not registered' }); return; }
+
+      const lobbyId = userLobby.get(me.userId);
+      const lobby = lobbyId ? lobbies.get(lobbyId) : null;
+      if (!lobby) { cb({ success: false, error: 'Not in a lobby' }); return; }
+      if (lobby.hostUserId !== me.userId) { cb({ success: false, error: 'Only the host can start' }); return; }
+      if (lobby.members.size < 2) { cb({ success: false, error: 'Need at least 2 players' }); return; }
+
+      const roomCode = generateRoomCode(rooms);
+      const room = new GameRoom(roomCode, null, io);
+      room.expectedPlayerCount = lobby.members.size;
+      room.matchedUserIds = Array.from(lobby.members.keys());
+      rooms.set(roomCode, room);
+
+      // Persist session for stats (fire-and-forget)
+      supabase
+        .from('game_sessions')
+        .insert({ room_code: roomCode, player_count: lobby.members.size, status: 'forming' })
+        .select()
+        .single()
+        .then(({ data }) => { if (data) room.gameSessionId = data.id; });
+
+      // Tell every member the room is ready, then dissolve the lobby
+      for (const m of lobby.members.values()) {
+        io.to(m.socketId).emit('matchFound', { roomCode });
+      }
+      destroyLobby(lobby.id);
+
+      cb({ success: true, roomCode });
+    });
 
     // ── Matchmaking ───────────────────────────────────────────────────────────
 
@@ -239,6 +461,17 @@ function setupSocketHandlers(io, rooms) {
 
       // Remove from matchmaking queue if they were waiting
       removeWaiting(socket.id);
+
+      // Drop registry entry + leave any open lobby
+      const me = socketUsers.get(socket.id);
+      if (me) {
+        // Only clear the user registry if this is still the active socket for that user
+        if (userSockets.get(me.userId) === socket.id) {
+          userSockets.delete(me.userId);
+          leaveLobby(io, me.userId);
+        }
+        socketUsers.delete(socket.id);
+      }
 
       rooms.forEach((room, roomCode) => {
         const player = room.getPlayer(socket.id);

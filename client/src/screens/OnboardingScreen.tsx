@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { COUNTRIES, getFlagEmoji } from '../lib/countries';
+import { detectCountryCode, getCountryName, getFlagEmoji } from '../lib/countries';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/Avatar';
 
@@ -18,16 +18,26 @@ export function OnboardingScreen({
     ?.split(' ')[0] ?? 'Player';
 
   const [username, setUsername] = useState(defaultName);
-  const [countryCode, setCountryCode] = useState('');
+  const [countryCode, setCountryCode] = useState<string | null>(null);
+  const [detecting, setDetecting] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    let cancelled = false;
+    detectCountryCode().then(code => {
+      if (cancelled) return;
+      setCountryCode(code);
+      setDetecting(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   async function handleSubmit() {
     if (!username.trim()) { setError('Please enter a username'); return; }
-    if (!countryCode) { setError('Please select your country'); return; }
     setLoading(true);
     setError('');
-    const err = await onComplete(username.trim(), countryCode);
+    const err = await onComplete(username.trim(), countryCode ?? '');
     if (err) { setError(err); setLoading(false); }
   }
 
@@ -83,29 +93,22 @@ export function OnboardingScreen({
             />
           </div>
 
-          {/* Country */}
+          {/* Country — auto-detected, read-only */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-display tracking-widest uppercase text-[color:var(--color-blue)] opacity-70">
-              Country
+              Country · Auto-detected
             </label>
-            <div className="relative">
-              {countryCode && (
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl pointer-events-none">
-                  {getFlagEmoji(countryCode)}
-                </span>
+            <div className="w-full bg-white border border-black/[0.12] rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3 text-foreground">
+              {detecting ? (
+                <span className="text-gray-400 text-sm">Detecting…</span>
+              ) : countryCode ? (
+                <>
+                  <span className="text-xl leading-none">{getFlagEmoji(countryCode)}</span>
+                  <span className="text-sm">{getCountryName(countryCode) ?? countryCode}</span>
+                </>
+              ) : (
+                <span className="text-gray-400 text-sm">Unknown</span>
               )}
-              <select
-                value={countryCode}
-                onChange={e => setCountryCode(e.target.value)}
-                className={`w-full bg-white border border-black/[0.12] rounded-2xl py-3 text-foreground focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm appearance-none ${countryCode ? 'pl-10 pr-4' : 'px-4'}`}
-              >
-                <option value="">Select your country…</option>
-                {COUNTRIES.map(c => (
-                  <option key={c.code} value={c.code}>
-                    {getFlagEmoji(c.code)} {c.name}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
 

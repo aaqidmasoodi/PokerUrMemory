@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useSocket, type DiscardEntry } from "./hooks/useSocket";
 import { useAuth } from "./hooks/useAuth";
+import { usePresence } from "./hooks/usePresence";
 import { LandingScreen } from "./screens/LandingScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { MainMenuScreen } from "./screens/MainMenuScreen";
@@ -8,6 +9,8 @@ import { MatchmakingScreen } from "./screens/MatchmakingScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { RulesScreen, RulesBody } from "./screens/RulesScreen";
+import { LobbyScreen } from "./screens/LobbyScreen";
+import { IncomingInviteModal } from "./components/IncomingInviteModal";
 import { PlayingCard } from "./components/poker/PlayingCard";
 import { ChipStack } from "./components/poker/ChipStack";
 import { Button } from "./components/ui/button";
@@ -17,7 +20,7 @@ import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X, WifiOff, BookOpen 
 
 
 type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "discardReveal" | "drawReveal" | "secondBetting" | "showdown";
-type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules';
+type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules' | 'lobby';
 
 let _globalMuted = false;
 function playSound(file: string, volume = 0.55) {
@@ -327,12 +330,16 @@ function ConfirmDialog({
 export default function App() {
   const { authState, user, profile, signInWithGoogle, signOut, createProfile, updateProfile } = useAuth();
   const {
+    socket,
     inGame, playerId, gameState,
     myTurnData, actionLog, timer, showdownData, discardRevealData, selectedDrawCards, hasDiscarded,
     turnTimer, gameLogs, disconnectNotice, roomClosedMsg, dismissRoomClosed,
     matchTimedOut, findGame, cancelSearch,
     playAction, toggleDrawCard, confirmDiscard, leaveGame,
+    lobby, incomingInvite, inviteDeclinedNotice,
+    registerUser, createLobby, leaveLobby, inviteToLobby, acceptInvite, declineInvite, startLobby,
   } = useSocket();
+  const onlineUserIds = usePresence(profile?.id ?? null, profile?.username ?? null);
 
   const [appScreen, setAppScreen] = useState<AppScreen>('menu');
   const [showRules, setShowRules] = useState(false);
@@ -365,6 +372,12 @@ export default function App() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appScreen, inGame]);
+
+  // Register the user with the server once the socket is connected and the profile is loaded
+  useEffect(() => {
+    if (!socket || !profile) return;
+    registerUser(profile.id, profile.username, profile.avatar_url);
+  }, [socket, profile, registerUser]);
 
   const [flashAction, setFlashAction] = useState<{ playerId: string; label: string; color: string } | null>(null);
   const gsRef = useRef(gameState);
@@ -423,53 +436,100 @@ export default function App() {
 
   // ── NON-GAME SCREENS ──────────────────────────────────────────────────────────
   if (!inGame) {
-    if (roomClosedMsg) return (
-      <div className="h-dvh flex flex-col items-center justify-center bg-[var(--color-background)] p-6">
-        <div className="bg-white border border-[color:var(--color-gold)]/30 rounded-2xl p-6 max-w-[280px] w-full shadow-2xl text-center">
-          <div className="w-10 h-10 rounded-full bg-[color:var(--color-gold)]/10 border border-[color:var(--color-gold)]/30 grid place-items-center mx-auto mb-4">
-            <LogOut className="w-4 h-4 text-[color:var(--color-gold)]" />
-          </div>
-          <h3 className="font-display text-base font-bold gold-text mb-2">Game Over</h3>
-          <p className="text-xs text-gray-500 leading-relaxed mb-6">{roomClosedMsg}</p>
-          <ActionButton
-            label="Back to Menu"
-            variant="primary"
-            className="w-full"
-            onClick={() => { dismissRoomClosed(); setAppScreen('menu'); }}
-          />
-        </div>
-      </div>
-    );
+    let screen: React.ReactNode;
 
-    if (appScreen === 'matchmaking') return (
-      <MatchmakingScreen
-        timedOut={matchTimedOut}
-        onCancel={() => setAppScreen('menu')}
-      />
-    );
-    if (appScreen === 'profile') return (
-      <ProfileScreen profile={profile!} onSave={updateProfile} onBack={() => setAppScreen('menu')} />
-    );
-    if (appScreen === 'settings') return (
-      <SettingsScreen
-        profile={profile!}
-        muted={muted}
-        onToggleMute={() => setMuted(m => !m)}
-        onBack={() => setAppScreen('menu')}
-        onSignOut={signOut}
-      />
-    );
-    if (appScreen === 'rules') return (
-      <RulesScreen onBack={() => setAppScreen('menu')} />
-    );
+    if (roomClosedMsg) {
+      screen = (
+        <div className="h-dvh flex flex-col items-center justify-center bg-[var(--color-background)] p-6">
+          <div className="bg-white border border-[color:var(--color-gold)]/30 rounded-2xl p-6 max-w-[280px] w-full shadow-2xl text-center">
+            <div className="w-10 h-10 rounded-full bg-[color:var(--color-gold)]/10 border border-[color:var(--color-gold)]/30 grid place-items-center mx-auto mb-4">
+              <LogOut className="w-4 h-4 text-[color:var(--color-gold)]" />
+            </div>
+            <h3 className="font-display text-base font-bold gold-text mb-2">Game Over</h3>
+            <p className="text-xs text-gray-500 leading-relaxed mb-6">{roomClosedMsg}</p>
+            <ActionButton
+              label="Back to Menu"
+              variant="primary"
+              className="w-full"
+              onClick={() => { dismissRoomClosed(); setAppScreen('menu'); }}
+            />
+          </div>
+        </div>
+      );
+    } else if (appScreen === 'matchmaking') {
+      screen = (
+        <MatchmakingScreen
+          timedOut={matchTimedOut}
+          onCancel={() => setAppScreen('menu')}
+        />
+      );
+    } else if (appScreen === 'lobby') {
+      screen = (
+        <LobbyScreen
+          profile={profile!}
+          lobby={lobby}
+          onlineUserIds={onlineUserIds}
+          onCreateLobby={async () => {
+            const res = await createLobby();
+            return { success: res.success, error: res.error };
+          }}
+          onLeaveLobby={leaveLobby}
+          onInvite={async (toUserId) => inviteToLobby(toUserId)}
+          onStart={async () => startLobby()}
+          onBack={() => setAppScreen('menu')}
+        />
+      );
+    } else if (appScreen === 'profile') {
+      screen = (
+        <ProfileScreen profile={profile!} onSave={updateProfile} onBack={() => setAppScreen('menu')} />
+      );
+    } else if (appScreen === 'settings') {
+      screen = (
+        <SettingsScreen
+          profile={profile!}
+          muted={muted}
+          onToggleMute={() => setMuted(m => !m)}
+          onBack={() => setAppScreen('menu')}
+          onSignOut={signOut}
+        />
+      );
+    } else if (appScreen === 'rules') {
+      screen = <RulesScreen onBack={() => setAppScreen('menu')} />;
+    } else {
+      screen = (
+        <MainMenuScreen
+          profile={profile!}
+          onStartGame={() => setAppScreen('matchmaking')}
+          onPlayWithFriends={() => setAppScreen('lobby')}
+          onProfile={() => setAppScreen('profile')}
+          onSettings={() => setAppScreen('settings')}
+          onRules={() => setAppScreen('rules')}
+        />
+      );
+    }
+
     return (
-      <MainMenuScreen
-        profile={profile!}
-        onStartGame={() => setAppScreen('matchmaking')}
-        onProfile={() => setAppScreen('profile')}
-        onSettings={() => setAppScreen('settings')}
-        onRules={() => setAppScreen('rules')}
-      />
+      <>
+        {screen}
+        {incomingInvite && (
+          <IncomingInviteModal
+            invite={incomingInvite}
+            onAccept={async () => {
+              const res = await acceptInvite(incomingInvite.lobbyId);
+              if (res.success) setAppScreen('lobby');
+            }}
+            onDecline={() => declineInvite(incomingInvite.lobbyId, incomingInvite.fromUserId)}
+          />
+        )}
+        {inviteDeclinedNotice && (
+          <div
+            className="fixed left-1/2 -translate-x-1/2 z-[350] flex items-center gap-2 px-4 py-2 rounded-full shadow-lg bg-red-50 border border-red-300 text-red-700 font-display text-[10px] tracking-widest uppercase"
+            style={{ top: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
+          >
+            {inviteDeclinedNotice.byUsername} declined
+          </div>
+        )}
+      </>
     );
   }
 

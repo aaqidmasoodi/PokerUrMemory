@@ -1,17 +1,19 @@
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
-import { User, Settings, Spade, BookOpen } from 'lucide-react';
+import { User, Settings, Spade, BookOpen, Users } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function MainMenuScreen({
   profile,
   onStartGame,
+  onPlayWithFriends,
   onProfile,
   onSettings,
   onRules,
 }: {
   profile: Profile;
   onStartGame: () => void;
+  onPlayWithFriends: () => void;
   onProfile: () => void;
   onSettings: () => void;
   onRules: () => void;
@@ -33,12 +35,22 @@ export function MainMenuScreen({
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/10 pointer-events-none" />
 
-      {/* Left / Top — Profile strip */}
+      {/* Left / Top — Profile strip (+ Title on landscape) */}
       <div className="relative shrink-0 flex flex-col items-center justify-center gap-3
         px-6 pt-6 pb-4
         [@media(orientation:landscape)]:w-[42%] [@media(orientation:landscape)]:h-full
         [@media(orientation:landscape)]:pt-0 [@media(orientation:landscape)]:pb-0
         [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]">
+
+        {/* Title — landscape only (sits above the profile) */}
+        <div className="hidden [@media(orientation:landscape)]:block text-center mb-1">
+          <h1 className="font-display text-[1.6rem] font-bold blue-text leading-tight tracking-wide">
+            PokerUrMemory
+          </h1>
+          <p className="text-[10px] text-gray-500 mt-1 tracking-[0.18em] uppercase">
+            5-Card Draw · Memory Twist
+          </p>
+        </div>
 
         <Avatar url={profile.avatar_url} name={profile.username} size="lg" className="border-2 border-white shadow-sm" />
 
@@ -69,12 +81,13 @@ export function MainMenuScreen({
         </div>
       </div>
 
-      {/* Right / Bottom — Title + Buttons */}
+      {/* Right / Bottom — Title (portrait) + Buttons */}
       <div className="relative flex-1 flex flex-col items-center justify-center gap-6 px-6
         pb-8 [@media(orientation:landscape)]:pb-0">
 
-        <div className="text-center">
-          <h1 className="font-display text-[2rem] [@media(orientation:landscape)]:text-[1.6rem] font-bold blue-text leading-tight tracking-wide">
+        {/* Title — portrait only (landscape version lives in the left column) */}
+        <div className="text-center [@media(orientation:landscape)]:hidden">
+          <h1 className="font-display text-[2rem] font-bold blue-text leading-tight tracking-wide">
             PokerUrMemory
           </h1>
           <p className="text-[10px] text-gray-500 mt-1 tracking-[0.18em] uppercase">
@@ -88,7 +101,15 @@ export function MainMenuScreen({
             className="w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[12px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow-[0_4px_20px_rgba(0,0,0,0.2)] active:scale-[0.97] transition-transform flex items-center justify-center gap-2.5"
           >
             <Spade className="w-4 h-4" />
-            Start a New Game
+            Quick Play
+          </button>
+
+          <button
+            onClick={onPlayWithFriends}
+            className="w-full h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white/90 text-[color:var(--color-blue)] border border-[color:var(--color-blue)]/30 shadow-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+          >
+            <Users className="w-3.5 h-3.5" />
+            Play with Friends
           </button>
 
           <div className="grid grid-cols-2 gap-2">

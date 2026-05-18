@@ -69,7 +69,7 @@ export function LandingScreen({ onLogin }: { onLogin: () => void }) {
             Continue with Google
           </button>
           <p className="text-center text-[10px] text-gray-400 tracking-wide">
-            No account needed — sign in to play
+            No account needed: sign in to play
           </p>
         </div>
       </div>
