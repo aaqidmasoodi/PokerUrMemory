@@ -11,7 +11,7 @@ export function usePresence(userId: string | null, username: string | null) {
 
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
+        const state = channel.presenceState() as Record<string, { user_id?: string }[]>;
         const ids = new Set<string>();
         for (const key of Object.keys(state)) {
           const presence = state[key];
