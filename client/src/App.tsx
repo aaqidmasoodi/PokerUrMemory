@@ -976,13 +976,13 @@ export default function App() {
           />
         </div>
         <div className="grid grid-cols-2 gap-1 mb-3">
-          {(["Min", "½ Pot", "Pot", "All In"] as const).map((label, idx) => {
+          {(["Min", "½ Pot", "Pot", "Max"] as const).map((label, idx) => {
             const pot = gameState.pot;
             const min = myTurnData ? (myTurnData.currentBet === 0 ? myTurnData.minBet : myTurnData.minRaise) : 0;
             let val = min;
             if (label === "½ Pot") val = Math.max(min, Math.floor(pot / 2));
             if (label === "Pot")   val = Math.max(min, pot);
-            if (label === "All In") val = myTurnData ? myTurnData.maxBet : 100;
+            if (label === "Max") val = myTurnData ? myTurnData.maxBet : 100;
             val = Math.min(val, myTurnData ? myTurnData.maxBet : 100);
             return (
               <button key={idx} onClick={() => setRaiseAmount([val])}
