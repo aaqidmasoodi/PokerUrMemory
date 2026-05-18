@@ -336,7 +336,7 @@ export default function App() {
     turnTimer, gameLogs, disconnectNotice, roomClosedMsg, dismissRoomClosed,
     matchTimedOut, findGame, cancelSearch,
     playAction, toggleDrawCard, confirmDiscard, leaveGame,
-    lobby, incomingInvite, inviteDeclinedNotice,
+    lobby, lobbyTransitioning, incomingInvite, inviteDeclinedNotice,
     registerUser, createLobby, leaveLobby, inviteToLobby, acceptInvite, declineInvite, startLobby,
   } = useSocket();
   const onlineUserIds = usePresence(profile?.id ?? null, profile?.username ?? null);
@@ -474,6 +474,7 @@ export default function App() {
         <LobbyScreen
           profile={profile!}
           lobby={lobby}
+          lobbyTransitioning={lobbyTransitioning}
           onlineUserIds={onlineUserIds}
           onCreateLobby={async () => {
             const res = await createLobby();

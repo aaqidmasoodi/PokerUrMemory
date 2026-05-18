@@ -12,6 +12,7 @@ type FriendRow = { friend_id: string; profile: Profile };
 export function LobbyScreen({
   profile,
   lobby,
+  lobbyTransitioning,
   onlineUserIds,
   onCreateLobby,
   onLeaveLobby,
@@ -21,6 +22,7 @@ export function LobbyScreen({
 }: {
   profile: Profile;
   lobby: Lobby | null;
+  lobbyTransitioning: boolean;
   onlineUserIds: Set<string>;
   onCreateLobby: () => Promise<{ success: boolean; error?: string }>;
   onLeaveLobby: () => void;
@@ -77,6 +79,21 @@ export function LobbyScreen({
       }}
     >
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
+
+      {/* Transition overlay - keeps showing party while game starts */}
+      {lobbyTransitioning && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[var(--color-background)]/95 backdrop-blur-sm">
+          <div className="w-16 h-16 rounded-3xl bg-white/80 border border-black/[0.08] shadow-lg flex items-center justify-center gap-3 mb-6">
+            <Crown className="w-6 h-6 text-[color:var(--color-gold)]" />
+          </div>
+          <p className="font-display text-sm tracking-wider uppercase text-gray-600 mb-2">
+            Starting Game…
+          </p>
+          <p className="text-xs text-gray-400 text-center max-w-[200px] leading-relaxed">
+            {members.map(m => m.username).join(' · ')} {members.length === 2 ? 'is ready' : 'are ready'} to play
+          </p>
+        </div>
+      )}
 
       {/* Header — background bleeds edge-to-edge, content sits inside safe area */}
       <div

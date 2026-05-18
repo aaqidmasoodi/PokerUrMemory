@@ -101,6 +101,7 @@ export function useSocket() {
   const [disconnectNotice, setDisconnectNotice] = useState<{ playerName: string; reconnecting: boolean } | null>(null);
   const [roomClosedMsg, setRoomClosedMsg] = useState<string | null>(null);
   const [lobby, setLobby] = useState<Lobby | null>(null);
+  const [lobbyTransitioning, setLobbyTransitioning] = useState(false);
   const [incomingInvite, setIncomingInvite] = useState<IncomingInvite | null>(null);
   const [inviteDeclinedNotice, setInviteDeclinedNotice] = useState<{ byUsername: string } | null>(null);
 
@@ -146,6 +147,8 @@ export function useSocket() {
       // lobby-started games, from the registered current user.
       const ident = pendingMatchRef.current ?? currentUserRef.current;
       if (!ident) return;
+      // Keep lobby visible while joining game (transitioning state)
+      setLobbyTransitioning(true);
       newSocket.emit('joinMatchedGame', { roomCode: rc, userId: ident.userId, username: ident.username }, (res: any) => {
         if (res?.success) {
           const upperRc = rc.toUpperCase();
@@ -155,7 +158,7 @@ export function useSocket() {
           playerIdRef.current = res.playerId;
           setIsHost(res.isHost);
           pendingMatchRef.current = null;
-          setLobby(null);
+          // Don't clear lobby yet - keep it visible until game actually starts
         }
       });
     });
@@ -290,6 +293,14 @@ export function useSocket() {
 
     return () => { newSocket.close(); };
   }, []);
+
+  // Clear lobby + transition state when game actually starts
+  useEffect(() => {
+    if (inGame && (lobby || lobbyTransitioning)) {
+      setLobby(null);
+      setLobbyTransitioning(false);
+    }
+  }, [inGame, lobby, lobbyTransitioning]);
 
   const findGame = useCallback((userId: string, username: string) => {
     if (!socket) return;
@@ -444,6 +455,7 @@ export function useSocket() {
     confirmDiscard,
     leaveGame,
     lobby,
+    lobbyTransitioning,
     incomingInvite,
     inviteDeclinedNotice,
     registerUser,
