@@ -80,9 +80,9 @@ function PhaseBadge({
 // ─── Player seat ─────────────────────────────────────────────────────────────
 
 const SEAT_CFG = {
-  normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1",       avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true,  ringPad: 5, numCls: "text-[15px]", flashCls: "text-[11px] sm:text-[13px]" },
-  compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5",         avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: false, ringPad: 3, numCls: "text-[11px]", flashCls: "text-[8px]"              },
-  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 py-[1px]",   avatar: "w-4 h-4 text-[6px]",                           name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: false, ringPad: 2, numCls: "text-[10px]", flashCls: "text-[7px]"              },
+  normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1",       avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true,  ringPad: 5, numCls: "text-[15px]", flashCls: "text-[14px] sm:text-[18px]" },
+  compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5",         avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: true,  ringPad: 3, numCls: "text-[11px]", flashCls: "text-[10px] sm:text-[12px]" },
+  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 py-[1px]",   avatar: "w-4 h-4 text-[6px]",                           name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: true,  ringPad: 2, numCls: "text-[10px]", flashCls: "text-[8px] sm:text-[10px]" },
 } as const;
 
 function PlayerSeat({
@@ -103,6 +103,10 @@ function PlayerSeat({
     : "#ef4444"
     : "#e2e8f0";
 
+  // When showing action (flashLabel), use dark background with white text
+  const showAction = !!flashLabel;
+  const actionBgColor = flashColor === '#ef4444' ? '#1a1a1a' : flashColor === '#22c55e' ? '#166534' : flashColor === '#f59e0b' ? '#92400e' : flashColor === '#3b82f6' ? '#1e40af' : '#1a1a1a';
+
   // Outer wrapper carries the ring; inner pill (fully opaque) masks the gradient center
   const ringStyle = showRing
     ? {
@@ -111,6 +115,8 @@ function PlayerSeat({
         background: `conic-gradient(${timerColor} ${pct.toFixed(1)}%, #e2e8f0 ${pct.toFixed(1)}%)`,
         boxShadow: turnTimeLeft! <= 10 ? `0 0 18px 3px ${timerColor}99` : undefined,
       }
+    : showAction
+    ? { padding: '3px', borderRadius: '9999px', background: actionBgColor, boxShadow: '0 0 20px rgba(0,0,0,0.5)' }
     : active && !folded
     ? { padding: '2px', borderRadius: '9999px', background: '#d4a843', boxShadow: '0 0 14px rgba(212,168,67,0.35)' }
     : { padding: '1px', borderRadius: '9999px', background: 'rgba(0,0,0,0.10)' };
@@ -123,51 +129,53 @@ function PlayerSeat({
         {disconnected && (
           <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)] animate-pulse z-10" />
         )}
-        {!disconnected && active && !folded && !showRing && (
+        {!disconnected && active && !folded && !showRing && !showAction && (
           <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
         )}
 
-        {/* Pill — bg-white (fully opaque) so it masks the gradient centre */}
+        {/* Pill — bg-white normally, bg-black when action showing */}
         <div className={cn(
-          "flex items-center rounded-full bg-white shadow-md",
+          "flex items-center rounded-full shadow-md",
           cfg.pill,
           (folded || disconnected) && "opacity-40 grayscale",
+          showAction ? "bg-black" : "bg-white",
         )}>
-          <div
-            className={cn(
-              "shrink-0 rounded-full grid place-items-center font-display font-bold text-white",
-              cfg.avatar,
-              !showRing && "bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)]",
-            )}
-            style={showRing ? { backgroundColor: timerColor } : undefined}
-          >
-            {showRing ? <span className="font-black tabular-nums">{turnTimeLeft}</span> : disconnected ? <WifiOff className="w-3 h-3" /> : avatar}
-          </div>
-          {/* Name + chips — stay in DOM to hold pill width; hidden behind flash overlay */}
-          <div className="relative flex flex-col leading-none">
-            <span className={cn(
-              "font-display font-semibold uppercase truncate text-foreground/90 transition-opacity duration-150",
-              cfg.name, flashLabel && "opacity-0",
-            )}>
-              {name}
-            </span>
-            <span className={cn("font-bold gold-text transition-opacity duration-150", cfg.chips, flashLabel && "opacity-0")}>
-              ${chips.toLocaleString()}
-            </span>
-            {flashLabel && (
-              <span
-                className={cn("absolute inset-0 flex items-center justify-center font-display font-black uppercase tracking-wide rounded-full bg-white/95", cfg.flashCls)}
-                style={{ color: flashColor ?? '#111', border: `1.5px solid ${flashColor ?? '#ccc'}` }}
-              >
+          {showAction ? (
+            /* Action showing: large white text, no avatar/name/chips */
+            <div className="flex items-center justify-center px-3 py-1">
+              <span className={cn("font-display font-black uppercase tracking-wider text-white", cfg.flashCls)}>
                 {flashLabel}
               </span>
-            )}
-          </div>
-          {cfg.showBet && typeof bet === "number" && bet > 0 && (
-            <span className="text-[6px] sm:text-[8px] text-[color:var(--color-gold)] pl-1.5 border-l border-black/10 leading-none whitespace-nowrap">
-              <span className="block opacity-60 tracking-wider text-[5px] uppercase">bet</span>
-              ${bet}
-            </span>
+            </div>
+          ) : (
+            /* Normal: show avatar, name, chips */
+            <>
+              <div
+                className={cn(
+                  "shrink-0 rounded-full grid place-items-center font-display font-bold text-white",
+                  cfg.avatar,
+                  !showRing && "bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)]",
+                )}
+                style={showRing ? { backgroundColor: timerColor } : undefined}
+              >
+                {showRing ? <span className="font-black tabular-nums">{turnTimeLeft}</span> : disconnected ? <WifiOff className="w-3 h-3" /> : avatar}
+              </div>
+              <div className="flex flex-col leading-none">
+                <span className={cn("font-display font-semibold uppercase truncate text-gray-900", cfg.name)}>
+                  {name}
+                </span>
+                <span className={cn("font-bold text-gray-700", cfg.chips)}>
+                  ${chips.toLocaleString()}
+                </span>
+              </div>
+            </>
+          )}
+          {/* Bet - always show and bigger */}
+          {!showAction && cfg.showBet && typeof bet === "number" && bet > 0 && (
+            <div className="flex flex-col items-center pl-2 border-l border-gray-300 ml-1">
+              <span className="font-bold text-gray-800 text-[10px] sm:text-[12px]">${bet}</span>
+              <span className="text-[5px] uppercase text-gray-500 tracking-wider">bet</span>
+            </div>
           )}
         </div>
       </div>
