@@ -7,15 +7,18 @@ export function usePresence(userId: string | null, username: string | null) {
   useEffect(() => {
     if (!userId || !username) return;
 
-    const channel = supabase.channel('online-users', {
-      config: { presence: { key: userId } },
-    });
+    const channel = supabase.channel('online-users');
 
     channel
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         const ids = new Set<string>();
-        for (const key of Object.keys(state)) ids.add(key);
+        for (const key of Object.keys(state)) {
+          const presence = state[key];
+          if (presence && presence[0]?.user_id) {
+            ids.add(presence[0].user_id);
+          }
+        }
         setOnlineUserIds(ids);
       })
       .subscribe(async (status) => {
