@@ -354,7 +354,7 @@ export default function App() {
   useEffect(() => {
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     if (!meta) return;
-    meta.content = inGame ? "#4e7fa4" : "#e8eef5";
+    meta.content = "#e8eef5";
   }, [inGame]);
 
   // Track game start for smooth transition
