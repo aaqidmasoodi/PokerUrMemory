@@ -380,8 +380,18 @@ export default function App() {
       const t = setTimeout(() => setGameJustStarted(false), 800);
       return () => clearTimeout(t);
     }
-    if (prevInGame.current && !inGame) setAppScreen('menu');
+    if (prevInGame.current && !inGame) {
+      setAppScreen('menu');
+      setShowExitDialog(false);
+    }
     prevInGame.current = inGame;
+  }, [inGame]);
+
+  // Clear exit dialog when joining a new game
+  useEffect(() => {
+    if (inGame) {
+      setShowExitDialog(false);
+    }
   }, [inGame]);
 
   // Start/stop matchmaking when the screen is shown
