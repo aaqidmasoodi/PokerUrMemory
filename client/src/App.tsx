@@ -87,12 +87,12 @@ const SEAT_CFG = {
 
 function PlayerSeat({
   name, chips, bet, active, avatar, folded, turnTimeLeft, size = "normal",
-  flashLabel, flashColor, disconnected,
+  flashLabel, disconnected,
 }: {
   name: string; chips: number; bet?: number; active?: boolean;
   avatar: string; folded?: boolean; turnTimeLeft?: number | null;
   size?: "normal" | "compact" | "mini";
-  flashLabel?: string; flashColor?: string; disconnected?: boolean;
+  flashLabel?: string; disconnected?: boolean;
 }) {
   const cfg = SEAT_CFG[size];
   const showRing = active && !folded && turnTimeLeft != null;
@@ -103,9 +103,9 @@ function PlayerSeat({
     : "#ef4444"
     : "#e2e8f0";
 
-  // When showing action (flashLabel), use dark background with white text
+  // When showing action (flashLabel), use blue background with white text
   const showAction = !!flashLabel;
-  const actionBgColor = flashColor === '#ef4444' ? '#1a1a1a' : flashColor === '#22c55e' ? '#166534' : flashColor === '#f59e0b' ? '#92400e' : flashColor === '#3b82f6' ? '#1e40af' : '#1a1a1a';
+  const actionBgColor = '#1e40af';
 
   // Outer wrapper carries the ring; inner pill (fully opaque) masks the gradient center
   const ringStyle = showRing
@@ -133,19 +133,25 @@ function PlayerSeat({
           <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[color:var(--color-gold)] shadow-[0_0_8px_rgba(212,168,67,1)] animate-pulse z-10" />
         )}
 
-        {/* Pill — bg-white normally, bg-black when action showing */}
+        {/* Pill — bg-white normally, bg-blue when action showing */}
         <div className={cn(
           "flex items-center rounded-full shadow-md",
           cfg.pill,
           (folded || disconnected) && "opacity-40 grayscale",
-          showAction ? "bg-black" : "bg-white",
+          showAction ? "bg-blue-700" : "bg-white",
         )}>
           {showAction ? (
-            /* Action showing: large white text, no avatar/name/chips */
-            <div className="flex items-center justify-center px-3 py-1">
+            /* Action showing: large white text + bet amount */
+            <div className="flex items-center gap-2 px-3 py-1">
               <span className={cn("font-display font-black uppercase tracking-wider text-white", cfg.flashCls)}>
                 {flashLabel}
               </span>
+              {typeof bet === "number" && bet > 0 && (
+                <div className="flex flex-col items-center border-l border-white/30 pl-2">
+                  <span className="font-bold text-white text-[10px] sm:text-[12px]">${bet}</span>
+                  <span className="text-[4px] uppercase text-white/70 tracking-wider">bet</span>
+                </div>
+              )}
             </div>
           ) : (
             /* Normal: show avatar, name, chips */
@@ -748,7 +754,6 @@ export default function App() {
                 turnTimeLeft={oppTurnTimeLeft}
                 size={seatSize}
                 flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
-                flashColor={flashAction?.playerId === opp.id ? flashAction.color : undefined}
               />
               <div className={cn("flex", cardSpacing)}>
                 {opp.hand.map((c, ci) => (
@@ -808,7 +813,6 @@ export default function App() {
             active={myTurnActive} folded={myPlayer.folded}
             turnTimeLeft={heroTurnTimeLeft}
             flashLabel={flashAction?.playerId === myPlayer.id ? flashAction.label : undefined}
-            flashColor={flashAction?.playerId === myPlayer.id ? flashAction.color : undefined}
           />
           <div className="flex gap-0.5 sm:gap-1">
             {myPlayer.hand.map((c, i) => {
