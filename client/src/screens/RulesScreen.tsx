@@ -13,7 +13,7 @@ export function RulesScreen({ onBack }: { onBack: () => void }) {
     >
       {/* Header — background bleeds edge-to-edge, content sits inside safe area */}
       <div
-        className="shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white/60 backdrop-blur-sm"
+        className="shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white backdrop-blur-sm"
         style={{
           marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
           marginLeft: 'calc(-1 * env(safe-area-inset-left, 0px))',
@@ -62,11 +62,11 @@ export function RulesBody() {
       </div>
 
       {/* No gambling notice */}
-      <div className="rounded-xl bg-white border border-black/[0.07] shadow-sm px-4 py-3 flex gap-3 items-start">
+      <div className="rounded-xl bg-white border border-black/[0.07] shadow-md px-4 py-3 flex gap-3 items-start">
         <span className="text-lg mt-0.5">🃏</span>
         <p className="text-[13px] [@media(orientation:landscape)]:text-[15px] text-gray-500 leading-relaxed">
           PokerUrMemory offers <strong className="text-foreground">no money, no prizes and no gambling.</strong>{' '}
-          Up to four players compete for points, each starting with <strong className="text-foreground">100 points</strong>.
+          Up to four players compete for points, each starting with <strong className="text-foreground">200 points</strong>.
         </p>
       </div>
 
@@ -131,12 +131,12 @@ export function RulesBody() {
           '2 to 4 players per game.',
           'Each player starts with 200 points.',
           'Win pots to grow your stack. Lose all your points and you\'re out.',
-          'Last player with points wins. Games continue until only one player has points left.',
+          'Rounds continue until only one player has points left. Best hand wins each round.',
         ]}
       />
 
       {/* Hand rankings quick ref */}
-      <div className="rounded-2xl bg-white border border-black/[0.07] shadow-sm px-4 py-4 [@media(orientation:landscape)]:px-5 [@media(orientation:landscape)]:py-5">
+      <div className="rounded-2xl bg-white border border-black/[0.07] shadow-md px-4 py-4 [@media(orientation:landscape)]:px-5 [@media(orientation:landscape)]:py-5">
         <p className="font-display text-[11px] [@media(orientation:landscape)]:text-[13px] tracking-widest uppercase gold-text font-semibold mb-3">
           Hand Rankings (High → Low)
         </p>
@@ -175,23 +175,23 @@ function RuleSection({
 }) {
   const palette = {
     gold: {
-      bg: 'bg-[color:var(--color-gold)]/10',
-      border: 'border-[color:var(--color-gold)]/25',
-      icon: 'bg-[color:var(--color-gold)]/15 text-[color:var(--color-gold)]',
+      bg: 'bg-[color:var(--color-gold)]/15',
+      border: 'border-[color:var(--color-gold)]/30',
+      icon: 'bg-[color:var(--color-gold)]/20 text-[color:var(--color-gold)]',
       dot: 'bg-[color:var(--color-gold)]',
       title: 'gold-text',
     },
     blue: {
-      bg: 'bg-[color:var(--color-blue)]/8',
-      border: 'border-[color:var(--color-blue)]/20',
-      icon: 'bg-[color:var(--color-blue)]/12 text-[color:var(--color-blue)]',
+      bg: 'bg-[color:var(--color-blue)]/12',
+      border: 'border-[color:var(--color-blue)]/25',
+      icon: 'bg-[color:var(--color-blue)]/15 text-[color:var(--color-blue)]',
       dot: 'bg-[color:var(--color-blue)]',
       title: 'blue-text',
     },
     teal: {
-      bg: 'bg-[color:var(--color-chip-teal)]/8',
-      border: 'border-[color:var(--color-chip-teal)]/20',
-      icon: 'bg-[color:var(--color-chip-teal)]/12 text-[color:var(--color-chip-teal)]',
+      bg: 'bg-[color:var(--color-chip-teal)]/12',
+      border: 'border-[color:var(--color-chip-teal)]/25',
+      icon: 'bg-[color:var(--color-chip-teal)]/15 text-[color:var(--color-chip-teal)]',
       dot: 'bg-[color:var(--color-chip-teal)]',
       title: 'text-[color:var(--color-chip-teal)]',
     },

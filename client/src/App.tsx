@@ -450,9 +450,11 @@ export default function App() {
     if (!phase || phase === prevPhaseRef.current) return;
     if (phase === 'memoryReveal') {
       setFlashAction(null);
-      playSound('card_flip.wav');
+      setTimeout(() => playSound('card_flip.wav'), 300);
+    } else if (prevPhaseRef.current === 'memoryReveal' && phase === 'firstBetting') {
+      setTimeout(() => playSound('card_flip.wav'), 300);
     } else if (phase === 'drawReveal' || phase === 'discardReveal') {
-      playSound('card_flip.wav');
+      setTimeout(() => playSound('card_flip.wav'), 300);
     }
     prevPhaseRef.current = phase;
   }, [gameState?.phase]);
