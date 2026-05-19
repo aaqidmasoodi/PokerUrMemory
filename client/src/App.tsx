@@ -28,6 +28,13 @@ function playSound(file: string, volume = 0.55) {
   try { const a = new Audio(`/sounds/${file}`); a.volume = volume; a.play().catch(() => {}); } catch {}
 }
 
+function speak(text: string) {
+  if (_globalMuted || !window.speechSynthesis) return;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.9;
+  window.speechSynthesis.speak(utterance);
+}
+
 // ─── Phase badge ─────────────────────────────────────────────────────────────
 
 function PhaseBadge({
@@ -445,19 +452,46 @@ export default function App() {
   }, [actionLog]);
 
   const prevPhaseRef = useRef<string | null>(null);
+  const prevTurnPlayerRef = useRef<string | null>(null);
   useEffect(() => {
     const phase = gameState?.phase;
-    if (!phase || phase === prevPhaseRef.current) return;
-    if (phase === 'memoryReveal') {
-      setFlashAction(null);
-      setTimeout(() => playSound('card_flip.wav'), 300);
-    } else if (prevPhaseRef.current === 'memoryReveal' && phase === 'firstBetting') {
-      setTimeout(() => playSound('card_flip.wav'), 300);
-    } else if (phase === 'drawReveal' || phase === 'discardReveal') {
-      setTimeout(() => playSound('card_flip.wav'), 300);
+    if (!phase) return;
+
+    const currentTurnPlayer = gameState.players?.find(p => p.isCurrentTurn && !p.folded);
+    const currentPlayerId = currentTurnPlayer?.id;
+
+    if (phase !== prevPhaseRef.current) {
+      if (phase === 'memoryReveal') {
+        setFlashAction(null);
+        setTimeout(() => { playSound('card_flip.wav'); speak("Memorise the cards"); }, 300);
+      } else if (prevPhaseRef.current === 'memoryReveal' && phase === 'firstBetting') {
+        setTimeout(() => { playSound('card_flip.wav'); speak("Cards hidden"); }, 300);
+      } else if (phase === 'drawReveal') {
+      setTimeout(() => { playSound('card_flip.wav'); speak("Memorise drawn cards"); }, 300);
+    } else if (phase === 'discardReveal') {
+      setTimeout(() => { playSound('card_flip.wav'); speak("Showing discards"); }, 300);
+    } else if (phase === 'draw') {
+      speak("Pick cards to discard");
     }
     prevPhaseRef.current = phase;
-  }, [gameState?.phase]);
+    }
+
+    if (phase !== 'showdown' && currentPlayerId && currentPlayerId !== prevTurnPlayerRef.current) {
+      if (currentPlayerId === playerId) {
+        speak("Your turn");
+      } else if (currentTurnPlayer) {
+        speak(`${currentTurnPlayer.name}'s turn`);
+      }
+      prevTurnPlayerRef.current = currentPlayerId;
+    }
+  }, [gameState?.phase, gameState?.players]);
+
+  useEffect(() => {
+    if (showdownData?.winner) {
+      const winnerName = showdownData.winner.playerName || showdownData.winner;
+      setTimeout(() => speak(`${winnerName} wins`), 500);
+    }
+  }, [showdownData]);
 
   // ── AUTH SCREENS ──────────────────────────────────────────────────────────────
   if (authState === 'loading') return (
@@ -628,7 +662,7 @@ export default function App() {
           message="You'll be disconnected from the table. Any chips in the pot will be forfeited."
           confirmLabel="Leave" cancelLabel="Stay"
           onCancel={() => setShowExitDialog(false)}
-          onConfirm={() => leaveGame()}
+          onConfirm={() => { setShowExitDialog(false); setAppScreen('menu'); leaveGame(); }}
         />
       )}
 

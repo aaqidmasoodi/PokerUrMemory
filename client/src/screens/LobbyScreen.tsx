@@ -126,7 +126,7 @@ export function LobbyScreen({
         {/* Members slot grid */}
         <div className="px-5 py-5 flex flex-col items-center gap-4
           [@media(orientation:landscape)]:w-[45%] [@media(orientation:landscape)]:justify-center
-          [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]">
+          [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-white/30">
 
           <p className="text-[10px] font-display tracking-widest uppercase text-gray-300 text-center">
             {!lobby ? 'Setting up your party…'

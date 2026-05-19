@@ -42,7 +42,7 @@ export function MatchmakingScreen({
           <div className="relative flex items-center justify-center
             py-8 [@media(orientation:landscape)]:py-0
             [@media(orientation:landscape)]:flex-1 [@media(orientation:landscape)]:h-full
-            [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]">
+            [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-white/30">
             <div className="relative flex items-center justify-center w-28 h-28">
               <div className="absolute inset-0 rounded-full border-2 border-[color:var(--color-blue)]/20 animate-ping" />
               <div className="absolute inset-2 rounded-full border-2 border-[color:var(--color-blue)]/30 animate-ping" style={{ animationDelay: '0.3s' }} />

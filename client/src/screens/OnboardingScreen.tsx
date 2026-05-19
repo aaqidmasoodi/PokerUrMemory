@@ -58,7 +58,7 @@ export function OnboardingScreen({
         px-6 pt-8 pb-4
         [@media(orientation:landscape)]:w-[42%] [@media(orientation:landscape)]:h-full
         [@media(orientation:landscape)]:pt-0 [@media(orientation:landscape)]:pb-0
-        [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]">
+        [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-white/30">
 
         <Avatar
           url={user.user_metadata?.avatar_url as string | undefined}

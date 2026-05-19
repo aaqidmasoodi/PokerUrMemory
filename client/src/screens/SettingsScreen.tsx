@@ -59,7 +59,7 @@ export function SettingsScreen({
         <div className="flex flex-col gap-3
           px-5 py-5 shrink-0
           [@media(orientation:landscape)]:w-1/2
-          [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]
+          [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-white/30
           [@media(orientation:landscape)]:justify-center">
 
           <p className="text-[10px] font-display tracking-widest uppercase text-gray-300">Account</p>

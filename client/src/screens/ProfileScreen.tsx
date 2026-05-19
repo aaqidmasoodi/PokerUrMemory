@@ -74,7 +74,7 @@ export function ProfileScreen({
         <div className="flex flex-col items-center gap-3
           px-5 py-5
           [@media(orientation:landscape)]:w-[40%] [@media(orientation:landscape)]:justify-center
-          [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]
+          [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-white/30
           shrink-0">
 
           <Avatar url={profile.avatar_url} name={profile.username} size="lg" className="border-4 border-white shadow-md" />

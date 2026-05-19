@@ -40,7 +40,7 @@ export function MainMenuScreen({
         px-6 pt-6 pb-4
         [@media(orientation:landscape)]:w-[42%] [@media(orientation:landscape)]:h-full
         [@media(orientation:landscape)]:pt-0 [@media(orientation:landscape)]:pb-0
-        [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]">
+        [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-white/30">
 
         {/* Title — landscape only (sits above the profile) */}
         <div className="hidden [@media(orientation:landscape)]:block text-center mb-1">
