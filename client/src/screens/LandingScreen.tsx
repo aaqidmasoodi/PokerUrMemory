@@ -19,7 +19,7 @@ function CardFan() {
 export function LandingScreen({ onLogin }: { onLogin: () => void }) {
   return (
     <div
-      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row bg-[var(--color-background)] overflow-hidden select-none"
+      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row bg-transparent overflow-hidden select-none"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -42,7 +42,7 @@ export function LandingScreen({ onLogin }: { onLogin: () => void }) {
           <h1 className="font-display text-[2.2rem] [@media(orientation:landscape)]:text-[1.7rem] font-bold blue-text leading-tight tracking-wide">
             PokerUrMemory
           </h1>
-          <p className="text-[11px] text-gray-500 mt-1 tracking-[0.18em] uppercase">
+          <p className="text-[11px] text-gray-300 mt-1 tracking-[0.18em] uppercase">
             5-Card Draw · Memory Twist
           </p>
         </div>
@@ -68,7 +68,7 @@ export function LandingScreen({ onLogin }: { onLogin: () => void }) {
             <GoogleIcon />
             Continue with Google
           </button>
-          <p className="text-center text-[10px] text-gray-400 tracking-wide">
+          <p className="text-center text-[10px] text-gray-300 tracking-wide">
             No account needed: sign in to play
           </p>
         </div>

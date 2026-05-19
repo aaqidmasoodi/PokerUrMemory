@@ -24,7 +24,7 @@ export function MainMenuScreen({
 
   return (
     <div
-      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row bg-[var(--color-background)] overflow-hidden select-none"
+      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row bg-transparent overflow-hidden select-none"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -44,10 +44,10 @@ export function MainMenuScreen({
 
         {/* Title — landscape only (sits above the profile) */}
         <div className="hidden [@media(orientation:landscape)]:block text-center mb-1">
-          <h1 className="font-display text-[1.6rem] font-bold blue-text leading-tight tracking-wide">
-            PokerUrMemory
+          <h1 className="font-display text-[1.6rem] font-bold leading-tight tracking-wide text-white drop-shadow-sm">
+            ♠ PokerUrMemory ♠
           </h1>
-          <p className="text-[10px] text-gray-500 mt-1 tracking-[0.18em] uppercase">
+          <p className="text-[10px] text-gray-300 mt-1 tracking-[0.18em] uppercase">
             5-Card Draw · Memory Twist
           </p>
         </div>
@@ -61,7 +61,7 @@ export function MainMenuScreen({
               <span className="ml-1.5">{getFlagEmoji(profile.country_code)}</span>
             )}
           </p>
-          <p className="text-[10px] text-gray-400 mt-0.5">
+          <p className="text-[10px] text-gray-300 mt-0.5">
             {profile.total_games} games · {winRate}% win rate
           </p>
         </div>
@@ -75,7 +75,7 @@ export function MainMenuScreen({
           ].map(s => (
             <div key={s.label} className="flex flex-col items-center bg-white/70 rounded-xl px-3 py-2 border border-black/[0.07] shadow-sm min-w-[52px]">
               <span className="font-display text-base font-bold blue-text leading-tight">{s.value}</span>
-              <span className="text-[8px] text-gray-400 tracking-wide uppercase">{s.label}</span>
+              <span className="text-[8px] text-gray-300 tracking-wide uppercase">{s.label}</span>
             </div>
           ))}
         </div>
@@ -87,10 +87,10 @@ export function MainMenuScreen({
 
         {/* Title — portrait only (landscape version lives in the left column) */}
         <div className="text-center [@media(orientation:landscape)]:hidden">
-          <h1 className="font-display text-[2rem] font-bold blue-text leading-tight tracking-wide">
-            PokerUrMemory
+          <h1 className="font-display text-[2rem] font-bold leading-tight tracking-wide text-white drop-shadow-sm">
+            ♠ PokerUrMemory ♠
           </h1>
-          <p className="text-[10px] text-gray-500 mt-1 tracking-[0.18em] uppercase">
+          <p className="text-[10px] text-gray-300 mt-1 tracking-[0.18em] uppercase">
             5-Card Draw · Memory Twist
           </p>
         </div>

@@ -3,7 +3,7 @@ import { ChevronLeft, Eye, Coins, Shuffle, Trophy, Users } from 'lucide-react';
 export function RulesScreen({ onBack }: { onBack: () => void }) {
   return (
     <div
-      className="h-dvh flex flex-col bg-[var(--color-background)] select-none"
+      className="h-dvh flex flex-col bg-transparent select-none"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -64,7 +64,7 @@ export function RulesBody() {
       {/* No gambling notice */}
       <div className="rounded-xl bg-white border border-black/[0.07] shadow-sm px-4 py-3 flex gap-3 items-start">
         <span className="text-lg mt-0.5">🃏</span>
-        <p className="text-[13px] [@media(orientation:landscape)]:text-[15px] text-gray-600 leading-relaxed">
+        <p className="text-[13px] [@media(orientation:landscape)]:text-[15px] text-gray-500 leading-relaxed">
           PokerUrMemory offers <strong className="text-foreground">no money, no prizes and no gambling.</strong>{' '}
           Up to four players compete for points, each starting with <strong className="text-foreground">100 points</strong>.
         </p>
@@ -155,7 +155,7 @@ export function RulesBody() {
           ].map(([name, emoji]) => (
             <div key={name} className="flex items-center gap-2">
               <span className="text-base [@media(orientation:landscape)]:text-lg">{emoji}</span>
-              <span className="text-[12px] [@media(orientation:landscape)]:text-[14px] text-gray-600 font-medium">{name}</span>
+              <span className="text-[12px] [@media(orientation:landscape)]:text-[14px] text-gray-500 font-medium">{name}</span>
             </div>
           ))}
         </div>

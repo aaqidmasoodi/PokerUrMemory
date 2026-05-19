@@ -43,7 +43,7 @@ export function OnboardingScreen({
 
   return (
     <div
-      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row bg-[var(--color-background)] overflow-hidden select-none"
+      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row bg-transparent overflow-hidden select-none"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -68,7 +68,7 @@ export function OnboardingScreen({
         />
         <div className="text-center">
           <h2 className="font-display text-xl font-bold blue-text">Set Up Your Profile</h2>
-          <p className="text-xs text-gray-500 mt-1">You can change these anytime in Profile</p>
+          <p className="text-xs text-gray-300 mt-1">You can change these anytime in Profile</p>
         </div>
       </div>
 
@@ -100,14 +100,14 @@ export function OnboardingScreen({
             </label>
             <div className="w-full bg-white border border-black/[0.12] rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3 text-foreground">
               {detecting ? (
-                <span className="text-gray-400 text-sm">Detecting…</span>
+                <span className="text-gray-300 text-sm">Detecting…</span>
               ) : countryCode ? (
                 <>
                   <span className="text-xl leading-none">{getFlagEmoji(countryCode)}</span>
                   <span className="text-sm">{getCountryName(countryCode) ?? countryCode}</span>
                 </>
               ) : (
-                <span className="text-gray-400 text-sm">Unknown</span>
+                <span className="text-gray-300 text-sm">Unknown</span>
               )}
             </div>
           </div>
@@ -126,7 +126,7 @@ export function OnboardingScreen({
 
           <button
             onClick={handleSignOut}
-            className="text-xs text-gray-400 hover:text-red-500 transition-colors text-center"
+            className="text-xs text-gray-300 hover:text-red-500 transition-colors text-center"
           >
             Sign out
           </button>

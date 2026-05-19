@@ -33,7 +33,7 @@ export function ProfileScreen({
 
   return (
     <div
-      className="h-dvh flex flex-col bg-[var(--color-background)] overflow-hidden select-none"
+      className="h-dvh flex flex-col bg-transparent overflow-hidden select-none"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -87,7 +87,7 @@ export function ProfileScreen({
             ].map(s => (
               <div key={s.label} className="flex flex-col items-center bg-white/70 rounded-2xl px-4 py-2.5 border border-black/[0.07] shadow-sm min-w-[64px]">
                 <span className="font-display text-lg font-bold blue-text leading-tight">{s.value}</span>
-                <span className="text-[9px] text-gray-400 tracking-wide uppercase">{s.label}</span>
+                <span className="text-[9px] text-gray-300 tracking-wide uppercase">{s.label}</span>
               </div>
             ))}
           </div>
@@ -116,7 +116,7 @@ export function ProfileScreen({
                     <span className="text-sm">{getCountryName(profile.country_code) ?? profile.country_code}</span>
                   </>
                 ) : (
-                  <span className="text-gray-400 text-sm">Unknown</span>
+                  <span className="text-gray-300 text-sm">Unknown</span>
                 )}
               </div>
             </div>

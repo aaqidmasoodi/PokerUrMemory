@@ -71,7 +71,7 @@ export function LobbyScreen({
 
   return (
     <div
-      className="h-dvh flex flex-col bg-[var(--color-background)] overflow-hidden select-none"
+      className="h-dvh flex flex-col bg-transparent overflow-hidden select-none"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -90,7 +90,7 @@ export function LobbyScreen({
           <p className="font-display text-sm tracking-wider uppercase text-gray-600 mb-2">
             Starting Game…
           </p>
-          <p className="text-xs text-gray-400 text-center max-w-[200px] leading-relaxed">
+          <p className="text-xs text-gray-300 text-center max-w-[200px] leading-relaxed">
             {members.map(m => m.username).join(' · ')} {members.length === 2 ? 'is ready' : 'are ready'} to play
           </p>
         </div>
@@ -128,7 +128,7 @@ export function LobbyScreen({
           [@media(orientation:landscape)]:w-[45%] [@media(orientation:landscape)]:justify-center
           [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]">
 
-          <p className="text-[10px] font-display tracking-widest uppercase text-gray-400 text-center">
+          <p className="text-[10px] font-display tracking-widest uppercase text-gray-300 text-center">
             {!lobby ? 'Setting up your party…'
               : isHost
                 ? `${filledSlots} / ${slotCount} Players · You're the host`
@@ -147,7 +147,7 @@ export function LobbyScreen({
                     key={idx}
                     onClick={() => isHost && setShowFriends(true)}
                     disabled={!isHost}
-                    className="flex flex-col items-center justify-center gap-1.5 h-[88px] rounded-2xl bg-white/40 border-2 border-dashed border-black/15 text-gray-400 disabled:cursor-default active:scale-[0.97] transition-transform"
+                    className="flex flex-col items-center justify-center gap-1.5 h-[88px] rounded-2xl bg-white/40 border-2 border-dashed border-black/15 text-gray-300 disabled:cursor-default active:scale-[0.97] transition-transform"
                   >
                     <Plus className="w-4 h-4" />
                     <span className="text-[9px] font-display tracking-wider uppercase">
@@ -176,7 +176,7 @@ export function LobbyScreen({
 
           {/* Hint — only show when host has empty seats */}
           {isHost && filledSlots < slotCount && (
-            <p className="text-[10px] text-gray-500 text-center max-w-[240px] leading-relaxed">
+            <p className="text-[10px] text-gray-300 text-center max-w-[240px] leading-relaxed">
               Tap an empty slot or <span className="font-semibold">Invite Friends</span> to fill the party. Online friends get an instant popup.
             </p>
           )}
@@ -212,7 +212,7 @@ export function LobbyScreen({
             )}
 
             {lobby && !isHost && (
-              <div className="w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[11px] bg-white/60 text-gray-500 border border-black/[0.07] flex items-center justify-center text-center px-4">
+              <div className="w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[11px] bg-white/60 text-gray-300 border border-black/[0.07] flex items-center justify-center text-center px-4">
                 Waiting for {hostMember?.username ?? 'host'} to start…
               </div>
             )}
@@ -369,14 +369,14 @@ function FriendsPanel({
         <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.07]">
           <span className="font-display text-xs tracking-widest uppercase blue-text font-semibold">Friends</span>
           <button onClick={onClose} className="w-7 h-7 grid place-items-center rounded-full hover:bg-gray-100">
-            <X className="w-3.5 h-3.5 text-gray-500" />
+            <X className="w-3.5 h-3.5 text-gray-300" />
           </button>
         </div>
 
         {/* Search bar */}
         <div className="px-4 py-3 border-b border-black/[0.06] space-y-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-300 pointer-events-none" />
             <input
               type="text"
               value={query}
@@ -385,7 +385,7 @@ function FriendsPanel({
               className="w-full bg-white border border-black/[0.10] rounded-full pl-9 pr-3 py-2 text-[12px] focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
             />
           </div>
-          <p className="text-[10px] text-gray-500 leading-snug px-1">
+          <p className="text-[10px] text-gray-300 leading-snug px-1">
             <span className="font-semibold">Add Friend</span> saves them to your list (silent).{' '}
             <span className="font-semibold">Invite</span> sends an instant popup to their device.
           </p>
@@ -463,7 +463,7 @@ function FriendsPanel({
                   ) : null}
                   <button
                     onClick={() => removeFriend(u.id)}
-                    className="w-7 h-7 grid place-items-center rounded-full bg-gray-100 hover:bg-red-50 text-gray-400 hover:text-red-500"
+                    className="w-7 h-7 grid place-items-center rounded-full bg-gray-100 hover:bg-red-50 text-gray-300 hover:text-red-500"
                     title="Remove friend"
                   >
                     <UserMinus className="w-3 h-3" />
@@ -497,11 +497,11 @@ function UserList({
 }) {
   return (
     <div className="py-2">
-      <p className="px-4 py-1.5 text-[9px] font-display tracking-widest uppercase text-gray-400">
+      <p className="px-4 py-1.5 text-[9px] font-display tracking-widest uppercase text-gray-300">
         {title}
       </p>
       {users.length === 0 ? (
-        <p className="px-4 py-6 text-[11px] text-gray-400 text-center italic leading-relaxed">
+        <p className="px-4 py-6 text-[11px] text-gray-300 text-center italic leading-relaxed">
           {emptyText}
         </p>
       ) : (
@@ -521,7 +521,7 @@ function UserList({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[12px] font-semibold truncate">{u.username}</p>
-                  <p className="text-[9px] text-gray-400">{isOnline ? 'Online' : 'Offline'}</p>
+                  <p className="text-[9px] text-gray-300">{isOnline ? 'Online' : 'Offline'}</p>
                 </div>
                 {fb ? (
                   <span className={`text-[9px] font-display tracking-wider uppercase ${fb.ok ? 'text-green-600' : 'text-red-500'}`}>

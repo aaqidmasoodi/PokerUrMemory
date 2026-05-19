@@ -26,7 +26,7 @@ export function MatchmakingScreen({
 
   return (
     <div
-      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row items-center justify-center bg-[var(--color-background)] overflow-hidden select-none"
+      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row items-center justify-center bg-transparent overflow-hidden select-none"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -61,7 +61,7 @@ export function MatchmakingScreen({
               <h2 className="font-display text-xl font-bold blue-text">
                 Finding Players{'.'.repeat(dots)}
               </h2>
-              <p className="text-xs text-gray-500 mt-1">Waiting for another player to join</p>
+              <p className="text-xs text-gray-300 mt-1">Waiting for another player to join</p>
             </div>
 
             <div className="w-full">
@@ -72,14 +72,14 @@ export function MatchmakingScreen({
                 />
               </div>
               <div className="flex justify-between mt-1.5">
-                <p className="text-[10px] text-gray-400">{elapsed}s elapsed</p>
-                <p className="text-[10px] text-gray-400">{Math.max(0, TIMEOUT_SECS - elapsed)}s remaining</p>
+                <p className="text-[10px] text-gray-300">{elapsed}s elapsed</p>
+                <p className="text-[10px] text-gray-300">{Math.max(0, TIMEOUT_SECS - elapsed)}s remaining</p>
               </div>
             </div>
 
             <button
               onClick={onCancel}
-              className="flex items-center gap-2 text-xs text-gray-500 hover:text-red-500 transition-colors"
+              className="flex items-center gap-2 text-xs text-gray-300 hover:text-red-500 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
               Cancel search
@@ -93,7 +93,7 @@ export function MatchmakingScreen({
           </div>
           <div>
             <h2 className="font-display text-xl font-bold text-foreground">No Match Found</h2>
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+            <p className="text-sm text-gray-300 mt-2 leading-relaxed">
               We couldn't find other players right now. Try again in a moment!
             </p>
           </div>

@@ -18,7 +18,7 @@ export function SettingsScreen({
 }) {
   return (
     <div
-      className="h-dvh flex flex-col bg-[var(--color-background)] overflow-hidden select-none"
+      className="h-dvh flex flex-col bg-transparent overflow-hidden select-none"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -62,7 +62,7 @@ export function SettingsScreen({
           [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-black/[0.07]
           [@media(orientation:landscape)]:justify-center">
 
-          <p className="text-[10px] font-display tracking-widest uppercase text-gray-400">Account</p>
+          <p className="text-[10px] font-display tracking-widest uppercase text-gray-300">Account</p>
           <div className="flex items-center gap-3 bg-white/70 rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-sm">
             <Avatar url={profile.avatar_url} name={profile.username} />
             <div>
@@ -76,14 +76,14 @@ export function SettingsScreen({
 
         {/* Right / Bottom — Sound + Sign out */}
         <div className="flex-1 flex flex-col gap-3 px-5 py-5 [@media(orientation:landscape)]:justify-center">
-          <p className="text-[10px] font-display tracking-widest uppercase text-gray-400">Sound</p>
+          <p className="text-[10px] font-display tracking-widest uppercase text-gray-300">Sound</p>
           <button
             onClick={onToggleMute}
             className="flex items-center justify-between bg-white/70 rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-sm active:bg-gray-50 transition-colors"
           >
             <div className="flex items-center gap-3">
               {muted
-                ? <VolumeX className="w-4 h-4 text-gray-400" />
+                ? <VolumeX className="w-4 h-4 text-gray-300" />
                 : <Volume2 className="w-4 h-4 text-[color:var(--color-blue)]" />}
               <span className="text-sm font-medium text-foreground">Sound Effects</span>
             </div>
