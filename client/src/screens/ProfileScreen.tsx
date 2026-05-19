@@ -97,18 +97,18 @@ export function ProfileScreen({
         <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 [@media(orientation:landscape)]:justify-center">
           <div className="flex flex-col gap-4 w-full max-w-sm mx-auto [@media(orientation:landscape)]:mx-0">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-display tracking-widest uppercase text-[color:var(--color-blue)] opacity-70">Username</label>
+              <label className="text-[10px] font-display tracking-widest uppercase text-white/80">Username</label>
               <input
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 maxLength={20}
-                className="w-full bg-white border border-black/[0.12] rounded-2xl px-4 py-3.5 text-white focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
+                className="w-full bg-white border border-black/[0.12] rounded-2xl px-4 py-3.5 text-black focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-display tracking-widest uppercase text-[color:var(--color-blue)] opacity-70">Country · Auto-detected</label>
+              <label className="text-[10px] font-display tracking-widest uppercase text-white/80">Country · Auto-detected</label>
               <div className="w-full bg-white/70 border border-black/[0.10] rounded-2xl px-4 py-3.5 shadow-sm flex items-center gap-3 text-foreground">
                 {profile.country_code ? (
                   <>

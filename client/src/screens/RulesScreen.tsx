@@ -77,6 +77,7 @@ export function RulesBody() {
         title="The Deal: Memorise!"
         steps={[
           'Each player receives 5 cards: 4 are shown face up briefly, then hidden. One card stays hidden the whole time.',
+          'The hidden card is always your last card (rightmost).',
           'Memorise your cards and your opponents\' before they flip face down.',
           'You have 20-45 seconds (more players = more time): then betting begins.',
         ]}
@@ -103,7 +104,7 @@ export function RulesBody() {
         steps={[
           'After the first betting round, you may discard up to 4 cards and draw new ones.',
           'All discarded cards are shown face up to every player: another memory moment.',
-          'If you draw 2 or more cards, one replacement is briefly shown face up.',
+          'If you draw 2+ cards, the middle replacement card is shown to opponents.',
           'A single drawn card stays hidden: mystery kept!',
           'Stand pat (keep all 5) if you\'re happy with your hand.',
         ]}
