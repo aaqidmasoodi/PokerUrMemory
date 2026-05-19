@@ -175,21 +175,21 @@ function RuleSection({
 }) {
   const palette = {
     gold: {
-      bg: 'bg-[color:var(--color-gold)]/15',
+      bg: 'bg-white',
       border: 'border-[color:var(--color-gold)]/30',
       icon: 'bg-[color:var(--color-gold)]/20 text-[color:var(--color-gold)]',
       dot: 'bg-[color:var(--color-gold)]',
       title: 'gold-text',
     },
     blue: {
-      bg: 'bg-[color:var(--color-blue)]/12',
+      bg: 'bg-white',
       border: 'border-[color:var(--color-blue)]/25',
       icon: 'bg-[color:var(--color-blue)]/15 text-[color:var(--color-blue)]',
       dot: 'bg-[color:var(--color-blue)]',
       title: 'blue-text',
     },
     teal: {
-      bg: 'bg-[color:var(--color-chip-teal)]/12',
+      bg: 'bg-white',
       border: 'border-[color:var(--color-chip-teal)]/25',
       icon: 'bg-[color:var(--color-chip-teal)]/15 text-[color:var(--color-chip-teal)]',
       dot: 'bg-[color:var(--color-chip-teal)]',
