@@ -78,7 +78,7 @@ export function RulesBody() {
         steps={[
           'Each player receives 5 cards: 4 are shown face up briefly, then hidden. One card stays hidden the whole time.',
           'Memorise your cards and your opponents\' before they flip face down.',
-          'You have 20 seconds: then betting begins.',
+          'You have 20-45 seconds (more players = more time): then betting begins.',
         ]}
       />
 
@@ -129,9 +129,9 @@ export function RulesBody() {
         title="Players & Scoring"
         steps={[
           '2 to 4 players per game.',
-          'Each player starts with 100 points.',
+          'Each player starts with 200 points.',
           'Win pots to grow your stack. Lose all your points and you\'re out.',
-          'Last player with points wins the game.',
+          'Last player with points wins. Games continue until only one player has points left.',
         ]}
       />
 

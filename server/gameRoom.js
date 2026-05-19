@@ -61,7 +61,7 @@ class GameRoom {
             id: socketId,
             name: name,
             userId: userId,
-            chips: 100,
+            chips: 200,
             hand: [],
             currentBet: 0,
             folded: false,
@@ -157,7 +157,12 @@ class GameRoom {
     }
 
     startMemoryRevealTimer() {
-        this.revealTimeLeft = 20;
+        const playerCount = this.players.size;
+        const baseTime = 20;
+        const extraTimePerPlayer = 8;
+        this.revealTimeLeft = baseTime + (playerCount - 2) * extraTimePerPlayer;
+        if (this.revealTimeLeft < 20) this.revealTimeLeft = 20;
+        if (this.revealTimeLeft > 45) this.revealTimeLeft = 45;
         this.io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
 
         this.revealTimer = setInterval(() => {
