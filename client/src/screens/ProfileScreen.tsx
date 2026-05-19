@@ -103,7 +103,7 @@ export function ProfileScreen({
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 maxLength={20}
-                className="w-full bg-white border border-black/[0.12] rounded-2xl px-4 py-3.5 text-foreground focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
+                className="w-full bg-white border border-black/[0.12] rounded-2xl px-4 py-3.5 text-white focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
               />
             </div>
 
@@ -113,7 +113,7 @@ export function ProfileScreen({
                 {profile.country_code ? (
                   <>
                     <span className="text-xl leading-none">{getFlagEmoji(profile.country_code)}</span>
-                    <span className="text-sm">{getCountryName(profile.country_code) ?? profile.country_code}</span>
+                    <span className="text-sm text-white">{getCountryName(profile.country_code) ?? profile.country_code}</span>
                   </>
                 ) : (
                   <span className="text-gray-300 text-sm">Unknown</span>
