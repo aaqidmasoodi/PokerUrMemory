@@ -30,14 +30,13 @@ async function recordGameResult({ gameSessionId, players }) {
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('id', gameSessionId);
 
-  // Increment total_games for all players, wins for the winner
-  for (const row of rows) {
-    const isWinner = row.placement === 1;
-    await supabase.rpc('increment_stats', {
+  // Increment total_games for all players, wins for the winner — run concurrently.
+  await Promise.all(rows.map(row =>
+    supabase.rpc('increment_stats', {
       p_user_id: row.user_id,
-      p_add_wins: isWinner ? 1 : 0,
-    });
-  }
+      p_add_wins: row.placement === 1 ? 1 : 0,
+    })
+  ));
 }
 
 module.exports = { supabase, recordGameResult };

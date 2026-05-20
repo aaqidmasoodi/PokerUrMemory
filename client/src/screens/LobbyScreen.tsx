@@ -279,11 +279,14 @@ function FriendsPanel({
     if (!q) { setSearchResults([]); return; }
 
     setLoadingSearch(true);
+    // Escape LIKE wildcards so a literal %, _ or \ in the query isn't treated as a
+    // pattern (otherwise typing "%" would match every user).
+    const escaped = q.replace(/[\\%_]/g, c => `\\${c}`);
     const handle = setTimeout(async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .ilike('username', `${q}%`)
+        .ilike('username', `${escaped}%`)
         .neq('id', currentUserId)
         .order('username')
         .limit(10);

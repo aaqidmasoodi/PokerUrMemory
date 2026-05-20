@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { supabase } from '../lib/supabase';
 
 export type Phase = 'waiting' | 'memoryReveal' | 'firstBetting' | 'draw' | 'discardReveal' | 'drawReveal' | 'secondBetting' | 'showdown';
 
@@ -87,6 +88,10 @@ export function useSocket() {
   const playerIdRef = useRef<string>('');
   const roomCodeRef = useRef<string>('');
   const currentUserRef = useRef<{ userId: string; username: string } | null>(null);
+  const avatarRef = useRef<string | null>(null);
+  // Latest Supabase access token — read by the socket handshake so the server can
+  // verify identity (auth) instead of trusting client-supplied user ids.
+  const tokenRef = useRef<string | null>(null);
 
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [myTurnData, setMyTurnData] = useState<YourTurnData | null>(null);
@@ -106,7 +111,9 @@ export function useSocket() {
   const [inviteDeclinedNotice, setInviteDeclinedNotice] = useState<{ byUsername: string } | null>(null);
 
   useEffect(() => {
-    const newSocket = io();
+    // The handshake auth is a function so socket.io re-reads the freshest token on
+    // every (re)connect — including after we set it post-login and reconnect.
+    const newSocket = io({ auth: (cb) => cb({ token: tokenRef.current ?? '' }) });
     setSocket(newSocket);
 
     let initialConnectDone = false;
@@ -114,15 +121,14 @@ export function useSocket() {
       // Always re-register on (re)connect so the server can route invites again
       if (currentUserRef.current) {
         newSocket.emit('auth:register', {
-          userId: currentUserRef.current.userId,
           username: currentUserRef.current.username,
+          avatarUrl: avatarRef.current,
         });
       }
       if (!initialConnectDone) { initialConnectDone = true; return; }
       // Socket reconnected — attempt to rejoin if we were in a room
       if (roomCodeRef.current && currentUserRef.current) {
         newSocket.emit('rejoinGame', {
-          userId: currentUserRef.current.userId,
           roomCode: roomCodeRef.current,
         }, (res: any) => {
           if (res?.success) {
@@ -147,9 +153,11 @@ export function useSocket() {
       // lobby-started games, from the registered current user.
       const ident = pendingMatchRef.current ?? currentUserRef.current;
       if (!ident) return;
-      // Keep lobby visible while joining game (transitioning state)
+      // The server-side lobby is gone the moment matchFound fires — clear it so
+      // neither device can re-click "Start game" against a now-deleted lobby.
+      setLobby(null);
       setLobbyTransitioning(true);
-      newSocket.emit('joinMatchedGame', { roomCode: rc, userId: ident.userId, username: ident.username }, (res: any) => {
+      newSocket.emit('joinMatchedGame', { roomCode: rc, username: ident.username }, (res: any) => {
         if (res?.success) {
           const upperRc = rc.toUpperCase();
           setRoomCode(upperRc);
@@ -158,7 +166,9 @@ export function useSocket() {
           playerIdRef.current = res.playerId;
           setIsHost(res.isHost);
           pendingMatchRef.current = null;
-          // Don't clear lobby yet - keep it visible until game actually starts
+        } else {
+          // Join failed — reset transitioning so the user isn't stuck.
+          setLobbyTransitioning(false);
         }
       });
     });
@@ -174,7 +184,10 @@ export function useSocket() {
       setGameState(null);
       setDisconnectNotice(null);
       roomCodeRef.current = '';
-      currentUserRef.current = null;
+      // Do NOT null currentUserRef here — the user's identity persists beyond a
+      // single game. Nulling it broke subsequent lobby games: matchFound would see
+      // ident = null and silently abort, leaving the host's opponent stuck on
+      // "Starting Game…" forever.
       setRoomClosedMsg(msg);
     });
 
@@ -308,7 +321,7 @@ export function useSocket() {
     pendingMatchRef.current = { userId, username };
     currentUserRef.current = { userId, username };
     setMatchTimedOut(false);
-    socket.emit('findGame', { userId, username });
+    socket.emit('findGame', { username });
   }, [socket]);
 
   const cancelSearch = useCallback(() => {
@@ -353,9 +366,22 @@ export function useSocket() {
     setRoomClosedMsg(null);
   }, []);
 
-  const registerUser = useCallback((userId: string, username: string, avatarUrl: string | null) => {
+  const registerUser = useCallback(async (userId: string, username: string, avatarUrl: string | null) => {
     currentUserRef.current = { userId, username };
-    socket?.emit('auth:register', { userId, username, avatarUrl });
+    avatarRef.current = avatarUrl;
+    if (!socket) return;
+
+    // Make sure the socket handshake carries the current access token so the server
+    // can verify identity. If the token changed since we connected, reconnect to
+    // re-run the handshake (auth callback re-reads tokenRef on connect).
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token ?? null;
+    if (token && tokenRef.current !== token) {
+      tokenRef.current = token;
+      socket.disconnect().connect(); // the 'connect' handler re-emits auth:register
+      return;
+    }
+    socket.emit('auth:register', { username, avatarUrl });
   }, [socket]);
 
   const createLobby = useCallback((): Promise<{ success: boolean; lobby?: Lobby; error?: string }> => {
@@ -368,8 +394,8 @@ export function useSocket() {
       // Defensive: if the user record was lost (server restart, race) re-register and retry once
       if (!res.success && res.error === 'Not registered' && currentUserRef.current) {
         socket?.emit('auth:register', {
-          userId: currentUserRef.current.userId,
           username: currentUserRef.current.username,
+          avatarUrl: avatarRef.current,
         });
         res = await emit();
       }
@@ -426,7 +452,8 @@ export function useSocket() {
     setGameLogs([]);
     setDisconnectNotice(null);
     roomCodeRef.current = '';
-    currentUserRef.current = null;
+    // Do NOT null currentUserRef — user identity must survive game exit so
+    // the next matchFound handler can call joinMatchedGame correctly.
   }, [socket, roomCode]);
 
   return {

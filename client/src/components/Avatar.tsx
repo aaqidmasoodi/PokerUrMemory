@@ -12,7 +12,8 @@ export function Avatar({
   className?: string;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const initial = name.charAt(0).toUpperCase();
+  // Use the first code point (not code unit) so emoji / surrogate pairs don't break.
+  const initial = ([...name][0] ?? '').toUpperCase();
 
   const sizeClass = size === 'sm' ? 'w-9 h-9 text-sm'
     : size === 'lg' ? 'w-20 h-20 text-2xl'

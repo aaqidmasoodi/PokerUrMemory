@@ -133,12 +133,31 @@ function tryMatch(rooms, io) {
 const RECONNECT_GRACE_MS = 60_000;
 
 function setupSocketHandlers(io, rooms) {
+  // ── Auth: verify the Supabase access token at the handshake ──────────────────
+  // The verified user id is the ONLY source of identity for the socket. Clients can
+  // no longer claim to be an arbitrary userId — anything they send is ignored in
+  // favour of socket.data.userId derived from the JWT here.
+  io.use(async (socket, next) => {
+    const token = socket.handshake.auth?.token;
+    socket.data.userId = null;
+    if (!token) return next(); // allow unauthenticated connection; gated per-event below
+    try {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (!error && data?.user) socket.data.userId = data.user.id;
+    } catch (err) {
+      console.error('[auth] token verification failed:', err?.message ?? err);
+    }
+    next();
+  });
+
   io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
+    console.log('User connected:', socket.id, socket.data.userId ? '(authenticated)' : '(anonymous)');
 
     // ── User registration (for invite routing) ────────────────────────────────
 
-    socket.on('auth:register', ({ userId, username, avatarUrl }) => {
+    socket.on('auth:register', ({ username, avatarUrl }) => {
+      // Identity is the verified token's user id — never the client-supplied value.
+      const userId = socket.data.userId;
       if (!userId || !username) return;
 
       // If this user had another live socket, evict it from the registry.
@@ -318,7 +337,12 @@ function setupSocketHandlers(io, rooms) {
         .single()
         .then(({ data }) => { if (data) room.gameSessionId = data.id; });
 
-      // Tell every member the room is ready, then dissolve the lobby
+      // First clear the lobby state on every client (prevents stale "Not in a lobby"
+      // errors if matchFound is delayed or the member tries to re-start).
+      // Then send matchFound so clients can join the game.
+      for (const m of lobby.members.values()) {
+        io.to(m.socketId).emit('lobby:update', null);
+      }
       for (const m of lobby.members.values()) {
         io.to(m.socketId).emit('matchFound', { roomCode });
       }
@@ -329,7 +353,9 @@ function setupSocketHandlers(io, rooms) {
 
     // ── Matchmaking ───────────────────────────────────────────────────────────
 
-    socket.on('findGame', ({ userId, username }) => {
+    socket.on('findGame', ({ username }) => {
+      const userId = socket.data.userId;
+      if (!userId) { socket.emit('matchTimeout'); return; }
       // Remove any stale entry from a previous search for this user
       const stale = waitingPlayers.findIndex(p => p.userId === userId);
       if (stale >= 0) removeWaiting(waitingPlayers[stale].socketId);
@@ -355,14 +381,20 @@ function setupSocketHandlers(io, rooms) {
 
     // ── Join a matchmade room ─────────────────────────────────────────────────
 
-    socket.on('joinMatchedGame', ({ roomCode, userId, username }, callback) => {
+    socket.on('joinMatchedGame', ({ roomCode, username }, callback) => {
       const cb = typeof callback === 'function' ? callback : () => {};
+      const userId = socket.data.userId;
+      if (!userId) { cb({ success: false, error: 'Not authenticated' }); return; }
       const room = rooms.get(roomCode?.toUpperCase());
 
       if (!room) { cb({ success: false, error: 'Room not found' }); return; }
-      if (room.players.size >= 4) { cb({ success: false, error: 'Room is full' }); return; }
+      // Only players who were actually matched/invited into this room may join.
+      if (room.matchedUserIds.length && !room.matchedUserIds.includes(userId)) {
+        cb({ success: false, error: 'Not invited to this room' }); return;
+      }
 
-      room.addPlayer(socket.id, username, userId);
+      const added = room.addPlayer(socket.id, username, userId);
+      if (!added) { cb({ success: false, error: 'Room is full' }); return; }
       socket.join(roomCode.toUpperCase());
 
       cb({ success: true, playerId: socket.id, isHost: room.players.size === 1 });
@@ -415,8 +447,10 @@ function setupSocketHandlers(io, rooms) {
       if (typeof callback === 'function') callback({ success: true });
     });
 
-    socket.on('rejoinGame', ({ userId, roomCode: rc }, callback) => {
+    socket.on('rejoinGame', ({ roomCode: rc }, callback) => {
       const cb = typeof callback === 'function' ? callback : () => {};
+      const userId = socket.data.userId;
+      if (!userId) { cb({ success: false, error: 'Not authenticated' }); return; }
       const roomKey = rc?.toUpperCase();
       const room = rooms.get(roomKey);
 

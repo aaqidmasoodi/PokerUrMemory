@@ -1,4 +1,5 @@
-const { evaluateHand, compareTieBreakers } = require('./handEvaluator');
+const crypto = require('crypto');
+const { evaluateHand, compareHands } = require('./handEvaluator');
 
 const SUITS = ['♠', '♥', '♦', '♣'];
 const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -16,11 +17,40 @@ function createDeck() {
 }
 
 function shuffleDeck(deck) {
+    // Cryptographically secure Fisher-Yates so deck output can't be fingerprinted/predicted.
     for (let i = deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = crypto.randomInt(i + 1);
         [deck[i], deck[j]] = [deck[j], deck[i]];
     }
     return deck;
+}
+
+// Build main + side pots from each player's total contribution this hand.
+// `contributions` = [{ id, committed, folded }]. Returns layered pots, each with the
+// chip amount and the ids of players still eligible to win that layer.
+function buildSidePots(contributions) {
+    const pots = [];
+    const remaining = contributions
+        .filter(c => c.committed > 0)
+        .map(c => ({ id: c.id, folded: c.folded, left: c.committed }));
+
+    while (true) {
+        const positive = remaining.filter(c => c.left > 0);
+        if (positive.length === 0) break;
+
+        const level = Math.min(...positive.map(c => c.left));
+        let amount = 0;
+        const eligibleIds = [];
+        for (const c of remaining) {
+            if (c.left > 0) {
+                amount += level;
+                c.left -= level;
+                if (!c.folded) eligibleIds.push(c.id);
+            }
+        }
+        pots.push({ amount, eligibleIds });
+    }
+    return pots;
 }
 
 class GameRoom {
@@ -64,6 +94,7 @@ class GameRoom {
             chips: 200,
             hand: [],
             currentBet: 0,
+            committed: 0,
             folded: false,
             isAllIn: false,
             isHost: this.players.size === 0,
@@ -107,6 +138,11 @@ class GameRoom {
     }
 
     startNewHand() {
+        // Guard against the restart timers firing on a room everyone has left.
+        if (this.players.size === 0) {
+            this.clearAllTimers();
+            return;
+        }
         this.deck = createDeck();
         this.pot = 0;
         this.currentBet = 0;
@@ -122,6 +158,7 @@ class GameRoom {
         this.players.forEach(player => {
             player.hand = [];
             player.currentBet = 0;
+            player.committed = 0;
             player.folded = false;
             player.isAllIn = false;
         });
@@ -131,6 +168,7 @@ class GameRoom {
             const ante = Math.min(ANTE, player.chips);
             player.chips -= ante;
             player.currentBet = ante;
+            player.committed += ante;
             this.pot += ante;
         });
         this.currentBet = ANTE;
@@ -182,6 +220,7 @@ class GameRoom {
         this.playersActedThisRound = 0;
 
         const playerArray = Array.from(this.players.values());
+        if (playerArray.length === 0) { this.clearAllTimers(); return; }
         this.currentPlayerIndex = Math.floor(Math.random() * playerArray.length);
 
         this.players.forEach(player => {
@@ -269,6 +308,13 @@ class GameRoom {
         const player = this.players.get(socketId);
         if (!player) return;
 
+        // Validate at the trust boundary — never act on an unknown action or a
+        // non-numeric amount (NaN/Infinity would poison the pot math).
+        const VALID_ACTIONS = ['check', 'bet', 'call', 'raise', 'fold', 'allIn'];
+        if (!VALID_ACTIONS.includes(action)) return;
+        amount = Number(amount);
+        if (!Number.isFinite(amount) || amount < 0) amount = 0;
+
         const playerIndex = this.getPlayerIndex(socketId);
         if (playerIndex !== this.currentPlayerIndex) return;
 
@@ -288,6 +334,7 @@ class GameRoom {
                 if (additional < 1) return;
                 player.chips -= additional;
                 player.currentBet = totalBet;
+                player.committed += additional;
                 this.pot += additional;
                 this.currentBet = Math.max(this.currentBet, player.currentBet);
                 this.io.to(this.roomCode).emit('actionLog', `${player.name} bets $${totalBet}.`);
@@ -304,6 +351,7 @@ class GameRoom {
                     const paid = Math.min(callAmount, player.chips);
                     player.chips -= paid;
                     player.currentBet += paid;
+                    player.committed += paid;
                     this.pot += paid;
                     if (player.chips === 0) player.isAllIn = true;
                     this.io.to(this.roomCode).emit('actionLog', `${player.name} calls $${paid}.`);
@@ -318,6 +366,7 @@ class GameRoom {
                 if (additional < 1) return;
                 player.chips -= additional;
                 player.currentBet = totalBet;
+                player.committed += additional;
                 this.pot += additional;
                 this.currentBet = Math.max(this.currentBet, player.currentBet);
                 this.io.to(this.roomCode).emit('actionLog', `${player.name} raises to $${totalBet}.`);
@@ -349,6 +398,7 @@ class GameRoom {
                 }
                 player.chips -= maxAdditional;
                 player.currentBet += maxAdditional;
+                player.committed += maxAdditional;
                 player.isAllIn = player.chips === 0;
                 this.pot += maxAdditional;
                 this.currentBet = Math.max(this.currentBet, player.currentBet);
@@ -496,7 +546,17 @@ class GameRoom {
 
     playerSelectCards(socketId, selectedIndices) {
         if (this.gamePhase !== 'draw') return;
-        this.drawSelections.set(socketId, selectedIndices);
+        const player = this.players.get(socketId);
+        if (!player) return;
+
+        // Sanitize: unique integer indices within the player's own hand only.
+        // Prevents negative/out-of-range/duplicate indices from corrupting the splice.
+        if (!Array.isArray(selectedIndices)) { this.drawSelections.set(socketId, []); return; }
+        const handLen = player.hand.length;
+        const clean = [...new Set(selectedIndices)]
+            .filter(i => Number.isInteger(i) && i >= 0 && i < handLen)
+            .slice(0, handLen);
+        this.drawSelections.set(socketId, clean);
     }
 
     playerConfirmDiscard(socketId) {
@@ -742,13 +802,55 @@ class GameRoom {
             result: evaluateHand(player.hand),
         }));
 
-        hands.sort((a, b) => b.result.rank - a.result.rank || compareTieBreakers(a.result, b.result));
+        hands.sort((a, b) => compareHands(b.result, a.result));
 
-        const winner = hands[0];
-        const winnerPlayer = this.players.get(winner.playerId);
-        if (winnerPlayer) {
-            winnerPlayer.chips += this.pot;
+        // Best hand per eligible player, keyed by id (for side-pot resolution).
+        const resultById = new Map(hands.map(h => [h.playerId, h.result]));
+        const totalPot = this.pot;
+
+        // Split the pot into main + side pots based on each player's total contribution,
+        // then award each layer to the best eligible hand(s), splitting ties evenly and
+        // handing odd chips to the earliest seat.
+        const seatOrder = Array.from(this.players.keys());
+        const pots = buildSidePots(
+            Array.from(this.players.values()).map(p => ({
+                id: p.id, committed: p.committed || 0, folded: p.folded,
+            }))
+        );
+
+        const winnings = new Map();
+        for (const pot of pots) {
+            let contenders = pot.eligibleIds.filter(id => resultById.has(id));
+            // If no eligible player remains for a layer (e.g. the sole contributor folded),
+            // fall back to the best hand overall so chips never vanish.
+            if (contenders.length === 0) contenders = [hands[0].playerId];
+
+            let best = [contenders[0]];
+            for (let i = 1; i < contenders.length; i++) {
+                const cmp = compareHands(resultById.get(contenders[i]), resultById.get(best[0]));
+                if (cmp > 0) best = [contenders[i]];
+                else if (cmp === 0) best.push(contenders[i]);
+            }
+
+            const share = Math.floor(pot.amount / best.length);
+            best.forEach(id => winnings.set(id, (winnings.get(id) || 0) + share));
+
+            // Distribute leftover chips one at a time by seat order among the tied winners.
+            let remainder = pot.amount - share * best.length;
+            const orderedWinners = seatOrder.filter(id => best.includes(id));
+            for (let i = 0; remainder > 0; i++, remainder--) {
+                const id = orderedWinners[i % orderedWinners.length];
+                winnings.set(id, (winnings.get(id) || 0) + 1);
+            }
         }
+
+        winnings.forEach((amount, id) => {
+            const p = this.players.get(id);
+            if (p) p.chips += amount;
+        });
+
+        // Primary winner for the UI = best hand overall (always wins ≥ the main pot).
+        const winner = hands[0];
 
         this.io.to(this.roomCode).emit('showdown', {
             hands: hands.map(h => ({
@@ -762,7 +864,8 @@ class GameRoom {
                 playerName: winner.playerName,
                 rankName: winner.result.rankName,
             },
-            pot: this.pot,
+            winnings: Array.from(winnings.entries()).map(([playerId, amount]) => ({ playerId, amount })),
+            pot: totalPot,
         });
 
         this.pot = 0;
