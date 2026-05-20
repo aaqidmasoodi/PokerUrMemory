@@ -1,7 +1,9 @@
-import { ChevronLeft, Volume2, VolumeX, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronLeft, Volume2, VolumeX, LogOut, MessageCircle, ChevronRight } from 'lucide-react';
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
 import { Avatar } from '../components/Avatar';
+import { FeedbackDialog } from '../components/FeedbackDialog';
 
 export function SettingsScreen({
   profile,
@@ -16,6 +18,8 @@ export function SettingsScreen({
   onBack: () => void;
   onSignOut: () => void;
 }) {
+  const [showFeedback, setShowFeedback] = useState(false);
+
   return (
     <div
       className="h-dvh flex flex-col bg-transparent overflow-hidden select-none"
@@ -92,6 +96,18 @@ export function SettingsScreen({
             </div>
           </button>
 
+          <p className="text-[10px] font-display tracking-widest uppercase text-gray-300 mt-4">Support</p>
+          <button
+            onClick={() => setShowFeedback(true)}
+            className="flex items-center justify-between bg-white/70 rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-sm active:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <MessageCircle className="w-4 h-4 text-[color:var(--color-blue)]" />
+              <span className="text-sm font-medium text-foreground">Contact Us</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-300" />
+          </button>
+
           <div className="[@media(orientation:portrait)]:flex-1 mt-4 [@media(orientation:landscape)]:mt-2">
             <button
               onClick={onSignOut}
@@ -103,6 +119,14 @@ export function SettingsScreen({
           </div>
         </div>
       </div>
+
+      {showFeedback && (
+        <FeedbackDialog
+          userId={profile.id}
+          username={profile.username}
+          onClose={() => setShowFeedback(false)}
+        />
+      )}
     </div>
   );
 }
