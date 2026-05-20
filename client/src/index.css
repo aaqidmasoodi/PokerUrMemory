@@ -177,7 +177,7 @@
   }
 
   body {
-    background-color: #111a14;
+    background-color: oklch(0.50 0.09 236);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -192,6 +192,11 @@
     -webkit-touch-callout: none;
     user-select: none;
     -webkit-user-select: none;
+  }
+
+  /* React mount point must fill the fixed body so h-full children reach bottom */
+  #root {
+    height: 100%;
   }
 
   /* allow text selection inside inputs */

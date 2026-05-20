@@ -504,7 +504,7 @@ export default function App() {
 
   // ── AUTH SCREENS ──────────────────────────────────────────────────────────────
   if (authState === 'loading') return (
-    <div className="h-dvh flex flex-col items-center justify-center gap-6 bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]">
+    <div className="h-full flex flex-col items-center justify-center gap-6 bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]">
       <div className="w-8 h-8 border-2 border-[color:var(--color-blue)]/30 border-t-[color:var(--color-blue)] rounded-full animate-spin" />
       <button
         onClick={signOut}
@@ -514,8 +514,8 @@ export default function App() {
       </button>
     </div>
   );
-  if (authState === 'landing') return <div className="h-dvh bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]"><LandingScreen onLogin={signInWithGoogle} /></div>;
-  if (authState === 'onboarding' && user) return <div className="h-dvh bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]"><OnboardingScreen user={user} onComplete={createProfile} /></div>;
+  if (authState === 'landing') return <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]"><LandingScreen onLogin={signInWithGoogle} /></div>;
+  if (authState === 'onboarding' && user) return <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]"><OnboardingScreen user={user} onComplete={createProfile} /></div>;
 
   // ── NON-GAME SCREENS ──────────────────────────────────────────────────────────
   if (!inGame) {
@@ -593,7 +593,7 @@ export default function App() {
     }
 
     return (
-      <div className="h-dvh bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]">
+      <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]">
         {gameJustStarted && !gameState && (
           <div className="fixed inset-0 z-[500] flex items-center justify-center bg-[var(--color-background)]">
             <div className="flex flex-col items-center gap-4">
