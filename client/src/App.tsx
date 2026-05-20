@@ -372,15 +372,24 @@ export default function App() {
 
   useEffect(() => { _globalMuted = muted; }, [muted]);
 
-  const menuClickSound = typeof window !== "undefined" ? new Audio("/sounds/Menu_Button_Click.wav") : null;
+  const menuClickSoundRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
-    if (inGame || !menuClickSound) return;
+    if (typeof window === "undefined") return;
+    const a = new Audio("/sounds/Menu_Button_Click.wav");
+    a.preload = "auto";
+    menuClickSoundRef.current = a;
+  }, []);
+  useEffect(() => {
+    if (inGame) return;
     const handleClick = (e: MouseEvent) => {
+      if (_globalMuted) return;
       const target = e.target as HTMLElement;
       if (target.tagName === "BUTTON" || target.closest("button")) {
-        menuClickSound.currentTime = 0;
-        menuClickSound.volume = 0.4;
-        menuClickSound.play().catch(() => {});
+        const audio = menuClickSoundRef.current;
+        if (!audio) return;
+        audio.currentTime = 0;
+        audio.volume = 0.4;
+        audio.play().catch(() => {});
       }
     };
     document.addEventListener("click", handleClick);
