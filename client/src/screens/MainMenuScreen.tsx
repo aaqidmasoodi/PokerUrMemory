@@ -87,7 +87,7 @@ export function MainMenuScreen({
 
         {/* Title — portrait only (landscape version lives in the left column) */}
         <div className="text-center [@media(orientation:landscape)]:hidden">
-          <h1 className="font-display text-[2rem] font-bold leading-tight tracking-wide text-white drop-shadow-sm">
+          <h1 className="font-display text-[1.5rem] min-[390px]:text-[2rem] font-bold leading-tight tracking-wide text-white drop-shadow-sm">
             ♠ PokerUrMemory ♠
           </h1>
           <p className="text-[10px] text-gray-300 mt-1 tracking-[0.18em] uppercase">

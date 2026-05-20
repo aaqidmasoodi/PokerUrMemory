@@ -39,7 +39,7 @@ export function LandingScreen({ onLogin }: { onLogin: () => void }) {
           className="w-20 h-20 [@media(orientation:landscape)]:w-16 [@media(orientation:landscape)]:h-16 rounded-[22px] shadow-[0_8px_28px_rgba(0,0,0,0.25)]"
         />
         <div className="text-center">
-          <h1 className="font-display text-[2.2rem] [@media(orientation:landscape)]:text-[1.7rem] font-bold blue-text leading-tight tracking-wide">
+          <h1 className="font-display text-[1.6rem] min-[390px]:text-[2.2rem] [@media(orientation:landscape)]:text-[1.7rem] font-bold blue-text leading-tight tracking-wide">
             PokerUrMemory
           </h1>
           <p className="text-[11px] text-gray-300 mt-1 tracking-[0.18em] uppercase">
