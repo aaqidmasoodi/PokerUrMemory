@@ -735,7 +735,7 @@ class GameRoom {
             canRaise: currentPlayer.chips > 0 && !currentPlayer.isAllIn && !atCap && this.currentBet < MAX_BET,
             currentBet: this.currentBet,
             playerBet: currentPlayer.currentBet,
-            minRaise: Math.min(Math.max(this.currentBet * 2, this.currentBet + 1), maxBetTotal),
+            minRaise: Math.min(this.currentBet + 1, maxBetTotal),
             maxBet: maxBetTotal,
             minBet: Math.min(this.currentBet + 1, maxBetTotal),
         });
