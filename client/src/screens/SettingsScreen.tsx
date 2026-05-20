@@ -34,7 +34,7 @@ export function SettingsScreen({
 
       {/* Header — background bleeds edge-to-edge, content sits inside safe area */}
       <div
-        className="relative shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white/60 backdrop-blur-sm"
+        className="relative shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white"
         style={{
           marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
           marginLeft: 'calc(-1 * env(safe-area-inset-left, 0px))',
@@ -67,7 +67,7 @@ export function SettingsScreen({
           [@media(orientation:landscape)]:justify-center">
 
           <p className="text-[10px] font-display tracking-widest uppercase text-gray-300">Account</p>
-          <div className="flex items-center gap-3 bg-white/70 rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-sm">
+          <div className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-md">
             <Avatar url={profile.avatar_url} name={profile.username} />
             <div>
               <p className="font-semibold text-sm text-foreground">
@@ -83,7 +83,7 @@ export function SettingsScreen({
           <p className="text-[10px] font-display tracking-widest uppercase text-gray-300">Sound</p>
           <button
             onClick={onToggleMute}
-            className="flex items-center justify-between bg-white/70 rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-sm active:bg-gray-50 transition-colors"
+            className="flex items-center justify-between bg-white rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-md active:bg-gray-50 transition-colors"
           >
             <div className="flex items-center gap-3">
               {muted
@@ -99,7 +99,7 @@ export function SettingsScreen({
           <p className="text-[10px] font-display tracking-widest uppercase text-gray-300 mt-4">Support</p>
           <button
             onClick={() => setShowFeedback(true)}
-            className="flex items-center justify-between bg-white/70 rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-sm active:bg-gray-50 transition-colors"
+            className="flex items-center justify-between bg-white rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-md active:bg-gray-50 transition-colors"
           >
             <div className="flex items-center gap-3">
               <MessageCircle className="w-4 h-4 text-[color:var(--color-blue)]" />
@@ -111,7 +111,7 @@ export function SettingsScreen({
           <div className="[@media(orientation:portrait)]:flex-1 mt-4 [@media(orientation:landscape)]:mt-2">
             <button
               onClick={onSignOut}
-              className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl border border-red-200 text-red-500 text-sm font-medium bg-white/60 active:bg-red-50 transition-colors"
+              className="flex items-center justify-center gap-2 w-full h-12 rounded-2xl border border-red-200 text-red-500 text-sm font-medium bg-white shadow-md active:bg-red-50 transition-colors"
             >
               <LogOut className="w-4 h-4" />
               Sign Out

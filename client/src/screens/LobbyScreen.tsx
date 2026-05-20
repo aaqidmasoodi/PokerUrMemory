@@ -98,7 +98,7 @@ export function LobbyScreen({
 
       {/* Header — background bleeds edge-to-edge, content sits inside safe area */}
       <div
-        className="relative shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white/60 backdrop-blur-sm"
+        className="relative shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white"
         style={{
           marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
           marginLeft: 'calc(-1 * env(safe-area-inset-left, 0px))',
@@ -160,7 +160,7 @@ export function LobbyScreen({
               return (
                 <div
                   key={member.userId}
-                  className="relative flex flex-col items-center justify-center gap-1.5 h-[88px] rounded-2xl bg-white/80 border border-black/[0.08] shadow-sm"
+                  className="relative flex flex-col items-center justify-center gap-1.5 h-[88px] rounded-2xl bg-white border border-black/[0.08] shadow-md"
                 >
                   {isHostSlot && (
                     <Crown className="absolute top-1.5 right-1.5 w-3 h-3 text-[color:var(--color-gold)]" />
@@ -194,7 +194,7 @@ export function LobbyScreen({
             <button
               onClick={() => setShowFriends(true)}
               disabled={!lobby}
-              className="w-full h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white/80 text-foreground border border-black/[0.10] shadow-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white text-foreground border border-black/[0.10] shadow-md active:scale-[0.97] transition-transform flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <UserPlus className="w-3.5 h-3.5 text-[color:var(--color-blue)]" />
               Invite Friends
@@ -212,7 +212,7 @@ export function LobbyScreen({
             )}
 
             {lobby && !isHost && (
-              <div className="w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[11px] bg-white/60 text-gray-300 border border-black/[0.07] flex items-center justify-center text-center px-4">
+              <div className="w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[11px] bg-white text-gray-400 border border-black/[0.07] shadow-md flex items-center justify-center text-center px-4">
                 Waiting for {hostMember?.username ?? 'host'} to start…
               </div>
             )}

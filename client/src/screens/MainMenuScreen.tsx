@@ -73,7 +73,7 @@ export function MainMenuScreen({
             { label: 'Wins', value: profile.wins },
             { label: 'Win %', value: `${winRate}%` },
           ].map(s => (
-            <div key={s.label} className="flex flex-col items-center bg-white/70 rounded-xl px-3 py-2 border border-black/[0.07] shadow-sm min-w-[52px]">
+            <div key={s.label} className="flex flex-col items-center bg-white rounded-xl px-3 py-2 border border-black/[0.07] shadow-md min-w-[52px]">
               <span className="font-display text-base font-bold blue-text leading-tight">{s.value}</span>
               <span className="text-[8px] text-gray-300 tracking-wide uppercase">{s.label}</span>
             </div>
@@ -106,7 +106,7 @@ export function MainMenuScreen({
 
           <button
             onClick={onPlayWithFriends}
-            className="w-full h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white/90 text-[color:var(--color-blue)] border border-[color:var(--color-blue)]/30 shadow-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white text-[color:var(--color-blue)] border border-[color:var(--color-blue)]/30 shadow-md active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
           >
             <Users className="w-3.5 h-3.5" />
             Play with Friends
@@ -115,7 +115,7 @@ export function MainMenuScreen({
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={onProfile}
-              className="h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white/80 text-foreground border border-black/[0.10] shadow-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+              className="h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white text-foreground border border-black/[0.10] shadow-md active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
             >
               <User className="w-3.5 h-3.5 text-[color:var(--color-blue)]" />
               Profile
@@ -123,7 +123,7 @@ export function MainMenuScreen({
 
             <button
               onClick={onSettings}
-              className="h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white/80 text-foreground border border-black/[0.10] shadow-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+              className="h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white text-foreground border border-black/[0.10] shadow-md active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
             >
               <Settings className="w-3.5 h-3.5 text-[color:var(--color-blue)]" />
               Settings
@@ -132,7 +132,7 @@ export function MainMenuScreen({
 
           <button
             onClick={onRules}
-            className="w-full h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white/80 text-foreground border border-black/[0.10] shadow-sm active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white text-foreground border border-black/[0.10] shadow-md active:scale-[0.97] transition-transform flex items-center justify-center gap-2"
           >
             <BookOpen className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
             How to Play

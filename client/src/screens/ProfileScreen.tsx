@@ -45,7 +45,7 @@ export function ProfileScreen({
 
       {/* Header — background bleeds edge-to-edge, content sits inside safe area */}
       <div
-        className="relative shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white/60 backdrop-blur-sm"
+        className="relative shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white"
         style={{
           marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
           marginLeft: 'calc(-1 * env(safe-area-inset-left, 0px))',
@@ -85,7 +85,7 @@ export function ProfileScreen({
               { label: 'Wins', value: profile.wins },
               { label: 'Win Rate', value: `${winRate}%` },
             ].map(s => (
-              <div key={s.label} className="flex flex-col items-center bg-white/70 rounded-2xl px-4 py-2.5 border border-black/[0.07] shadow-sm min-w-[64px]">
+              <div key={s.label} className="flex flex-col items-center bg-white rounded-2xl px-4 py-2.5 border border-black/[0.07] shadow-md min-w-[64px]">
                 <span className="font-display text-lg font-bold blue-text leading-tight">{s.value}</span>
                 <span className="text-[9px] text-gray-300 tracking-wide uppercase">{s.label}</span>
               </div>
@@ -109,7 +109,7 @@ export function ProfileScreen({
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-display tracking-widest uppercase text-white/80">Country · Auto-detected</label>
-              <div className="w-full bg-white/70 border border-black/[0.10] rounded-2xl px-4 py-3.5 shadow-sm flex items-center gap-3 text-foreground">
+              <div className="w-full bg-white border border-black/[0.10] rounded-2xl px-4 py-3.5 shadow-md flex items-center gap-3 text-foreground">
                 {profile.country_code ? (
                   <>
                     <span className="text-xl leading-none">{getFlagEmoji(profile.country_code)}</span>
