@@ -78,6 +78,11 @@ class GameRoom {
         this.playersConfirmed = new Set();
         this.discardPool = new Map();
         this.discardRevealInterval = null;
+        // Deferred one-shot timers (next-hand restart, end-of-game room close).
+        // Tracked so clearAllTimers() can cancel them — otherwise a stray restart
+        // fires on a room that's already being torn down.
+        this.restartTimer = null;
+        this.endGameTimer = null;
         // Matchmaking fields
         this.gameSessionId = null;
         this.expectedPlayerCount = 0;
@@ -485,7 +490,7 @@ class GameRoom {
         if (this.onGameOver) {
             this.onGameOver(players);
         }
-        setTimeout(() => this.io.to(this.roomCode).emit('roomClosed', msg), 4000);
+        this.endGameTimer = setTimeout(() => this.io.to(this.roomCode).emit('roomClosed', msg), 4000);
     }
 
     showBluffWin(winner) {
@@ -500,7 +505,8 @@ class GameRoom {
         this.gamePhase = 'showdown';
         this.broadcastState();
         setTimeout(() => this.broadcastLeaderboard(), 100);
-        setTimeout(() => {
+        this.restartTimer = setTimeout(() => {
+            this.restartTimer = null;
             this.eliminateBrokePlayers();
             if (this.players.size <= 1) { this.endGame(); return; }
             this.startNewHand();
@@ -784,6 +790,8 @@ class GameRoom {
         if (this.drawTimerInterval) { clearInterval(this.drawTimerInterval); this.drawTimerInterval = null; }
         if (this.revealTimerInterval) { clearInterval(this.revealTimerInterval); this.revealTimerInterval = null; }
         if (this.discardRevealInterval) { clearInterval(this.discardRevealInterval); this.discardRevealInterval = null; }
+        if (this.restartTimer) { clearTimeout(this.restartTimer); this.restartTimer = null; }
+        if (this.endGameTimer) { clearTimeout(this.endGameTimer); this.endGameTimer = null; }
     }
 
     startShowdown() {
@@ -871,7 +879,8 @@ class GameRoom {
         this.pot = 0;
         this.broadcastState();
         setTimeout(() => this.broadcastLeaderboard(), 100);
-        setTimeout(() => {
+        this.restartTimer = setTimeout(() => {
+            this.restartTimer = null;
             this.eliminateBrokePlayers();
             if (this.players.size <= 1) { this.endGame(); return; }
             this.startNewHand();

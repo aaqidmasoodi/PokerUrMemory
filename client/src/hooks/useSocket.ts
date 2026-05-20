@@ -136,13 +136,14 @@ export function useSocket() {
             playerIdRef.current = res.playerId;
             setIsHost(res.isHost);
           } else {
-            // Room is gone — reset to menu
+            // Room is gone — reset to menu. Keep currentUserRef: the user's identity
+            // outlives a single game, and nulling it makes the next matchFound abort
+            // (the lobby "stuck on Starting Game…" bug).
             setInGame(false);
             setRoomCode('');
             setGameState(null);
             setDisconnectNotice(null);
             roomCodeRef.current = '';
-            currentUserRef.current = null;
           }
         });
       }

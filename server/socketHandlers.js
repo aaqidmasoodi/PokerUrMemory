@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const waitingPlayers = [];
 const GATHER_WINDOW_MS = 3000;  // after 2 players found, wait up to 3s for more
 const QUEUE_TIMEOUT_MS = 20000; // 20s personal timeout per player
+const RECONNECT_GRACE_MS = 60_000; // grace window for a dropped socket to come back
 let gatherTimer = null;
 
 // ── User socket registry (for invite routing) ─────────────────────────────────
@@ -18,6 +19,7 @@ const socketUsers = new Map();    // socketId -> { userId, username, avatarUrl }
 // lobby = { id, hostUserId, members: Map<userId, { socketId, username, avatarUrl }>, invites: Set<userId> }
 const lobbies = new Map();        // lobbyId -> lobby
 const userLobby = new Map();      // userId -> lobbyId
+const lobbyLeaveTimers = new Map(); // userId -> timeout (deferred lobby removal on disconnect)
 
 function newLobbyId() {
   return crypto.randomBytes(6).toString('hex');
@@ -68,6 +70,23 @@ function leaveLobby(io, userId) {
 
   broadcastLobby(io, lobby);
   return lobby;
+}
+
+// A lobby member's socket dropping (mobile backgrounding, network blip) should NOT
+// instantly kick them out — that's why a host would suddenly be told "need more
+// players". Defer the removal; a reconnect (auth:register) cancels it.
+function cancelLobbyLeave(userId) {
+  const t = lobbyLeaveTimers.get(userId);
+  if (t) { clearTimeout(t); lobbyLeaveTimers.delete(userId); }
+}
+
+function scheduleLobbyLeave(io, userId) {
+  if (!userLobby.has(userId)) return;
+  cancelLobbyLeave(userId);
+  lobbyLeaveTimers.set(userId, setTimeout(() => {
+    lobbyLeaveTimers.delete(userId);
+    leaveLobby(io, userId);
+  }, RECONNECT_GRACE_MS));
 }
 
 function removeWaiting(socketId) {
@@ -130,8 +149,6 @@ function tryMatch(rooms, io) {
 
 // ── Socket handlers ───────────────────────────────────────────────────────────
 
-const RECONNECT_GRACE_MS = 60_000;
-
 function setupSocketHandlers(io, rooms) {
   // ── Auth: verify the Supabase access token at the handshake ──────────────────
   // The verified user id is the ONLY source of identity for the socket. Clients can
@@ -169,6 +186,9 @@ function setupSocketHandlers(io, rooms) {
 
       userSockets.set(userId, socket.id);
       socketUsers.set(socket.id, { userId, username, avatarUrl: avatarUrl ?? null });
+
+      // They're back — cancel any pending lobby removal from a brief disconnect.
+      cancelLobbyLeave(userId);
 
       // If they were in a lobby on a previous socket, refresh that lobby's record
       const lobbyId = userLobby.get(userId);
@@ -210,6 +230,7 @@ function setupSocketHandlers(io, rooms) {
     socket.on('lobby:leave', () => {
       const me = socketUsers.get(socket.id);
       if (!me) return;
+      cancelLobbyLeave(me.userId);
       leaveLobby(io, me.userId);
       socket.emit('lobby:update', null);
     });
@@ -456,7 +477,10 @@ function setupSocketHandlers(io, rooms) {
 
       if (!room) { cb({ success: false, error: 'Room not found' }); return; }
 
-      const entry = Array.from(room.players.entries()).find(([, p]) => p.userId === userId);
+      // Match by verified userId. Prefer a disconnected seat (the one actually
+      // waiting to be reclaimed) over a still-connected one.
+      const entries = Array.from(room.players.entries()).filter(([, p]) => p.userId === userId);
+      const entry = entries.find(([, p]) => p.disconnected) ?? entries[0];
       if (!entry) { cb({ success: false, error: 'Player not in room' }); return; }
 
       const [oldSocketId, player] = entry;
@@ -533,7 +557,9 @@ function setupSocketHandlers(io, rooms) {
         // Only clear the user registry if this is still the active socket for that user
         if (userSockets.get(me.userId) === socket.id) {
           userSockets.delete(me.userId);
-          leaveLobby(io, me.userId);
+          // Don't kick them out of the lobby instantly — mobile sockets drop and
+          // reconnect all the time. Defer it; auth:register cancels on return.
+          scheduleLobbyLeave(io, me.userId);
         }
         socketUsers.delete(socket.id);
       }
