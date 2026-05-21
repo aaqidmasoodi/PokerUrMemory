@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PokerUrMemory</string>
+    <string name="title_activity_main">PokerUrMemory</string>
+    <string name="package_name">com.pokerurmemory.app</string>
+    <string name="custom_url_scheme">com.pokerurmemory.app</string>
+</resources>

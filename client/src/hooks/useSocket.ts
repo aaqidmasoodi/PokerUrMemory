@@ -113,7 +113,18 @@ export function useSocket() {
   useEffect(() => {
     // The handshake auth is a function so socket.io re-reads the freshest token on
     // every (re)connect — including after we set it post-login and reconnect.
-    const newSocket = io({ auth: (cb) => cb({ token: tokenRef.current ?? '' }) });
+    // In the browser build VITE_SERVER_URL is empty → same-origin. In the Capacitor
+    // (Android) build the app is served from https://localhost, so it's set to the
+    // deployed server's absolute URL.
+    // When a server URL is set (Capacitor build) the app origin is https://localhost,
+    // which makes Socket.IO's initial polling request cross-origin and CORS-blocked.
+    // Skipping polling and going straight to WebSocket sidesteps this: browsers don't
+    // enforce CORS on WS upgrades, and WebSocket is more efficient on mobile anyway.
+    const serverUrl = import.meta.env.VITE_SERVER_URL || '';
+    const newSocket = io(serverUrl, {
+      auth: (cb) => cb({ token: tokenRef.current ?? '' }),
+      ...(serverUrl ? { transports: ['websocket'] } : {}),
+    });
     setSocket(newSocket);
 
     let initialConnectDone = false;

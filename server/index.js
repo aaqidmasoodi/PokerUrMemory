@@ -7,7 +7,17 @@ const { setupSocketHandlers } = require('./socketHandlers');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+
+// The browser build is served same-origin (no CORS needed), but the Capacitor
+// Android app loads from https://localhost and connects cross-origin, so the
+// Socket.IO polling handshake must explicitly allow that origin. capacitor://localhost
+// covers the iOS scheme for future use.
+const io = new Server(server, {
+  cors: {
+    origin: ['https://localhost', 'http://localhost', 'capacitor://localhost'],
+    methods: ['GET', 'POST'],
+  },
+});
 
 app.use(express.static(path.join(__dirname, '../client/dist')));
 app.get('*', (req, res) => {
