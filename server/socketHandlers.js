@@ -15,6 +15,33 @@ let gatherTimer = null;
 const userSockets = new Map();    // userId -> socketId
 const socketUsers = new Map();    // socketId -> { userId, username, avatarUrl }
 
+// ── Verified-token cache ───────────────────────────────────────────────────────
+// Mobile PWA sockets drop and reconnect constantly, and each reconnect reuses the
+// SAME Supabase access token until it refreshes (~1h). Calling supabase.auth.getUser()
+// on every handshake means a network round-trip per reconnect — the first thing to
+// throttle at scale. Cache the verified userId keyed by token until the token's own
+// expiry, so a reconnect with an already-seen token costs nothing.
+const tokenCache = new Map();     // token -> { userId, expMs }
+
+// Pull the `exp` claim (seconds) out of a JWT without verifying it — only used to
+// bound how long we trust an already-verified token. Returns ms, or 0 if unparseable.
+function jwtExpMs(token) {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString('utf8'));
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : 0;
+  } catch {
+    return 0;
+  }
+}
+
+// Drop expired entries periodically so the cache can't grow unbounded as tokens rotate.
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, entry] of tokenCache) {
+    if (entry.expMs <= now) tokenCache.delete(token);
+  }
+}, 10 * 60 * 1000).unref();
+
 // ── Lobby state ───────────────────────────────────────────────────────────────
 // lobby = { id, hostUserId, members: Map<userId, { socketId, username, avatarUrl }>, invites: Set<userId> }
 const lobbies = new Map();        // lobbyId -> lobby
@@ -158,9 +185,22 @@ function setupSocketHandlers(io, rooms) {
     const token = socket.handshake.auth?.token;
     socket.data.userId = null;
     if (!token) return next(); // allow unauthenticated connection; gated per-event below
+
+    const now = Date.now();
+    const cached = tokenCache.get(token);
+    if (cached && cached.expMs > now) {
+      socket.data.userId = cached.userId; // cache hit — no Supabase round-trip
+      return next();
+    }
+
     try {
       const { data, error } = await supabase.auth.getUser(token);
-      if (!error && data?.user) socket.data.userId = data.user.id;
+      if (!error && data?.user) {
+        socket.data.userId = data.user.id;
+        // Only cache when the token carries a sane future expiry to trust against.
+        const expMs = jwtExpMs(token);
+        if (expMs > now) tokenCache.set(token, { userId: data.user.id, expMs });
+      }
     } catch (err) {
       console.error('[auth] token verification failed:', err?.message ?? err);
     }
