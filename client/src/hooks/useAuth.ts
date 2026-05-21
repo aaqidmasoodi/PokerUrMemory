@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
 import type { User } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 import { supabase, type Profile } from '../lib/supabase';
 
 export type AuthState = 'loading' | 'landing' | 'onboarding' | 'ready';
+
+// On native (Capacitor) the app is served from https://localhost, which Google can't
+// redirect back to. Instead we redirect to a custom scheme that Android routes back
+// into the app, where the appUrlOpen listener below picks up the tokens.
+const isNative = Capacitor.isNativePlatform();
+const NATIVE_REDIRECT = 'com.pokerurmemory.app://login-callback';
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>('loading');
@@ -62,8 +71,46 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Native deep-link handler: Google sends the tokens back via the custom scheme
+  // (com.pokerurmemory.app://login-callback#access_token=…&refresh_token=…). Parse the
+  // hash, hand the tokens to Supabase, and close the in-app browser. No-op on web/PWA.
+  useEffect(() => {
+    if (!isNative) return;
+    const handle = App.addListener('appUrlOpen', async ({ url }) => {
+      if (!url.startsWith(NATIVE_REDIRECT)) return;
+      Browser.close().catch(() => {}); // ignore if already closed
+
+      const hash = url.split('#')[1];
+      if (!hash) return;
+      const params = new URLSearchParams(hash);
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      if (access_token && refresh_token) {
+        // Triggers onAuthStateChange → fetchProfile above.
+        await supabase.auth.setSession({ access_token, refresh_token });
+      }
+    });
+    return () => { handle.then((h) => h.remove()); };
+  }, []);
+
   async function signInWithGoogle() {
-    // Use the current origin so it works on any port (dev or prod)
+    if (isNative) {
+      // Get the provider URL without auto-redirecting, then open it in the system
+      // browser (Custom Tab) — Google blocks OAuth inside embedded WebViews.
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
+      });
+      if (error || !data?.url) {
+        console.error('[signInWithGoogle] failed to start OAuth:', error?.message);
+        return;
+      }
+      await Browser.open({ url: data.url });
+      return;
+    }
+
+    // Web / PWA: full-page redirect back to the current origin (implicit flow,
+    // detectSessionInUrl picks up the hash on return). Works on any port.
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin },
