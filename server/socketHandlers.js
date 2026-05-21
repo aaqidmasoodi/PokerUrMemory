@@ -212,9 +212,31 @@ function setupSocketHandlers(io, rooms) {
 
     // ── User registration (for invite routing) ────────────────────────────────
 
-    socket.on('auth:register', ({ username, avatarUrl }) => {
+    socket.on('auth:register', async ({ username, avatarUrl }) => {
       // Identity is the verified token's user id — never the client-supplied value.
-      const userId = socket.data.userId;
+      // If the handshake verification failed (Render cold start, network hiccup during
+      // middleware), socket.data.userId will be null. Re-attempt with the same handshake
+      // token so the user doesn't have to reconnect.
+      let userId = socket.data.userId;
+      if (!userId) {
+        const token = socket.handshake.auth?.token;
+        if (token) {
+          const now = Date.now();
+          const cached = tokenCache.get(token);
+          if (cached && cached.expMs > now) {
+            userId = socket.data.userId = cached.userId;
+          } else {
+            try {
+              const { data, error } = await supabase.auth.getUser(token);
+              if (!error && data?.user) {
+                userId = socket.data.userId = data.user.id;
+                const expMs = jwtExpMs(token);
+                if (expMs > now) tokenCache.set(token, { userId, expMs });
+              }
+            } catch {}
+          }
+        }
+      }
       if (!userId || !username) return;
 
       // If this user had another live socket, evict it from the registry.

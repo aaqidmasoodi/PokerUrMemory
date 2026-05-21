@@ -1,9 +1,21 @@
 import { useState } from 'react';
-import { ChevronLeft, Volume2, VolumeX, LogOut, MessageCircle, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, LogOut, MessageCircle, ChevronRight, Shield } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
 import { Avatar } from '../components/Avatar';
 import { FeedbackDialog } from '../components/FeedbackDialog';
+
+const PRIVACY_POLICY_URL = 'https://pokerurmemory.onrender.com/privacy';
+
+function openUrl(url: string) {
+  if (Capacitor.isNativePlatform()) {
+    Browser.open({ url });
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
 
 export function SettingsScreen({
   profile,
@@ -104,6 +116,17 @@ export function SettingsScreen({
             <div className="flex items-center gap-3">
               <MessageCircle className="w-4 h-4 text-[color:var(--color-blue)]" />
               <span className="text-sm font-medium text-foreground">Contact Us</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-300" />
+          </button>
+
+          <button
+            onClick={() => openUrl(PRIVACY_POLICY_URL)}
+            className="flex items-center justify-between bg-white rounded-2xl px-4 py-3.5 border border-black/[0.07] shadow-md active:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Shield className="w-4 h-4 text-[color:var(--color-blue)]" />
+              <span className="text-sm font-medium text-foreground">Privacy Policy</span>
             </div>
             <ChevronRight className="w-4 h-4 text-gray-300" />
           </button>

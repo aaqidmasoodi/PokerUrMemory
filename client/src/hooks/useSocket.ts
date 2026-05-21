@@ -122,7 +122,16 @@ export function useSocket() {
     // enforce CORS on WS upgrades, and WebSocket is more efficient on mobile anyway.
     const serverUrl = import.meta.env.VITE_SERVER_URL || '';
     const newSocket = io(serverUrl, {
-      auth: (cb) => cb({ token: tokenRef.current ?? '' }),
+      // Async auth callback: called on every connect/reconnect right before the
+      // handshake packet is sent. Fetching the session here guarantees the server
+      // always gets a valid token even on the very first connect (before auth has
+      // resolved) or after a background token refresh.
+      auth: async (cb) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token ?? null;
+        tokenRef.current = token;
+        cb({ token: token ?? '' });
+      },
       ...(serverUrl ? { transports: ['websocket'] } : {}),
     });
     setSocket(newSocket);
