@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSocket, type DiscardEntry } from "./hooks/useSocket";
+import { useSocket, type DiscardEntry, type Phase, type ShowdownData } from "./hooks/useSocket";
 import { useAuth } from "./hooks/useAuth";
 import { usePresence } from "./hooks/usePresence";
 import { LandingScreen } from "./screens/LandingScreen";
@@ -19,7 +19,6 @@ import { cn } from "./lib/utils";
 import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X, WifiOff, BookOpen } from "lucide-react";
 
 
-type Phase = "waiting" | "memoryReveal" | "firstBetting" | "draw" | "discardReveal" | "drawReveal" | "secondBetting" | "showdown";
 type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules' | 'lobby';
 
 let _globalMuted = false;
@@ -30,6 +29,7 @@ function playSound(file: string, volume = 0.55) {
 
 function speak(text: string) {
   if (_globalMuted || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.rate = 0.9;
   window.speechSynthesis.speak(utterance);
@@ -155,7 +155,7 @@ function PlayerSeat({
               </span>
               {typeof bet === "number" && bet > 0 && (
                 <div className="flex flex-col items-center border-l border-white/30 pl-2">
-                  <span className="font-bold text-white text-[10px] sm:text-[12px]">${bet}</span>
+                  <span className="font-bold text-white text-[10px] sm:text-[12px]">{bet}pts</span>
                   <span className="text-[4px] uppercase text-white/70 tracking-wider">bet</span>
                 </div>
               )}
@@ -178,7 +178,7 @@ function PlayerSeat({
                   {name}
                 </span>
                 <span className={cn("font-bold text-gray-700", cfg.chips)}>
-                  ${chips.toLocaleString()}
+                  {chips.toLocaleString()}pts
                 </span>
               </div>
             </>
@@ -186,7 +186,7 @@ function PlayerSeat({
           {/* Bet - always show and bigger */}
           {!showAction && cfg.showBet && typeof bet === "number" && bet > 0 && (
             <div className="flex flex-col items-center pl-2 border-l border-gray-300 ml-1">
-              <span className="font-bold text-gray-800 text-[10px] sm:text-[12px]">${bet}</span>
+              <span className="font-bold text-gray-800 text-[10px] sm:text-[12px]">{bet}pts</span>
               <span className="text-[5px] uppercase text-gray-500 tracking-wider">bet</span>
             </div>
           )}
@@ -364,13 +364,16 @@ export default function App() {
 
   const [appScreen, setAppScreen] = useState<AppScreen>('menu');
   const [showRules, setShowRules] = useState(false);
-  const [raiseAmount, setRaiseAmount] = useState<number[]>([100]);
+  const [raiseAmount, setRaiseAmount] = useState<number[]>([5]);
   const [showBetSlider, setShowBetSlider] = useState(false);
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [muted, setMuted] = useState(false);
   const [showLog, setShowLog] = useState(false);
 
-  useEffect(() => { _globalMuted = muted; }, [muted]);
+  useEffect(() => {
+    _globalMuted = muted;
+    return () => { _globalMuted = false; };
+  }, [muted]);
 
   const menuClickSoundRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
@@ -493,11 +496,11 @@ export default function App() {
       }
       prevTurnPlayerRef.current = currentPlayerId;
     }
-  }, [gameState?.phase, gameState?.players]);
+  }, [gameState?.phase, gameState?.currentPlayerIndex]);
 
   useEffect(() => {
     if (showdownData?.winner) {
-      const winnerName = showdownData.winner.playerName || showdownData.winner;
+      const winnerName = showdownData.winner.playerName;
       setTimeout(() => speak(`${winnerName} wins`), 500);
     }
   }, [showdownData]);
@@ -690,7 +693,7 @@ export default function App() {
         <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center">
           <div className="bg-white/95 border-y border-[color:var(--color-gold)]/40 backdrop-blur-md py-4 w-full text-center shadow-lg">
             <h2 className="font-display text-base sm:text-3xl font-bold gold-text mb-2">
-              {showdownData.winner.playerName || showdownData.winner} Wins!
+              {showdownData.winner.playerName} Wins!
             </h2>
             {showdownData.isBluff ? (
               <p className="text-gray-500 italic text-xs">Opponent folded</p>
@@ -840,7 +843,7 @@ export default function App() {
             style={{ backgroundColor: potChipVariant === "gold" ? "var(--color-gold)" : potChipVariant === "blue" ? "var(--color-chip-blue)" : "var(--color-chip-red)" }}
           />
           <span className="font-display font-bold gold-text text-[11px] sm:text-sm">
-            ${gameState.pot.toLocaleString()}
+            {gameState.pot.toLocaleString()}pts
           </span>
         </div>
         <div className={cn(
@@ -925,7 +928,7 @@ export default function App() {
                   <div className="flex flex-col items-center leading-none">
                     <span>Call</span>
                     <span className="text-[6px] font-sans font-normal opacity-80 mt-0.5">
-                      ${myTurnData!.currentBet - myTurnData!.playerBet}
+                      {myTurnData!.currentBet - myTurnData!.playerBet}pts
                     </span>
                   </div>
                 }

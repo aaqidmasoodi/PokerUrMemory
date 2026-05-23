@@ -66,7 +66,7 @@ class GameRoom {
         this.gamePhase = 'waiting';
         this.isDrawPhase = false;
         this.playersActedThisRound = 0;
-        this.revealTimer = null;
+        this.memoryRevealInterval = null;
         this.revealTimeLeft = 0;
         this.selectedCards = new Map();
         this.turnTimer = null;
@@ -208,13 +208,13 @@ class GameRoom {
         if (this.revealTimeLeft > 45) this.revealTimeLeft = 45;
         this.io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
 
-        this.revealTimer = setInterval(() => {
+        this.memoryRevealInterval = setInterval(() => {
             this.revealTimeLeft--;
             this.io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
 
             if (this.revealTimeLeft <= 0) {
-                clearInterval(this.revealTimer);
-                this.revealTimer = null;
+                clearInterval(this.memoryRevealInterval);
+                this.memoryRevealInterval = null;
                 this.endMemoryRevealPhase();
             }
         }, 1000);
@@ -235,7 +235,7 @@ class GameRoom {
         this.broadcastState();
         this.notifyCurrentPlayer();
 
-        this.io.to(this.roomCode).emit('actionLog', `Memory phase over. Cards hidden. Antes posted: pot: $${this.pot}. Betting begins!`);
+        this.io.to(this.roomCode).emit('actionLog', `Memory phase over. Cards hidden. Antes posted: pot ${this.pot}pts. Betting begins!`);
     }
 
     getPlayerPublicState(socketId, forPlayerId) {
@@ -309,6 +309,18 @@ class GameRoom {
         return Array.from(this.players.values()).filter(p => !p.folded);
     }
 
+    _applyBet(player, amount) {
+        const totalBet = Math.min(amount, player.chips + player.currentBet, MAX_BET);
+        const additional = totalBet - player.currentBet;
+        if (additional < 1) return 0;
+        player.chips -= additional;
+        player.currentBet = totalBet;
+        player.committed += additional;
+        this.pot += additional;
+        this.currentBet = Math.max(this.currentBet, player.currentBet);
+        return totalBet;
+    }
+
     playerAction(socketId, action, amount = 0) {
         const player = this.players.get(socketId);
         if (!player) return;
@@ -334,15 +346,9 @@ class GameRoom {
             }
 
             case 'bet': {
-                const totalBet = Math.min(amount, player.chips + player.currentBet, MAX_BET);
-                const additional = totalBet - player.currentBet;
-                if (additional < 1) return;
-                player.chips -= additional;
-                player.currentBet = totalBet;
-                player.committed += additional;
-                this.pot += additional;
-                this.currentBet = Math.max(this.currentBet, player.currentBet);
-                this.io.to(this.roomCode).emit('actionLog', `${player.name} bets $${totalBet}.`);
+                const totalBet = this._applyBet(player, amount);
+                if (!totalBet) return;
+                this.io.to(this.roomCode).emit('actionLog', `${player.name} bets ${totalBet}pts.`);
                 this.nextPlayer();
                 break;
             }
@@ -359,22 +365,16 @@ class GameRoom {
                     player.committed += paid;
                     this.pot += paid;
                     if (player.chips === 0) player.isAllIn = true;
-                    this.io.to(this.roomCode).emit('actionLog', `${player.name} calls $${paid}.`);
+                    this.io.to(this.roomCode).emit('actionLog', `${player.name} calls ${paid}pts.`);
                 }
                 this.nextPlayer();
                 break;
             }
 
             case 'raise': {
-                const totalBet = Math.min(amount, player.chips + player.currentBet, MAX_BET);
-                const additional = totalBet - player.currentBet;
-                if (additional < 1) return;
-                player.chips -= additional;
-                player.currentBet = totalBet;
-                player.committed += additional;
-                this.pot += additional;
-                this.currentBet = Math.max(this.currentBet, player.currentBet);
-                this.io.to(this.roomCode).emit('actionLog', `${player.name} raises to $${totalBet}.`);
+                const totalBet = this._applyBet(player, amount);
+                if (!totalBet) return;
+                this.io.to(this.roomCode).emit('actionLog', `${player.name} raises to ${totalBet}pts.`);
                 this.playersActedThisRound = 1;
                 this.nextPlayer();
                 break;
@@ -407,7 +407,7 @@ class GameRoom {
                 player.isAllIn = player.chips === 0;
                 this.pot += maxAdditional;
                 this.currentBet = Math.max(this.currentBet, player.currentBet);
-                this.io.to(this.roomCode).emit('actionLog', `${player.name} goes ALL IN for $${maxAdditional}!`);
+                this.io.to(this.roomCode).emit('actionLog', `${player.name} bets to the cap (${maxAdditional}pts).`);
                 this.nextPlayer();
                 break;
             }
@@ -425,7 +425,7 @@ class GameRoom {
 
         if (this.shouldEndBettingRound()) {
             if (this.getActivePlayers().some(p => p.currentBet >= MAX_BET)) {
-                this.io.to(this.roomCode).emit('actionLog', `Bet limit of $${MAX_BET} reached: moving to next phase.`);
+                this.io.to(this.roomCode).emit('actionLog', `Bet limit of ${MAX_BET}pts reached: moving to next phase.`);
             }
             this.endBettingRound();
             return;
@@ -484,7 +484,7 @@ class GameRoom {
         const players = Array.from(this.players.values());
         const winner = players.find(p => p.chips > 0) || players[0];
         const msg = winner
-            ? `🏆 Game Over! ${winner.name} wins with $${winner.chips}!`
+            ? `🏆 Game Over! ${winner.name} wins with ${winner.chips}pts!`
             : 'Game Over!';
         this.io.to(this.roomCode).emit('gameOver', { winnerName: winner?.name, chips: winner?.chips });
         if (this.onGameOver) {
@@ -496,7 +496,7 @@ class GameRoom {
     showBluffWin(winner) {
         this.clearTurnTimer();
         winner.chips += this.pot;
-        this.io.to(this.roomCode).emit('actionLog', `${winner.name} wins $${this.pot}!`);
+        this.io.to(this.roomCode).emit('actionLog', `${winner.name} wins ${this.pot}pts!`);
         this.io.to(this.roomCode).emit('bluffWin', {
             winner: winner.name,
             amount: this.pot,
@@ -617,7 +617,7 @@ class GameRoom {
 
     showDiscardReveal() {
         this.gamePhase = 'discardReveal';
-        this.revealTimer = 10;
+        this.revealTimeLeft = 10;
 
         // Build payload — include ALL active players so stand-pat is visible too
         const discards = this.getActivePlayers().map(player => ({
@@ -633,10 +633,10 @@ class GameRoom {
         this.broadcastState();
 
         this.discardRevealInterval = setInterval(() => {
-            this.revealTimer--;
-            this.io.to(this.roomCode).emit('timerUpdate', this.revealTimer);
+            this.revealTimeLeft--;
+            this.io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
 
-            if (this.revealTimer <= 0) {
+            if (this.revealTimeLeft <= 0) {
                 clearInterval(this.discardRevealInterval);
                 this.discardRevealInterval = null;
                 this.showReplacementCards();
@@ -646,7 +646,7 @@ class GameRoom {
 
     showReplacementCards() {
         this.gamePhase = 'drawReveal';
-        this.revealTimer = 10;
+        this.revealTimeLeft = 10;
 
         this.drawSelections.forEach((data) => {
             if (data.faceUpCard) {
@@ -655,7 +655,7 @@ class GameRoom {
         });
 
         this.io.to(this.roomCode).emit('drawRevealStart', {
-            timer: this.revealTimer,
+            timer: this.revealTimeLeft,
             replacements: Array.from(this.drawSelections.entries()).map(([id, data]) => ({
                 playerId: id,
                 playerName: data.playerName,
@@ -666,15 +666,24 @@ class GameRoom {
         this.broadcastState();
 
         this.revealTimerInterval = setInterval(() => {
-            this.revealTimer--;
-            this.io.to(this.roomCode).emit('timerUpdate', this.revealTimer);
+            this.revealTimeLeft--;
+            this.io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
 
-            if (this.revealTimer <= 0) {
+            if (this.revealTimeLeft <= 0) {
                 clearInterval(this.revealTimerInterval);
                 this.revealTimerInterval = null;
                 this.endDrawPhase();
             }
         }, 1000);
+    }
+
+    _startSecondBetting() {
+        this.gamePhase = 'secondBetting';
+        this.currentPlayerIndex = Math.floor(Math.random() * this.players.size);
+        this.players.forEach(p => { p.currentBet = 0; });
+        this.playersActedThisRound = 0;
+        this.broadcastState();
+        this.notifyCurrentPlayer();
     }
 
     endDrawPhase() {
@@ -683,28 +692,13 @@ class GameRoom {
                 data.newCards.forEach(card => { card.faceUp = false; });
             }
         });
-
         this.io.to(this.roomCode).emit('actionLog', 'Draw phase complete. Second betting begins.');
-
-        this.gamePhase = 'secondBetting';
-        this.currentPlayerIndex = Math.floor(Math.random() * this.players.size);
-        this.players.forEach(p => { p.currentBet = 0; });
-        this.playersActedThisRound = 0;
-
-        this.broadcastState();
-        this.notifyCurrentPlayer();
+        this._startSecondBetting();
     }
 
     endDrawPhaseNoDiscard() {
         this.io.to(this.roomCode).emit('actionLog', 'Draw phase ended. Second betting begins.');
-
-        this.gamePhase = 'secondBetting';
-        this.currentPlayerIndex = Math.floor(Math.random() * this.players.size);
-        this.players.forEach(p => { p.currentBet = 0; });
-        this.playersActedThisRound = 0;
-
-        this.broadcastState();
-        this.notifyCurrentPlayer();
+        this._startSecondBetting();
     }
 
     notifyCurrentPlayer() {
@@ -786,7 +780,7 @@ class GameRoom {
 
     clearAllTimers() {
         this.clearTurnTimer();
-        if (this.revealTimer) { clearInterval(this.revealTimer); this.revealTimer = null; }
+        if (this.memoryRevealInterval) { clearInterval(this.memoryRevealInterval); this.memoryRevealInterval = null; }
         if (this.drawTimerInterval) { clearInterval(this.drawTimerInterval); this.drawTimerInterval = null; }
         if (this.revealTimerInterval) { clearInterval(this.revealTimerInterval); this.revealTimerInterval = null; }
         if (this.discardRevealInterval) { clearInterval(this.discardRevealInterval); this.discardRevealInterval = null; }

@@ -521,15 +521,6 @@ function setupSocketHandlers(io, rooms) {
       room.playerConfirmDiscard(socket.id);
     });
 
-    socket.on('nextHand', (data, callback) => {
-      const room = rooms.get(data.roomCode);
-      if (!room) { if (typeof callback === 'function') callback({ success: false }); return; }
-      const player = room.getPlayer(socket.id);
-      if (!player?.isHost) { if (typeof callback === 'function') callback({ success: false }); return; }
-      room.startNewHand();
-      if (typeof callback === 'function') callback({ success: true });
-    });
-
     socket.on('rejoinGame', ({ roomCode: rc }, callback) => {
       const cb = typeof callback === 'function' ? callback : () => {};
       const userId = socket.data.userId;

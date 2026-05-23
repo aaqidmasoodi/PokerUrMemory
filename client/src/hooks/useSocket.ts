@@ -77,6 +77,22 @@ export interface IncomingInvite {
   fromAvatarUrl: string | null;
 }
 
+export interface ShowdownHandEntry {
+  playerId: string;
+  playerName: string;
+  hand: CardData[];
+  rankName: string;
+}
+
+export interface ShowdownData {
+  isBluff?: boolean;
+  winner: { playerId?: string; playerName: string; rankName?: string };
+  amount?: number;
+  hands?: ShowdownHandEntry[];
+  winnings?: { playerId: string; amount: number }[];
+  pot?: number;
+}
+
 export function useSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [inGame, setInGame] = useState(false);
@@ -97,7 +113,7 @@ export function useSocket() {
   const [myTurnData, setMyTurnData] = useState<YourTurnData | null>(null);
   const [actionLog, setActionLog] = useState<string>('');
   const [timer, setTimer] = useState<number | null>(null);
-  const [showdownData, setShowdownData] = useState<any | null>(null);
+  const [showdownData, setShowdownData] = useState<ShowdownData | null>(null);
   const [discardRevealData, setDiscardRevealData] = useState<DiscardRevealData | null>(null);
   const [selectedDrawCards, setSelectedDrawCards] = useState<number[]>([]);
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
@@ -109,6 +125,7 @@ export function useSocket() {
   const [lobbyTransitioning, setLobbyTransitioning] = useState(false);
   const [incomingInvite, setIncomingInvite] = useState<IncomingInvite | null>(null);
   const [inviteDeclinedNotice, setInviteDeclinedNotice] = useState<{ byUsername: string } | null>(null);
+  const inviteDeclinedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // The handshake auth is a function so socket.io re-reads the freshest token on
@@ -136,9 +153,10 @@ export function useSocket() {
     });
     setSocket(newSocket);
 
+    // ── Named handlers (improves stack traces and breakpoint targeting) ──────────
+
     let initialConnectDone = false;
-    newSocket.on('connect', () => {
-      // Always re-register on (re)connect so the server can route invites again
+    function onConnect() {
       if (currentUserRef.current) {
         newSocket.emit('auth:register', {
           username: currentUserRef.current.username,
@@ -148,9 +166,7 @@ export function useSocket() {
       if (!initialConnectDone) { initialConnectDone = true; return; }
       // Socket reconnected — attempt to rejoin if we were in a room
       if (roomCodeRef.current && currentUserRef.current) {
-        newSocket.emit('rejoinGame', {
-          roomCode: roomCodeRef.current,
-        }, (res: any) => {
+        newSocket.emit('rejoinGame', { roomCode: roomCodeRef.current }, (res: any) => {
           if (res?.success) {
             setPlayerId(res.playerId);
             playerIdRef.current = res.playerId;
@@ -167,9 +183,9 @@ export function useSocket() {
           }
         });
       }
-    });
+    }
 
-    newSocket.on('matchFound', ({ roomCode: rc }: { roomCode: string }) => {
+    function onMatchFound({ roomCode: rc }: { roomCode: string }) {
       // Identity comes from the matchmaking queue (pendingMatchRef) or, for
       // lobby-started games, from the registered current user.
       const ident = pendingMatchRef.current ?? currentUserRef.current;
@@ -188,18 +204,12 @@ export function useSocket() {
           setIsHost(res.isHost);
           pendingMatchRef.current = null;
         } else {
-          // Join failed — reset transitioning so the user isn't stuck.
           setLobbyTransitioning(false);
         }
       });
-    });
+    }
 
-    newSocket.on('matchTimeout', () => {
-      pendingMatchRef.current = null;
-      setMatchTimedOut(true);
-    });
-
-    newSocket.on('roomClosed', (msg: string) => {
+    function onRoomClosed(msg: string) {
       setInGame(false);
       setRoomCode('');
       setGameState(null);
@@ -210,9 +220,9 @@ export function useSocket() {
       // ident = null and silently abort, leaving the host's opponent stuck on
       // "Starting Game…" forever.
       setRoomClosedMsg(msg);
-    });
+    }
 
-    newSocket.on('gameState', (state: GameState) => {
+    function onGameState(state: GameState) {
       setGameState(state);
       setTimer(state.timeLeft > 0 ? state.timeLeft : null);
 
@@ -223,16 +233,20 @@ export function useSocket() {
         setInGame(true);
         setShowdownData(null);
       }
-
       if (state.phase !== 'draw') {
         setSelectedDrawCards([]);
         setHasDiscarded(false);
       }
-
       if (state.phase !== 'firstBetting' && state.phase !== 'secondBetting') {
         setTurnTimer(null);
       }
-    });
+    }
+
+    newSocket.on('connect', onConnect);
+    newSocket.on('matchFound', onMatchFound);
+    newSocket.on('matchTimeout', () => { pendingMatchRef.current = null; setMatchTimedOut(true); });
+    newSocket.on('roomClosed', onRoomClosed);
+    newSocket.on('gameState', onGameState);
 
     newSocket.on('turnTimer', (data: { playerId: string; timeLeft: number } | null) => {
       setTurnTimer(data);
@@ -276,23 +290,23 @@ export function useSocket() {
       setMyTurnData(null);
     });
 
-    newSocket.on('showdown', (data: any) => {
+    newSocket.on('showdown', (data: ShowdownData) => {
       setShowdownData(data);
       setMyTurnData(null);
       setInGame(true);
-      const handStr = data.hands?.map((h: any) => `${h.playerName}: ${h.rankName}`).join(' · ');
-      setGameLogs(prev => [`${data.winner.playerName} wins $${data.pot} with ${data.winner.rankName}${handStr ? ': ' + handStr : ''}`, ...prev].slice(0, 60));
+      const handStr = data.hands?.map(h => `${h.playerName}: ${h.rankName}`).join(' · ');
+      setGameLogs(prev => [`${data.winner.playerName} wins ${data.pot}pts with ${data.winner.rankName}${handStr ? ': ' + handStr : ''}`, ...prev].slice(0, 60));
     });
 
-    newSocket.on('bluffWin', (data: any) => {
+    newSocket.on('bluffWin', (data: { winner: string; amount: number }) => {
       setShowdownData({ isBluff: true, winner: { playerName: data.winner }, amount: data.amount });
       setMyTurnData(null);
       setInGame(true);
-      setGameLogs(prev => [`${data.winner} wins $${data.amount} (all others folded)`, ...prev].slice(0, 60));
+      setGameLogs(prev => [`${data.winner} wins ${data.amount}pts (all others folded)`, ...prev].slice(0, 60));
     });
 
-    newSocket.on('gameOver', (data: any) => {
-      setGameLogs(prev => [`🏆 GAME OVER: ${data.winnerName} wins with $${data.chips}!`, ...prev].slice(0, 60));
+    newSocket.on('gameOver', (data: { winnerName: string; chips: number }) => {
+      setGameLogs(prev => [`🏆 GAME OVER: ${data.winnerName} wins with ${data.chips}pts!`, ...prev].slice(0, 60));
     });
 
     newSocket.on('playerDisconnected', ({ playerName }: { playerId: string; playerName: string }) => {
@@ -322,11 +336,18 @@ export function useSocket() {
     });
 
     newSocket.on('lobby:inviteDeclined', ({ byUsername }: { byUsername: string }) => {
+      if (inviteDeclinedTimerRef.current) clearTimeout(inviteDeclinedTimerRef.current);
       setInviteDeclinedNotice({ byUsername });
-      setTimeout(() => setInviteDeclinedNotice(null), 3000);
+      inviteDeclinedTimerRef.current = setTimeout(() => {
+        inviteDeclinedTimerRef.current = null;
+        setInviteDeclinedNotice(null);
+      }, 3000);
     });
 
-    return () => { newSocket.close(); };
+    return () => {
+      if (inviteDeclinedTimerRef.current) clearTimeout(inviteDeclinedTimerRef.current);
+      newSocket.close();
+    };
   }, []);
 
   // Clear lobby + transition state when game actually starts
@@ -351,13 +372,6 @@ export function useSocket() {
     setMatchTimedOut(false);
     socket.emit('cancelSearch');
   }, [socket]);
-
-  const nextHand = useCallback(() => {
-    if (!socket) return;
-    socket.emit('nextHand', { roomCode }, (res: any) => {
-      if (res?.success) setShowdownData(null);
-    });
-  }, [socket, roomCode]);
 
   const playAction = useCallback((action: string, amount = 0) => {
     if (!socket) return;
@@ -499,7 +513,6 @@ export function useSocket() {
     dismissRoomClosed,
     findGame,
     cancelSearch,
-    nextHand,
     playAction,
     toggleDrawCard,
     confirmDiscard,

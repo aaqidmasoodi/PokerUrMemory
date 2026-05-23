@@ -89,10 +89,12 @@ export function RulesBody() {
         color="blue"
         title="Antes & Betting"
         steps={[
-          'Before cards are dealt everyone puts 5 points into the pot.',
+          'Before cards are dealt, everyone antes 5 points into the pot — your compulsory first contribution to the round.',
+          'The pot is the shared prize pool: every ante, bet, and call flows into it and it keeps growing throughout the round.',
           'You can check, bet, call, raise, or fold during each betting round.',
           'The maximum any player can bet per round is 20 points total.',
           'The moment a player reaches 20, that betting round ends immediately.',
+          'The winner of each round claims the entire pot, adding those points directly to their stack.',
         ]}
       />
 
@@ -130,9 +132,10 @@ export function RulesBody() {
         title="Players & Scoring"
         steps={[
           '2 to 4 players per game.',
-          'Each player starts with 200 points.',
+          'Each player starts with 200 points. The game tracks every player\'s total in real time.',
+          'The current pot size is always visible so you know exactly what\'s at stake each round.',
           'Win pots to grow your stack. Lose all your points and you\'re out.',
-          'Rounds continue until only one player has points left. Best hand wins each round.',
+          'Rounds continue until only one player has points left.',
         ]}
       />
 
