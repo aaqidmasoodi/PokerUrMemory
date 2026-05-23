@@ -43,28 +43,24 @@ export function ProfileScreen({
     >
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
 
-      {/* Header — background bleeds edge-to-edge, content sits inside safe area */}
+      {/* Back button — floating pill, no full-width bar */}
       <div
-        className="relative shrink-0 flex items-center gap-3 border-b border-black/[0.07] bg-white"
+        className="relative shrink-0"
         style={{
-          marginTop: 'calc(-1 * env(safe-area-inset-top, 0px))',
-          marginLeft: 'calc(-1 * env(safe-area-inset-left, 0px))',
-          marginRight: 'calc(-1 * env(safe-area-inset-right, 0px))',
-          paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))',
-          paddingBottom: '0.75rem',
-          paddingLeft: 'calc(1rem + env(safe-area-inset-left, 0px))',
-          paddingRight: 'calc(1rem + env(safe-area-inset-right, 0px))',
+          paddingTop: 'calc(0.625rem + env(safe-area-inset-top, 0px))',
+          paddingLeft: 'calc(0.75rem + env(safe-area-inset-left, 0px))',
+          paddingBottom: '0.25rem',
         }}
       >
         <button
           onClick={onBack}
-          className="w-8 h-8 grid place-items-center rounded-full bg-white border border-black/[0.08] shadow-sm active:scale-95 transition-transform"
+          className="flex items-center gap-1 h-10 pl-2 pr-4 rounded-full bg-white/90 backdrop-blur-sm border border-black/[0.08] shadow-md active:scale-95 transition-transform"
         >
-          <ChevronLeft className="w-4 h-4 text-foreground" />
+          <ChevronLeft className="w-5 h-5 text-[color:var(--color-blue)]" />
+          <span className="font-display text-[12px] font-bold blue-text tracking-wider uppercase">
+            Profile
+          </span>
         </button>
-        <h1 className="font-display text-sm [@media(orientation:landscape)]:text-base font-bold blue-text tracking-wider uppercase">
-          Profile
-        </h1>
       </div>
 
       {/* Body — single col portrait, two col landscape */}
