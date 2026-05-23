@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 
 const TIMEOUT_SECS = 20;
 
@@ -26,7 +26,7 @@ export function MatchmakingScreen({
 
   return (
     <div
-      className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row items-center justify-center bg-transparent overflow-hidden select-none"
+      className="h-dvh flex flex-col bg-transparent overflow-hidden select-none"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
@@ -36,10 +36,32 @@ export function MatchmakingScreen({
     >
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
 
+      {/* Cancel pill — top left, red accent */}
+      <div
+        className="relative shrink-0"
+        style={{
+          paddingTop: 'calc(0.625rem + env(safe-area-inset-top, 0px))',
+          paddingLeft: 'calc(0.75rem + env(safe-area-inset-left, 0px))',
+          paddingBottom: '0.25rem',
+        }}
+      >
+        <button
+          onClick={onCancel}
+          className="flex items-center gap-1 h-10 pl-2 pr-4 rounded-full bg-white/90 backdrop-blur-sm border border-red-200 shadow-md active:scale-95 transition-transform"
+        >
+          <ChevronLeft className="w-5 h-5 text-red-500" />
+          <span className="font-display text-[12px] font-bold text-red-500 tracking-wider uppercase">
+            {timedOut ? 'Back' : 'Cancel'}
+          </span>
+        </button>
+      </div>
+
+      {/* Main content */}
       {!timedOut ? (
-        <>
-          {/* Left / Top — Animation */}
-          <div className="relative flex items-center justify-center
+        <div className="relative flex-1 flex flex-col [@media(orientation:landscape)]:flex-row overflow-hidden">
+
+          {/* Animation pane */}
+          <div className="flex items-center justify-center
             py-8 [@media(orientation:landscape)]:py-0
             [@media(orientation:landscape)]:flex-1 [@media(orientation:landscape)]:h-full
             [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-white/30">
@@ -52,57 +74,52 @@ export function MatchmakingScreen({
             </div>
           </div>
 
-          {/* Right / Bottom — Status */}
-          <div className="relative flex flex-col items-center gap-5 w-full max-w-xs px-6
-            pb-10 [@media(orientation:landscape)]:pb-0
-            [@media(orientation:landscape)]:flex-1 [@media(orientation:landscape)]:justify-center">
-
-            <div className="text-center">
-              <h2 className="font-display text-xl font-bold blue-text">
-                Finding Players{'.'.repeat(dots)}
-              </h2>
-              <p className="text-xs text-gray-300 mt-1">Waiting for another player to join</p>
-            </div>
-
-            <div className="w-full">
-              <div className="w-full h-1.5 bg-black/8 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-[color:var(--color-blue)] transition-all duration-1000 ease-linear"
-                  style={{ width: `${pct}%` }}
-                />
+          {/* Status card pane */}
+          <div className="flex flex-col items-center justify-center
+            px-6 pb-10 [@media(orientation:landscape)]:pb-0
+            [@media(orientation:landscape)]:flex-1">
+            <div className="w-full max-w-xs bg-white/80 backdrop-blur-sm rounded-2xl border border-black/[0.07] shadow-lg px-6 py-6 flex flex-col gap-5">
+              <div className="text-center">
+                <h2 className="font-display text-xl font-bold blue-text">
+                  Finding Players{'.'.repeat(dots)}
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">Waiting for another player to join</p>
               </div>
-              <div className="flex justify-between mt-1.5">
-                <p className="text-[10px] text-gray-300">{elapsed}s elapsed</p>
-                <p className="text-[10px] text-gray-300">{Math.max(0, TIMEOUT_SECS - elapsed)}s remaining</p>
+
+              <div className="w-full">
+                <div className="w-full h-2 bg-black/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] transition-all duration-1000 ease-linear"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-1.5">
+                  <p className="text-[10px] text-gray-500">{elapsed}s elapsed</p>
+                  <p className="text-[10px] text-gray-500">{Math.max(0, TIMEOUT_SECS - elapsed)}s remaining</p>
+                </div>
               </div>
             </div>
-
+          </div>
+        </div>
+      ) : (
+        <div className="relative flex-1 flex flex-col items-center justify-center px-6">
+          <div className="w-full max-w-xs bg-white/80 backdrop-blur-sm rounded-2xl border border-black/[0.07] shadow-lg px-6 py-8 flex flex-col items-center gap-5 text-center">
+            <div className="w-20 h-20 rounded-full bg-black/5 flex items-center justify-center text-4xl">
+              😔
+            </div>
+            <div>
+              <h2 className="font-display text-xl font-bold text-foreground">No Match Found</h2>
+              <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                We couldn't find other players right now. Try again in a moment!
+              </p>
+            </div>
             <button
               onClick={onCancel}
-              className="flex items-center gap-2 text-xs text-gray-300 hover:text-red-500 transition-colors"
+              className="w-full h-13 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow active:scale-[0.97] transition-transform"
             >
-              <X className="w-3.5 h-3.5" />
-              Cancel search
+              Back to Menu
             </button>
           </div>
-        </>
-      ) : (
-        <div className="relative flex flex-col items-center gap-5 w-full max-w-xs text-center px-6">
-          <div className="w-20 h-20 rounded-full bg-black/5 flex items-center justify-center text-4xl">
-            😔
-          </div>
-          <div>
-            <h2 className="font-display text-xl font-bold text-foreground">No Match Found</h2>
-            <p className="text-sm text-gray-300 mt-2 leading-relaxed">
-              We couldn't find other players right now. Try again in a moment!
-            </p>
-          </div>
-          <button
-            onClick={onCancel}
-            className="w-full h-13 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow active:scale-[0.97] transition-transform"
-          >
-            Back to Menu
-          </button>
         </div>
       )}
     </div>
