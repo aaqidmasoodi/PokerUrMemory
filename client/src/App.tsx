@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSocket, type DiscardEntry, type Phase, type ShowdownData } from "./hooks/useSocket";
+import { useSocket, type DiscardEntry, type Phase } from "./hooks/useSocket";
 import { useAuth } from "./hooks/useAuth";
 import { usePresence } from "./hooks/usePresence";
 import { LandingScreen } from "./screens/LandingScreen";
