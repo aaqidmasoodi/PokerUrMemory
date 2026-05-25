@@ -34,8 +34,6 @@ export function MainMenuScreen({
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        paddingLeft: 'env(safe-area-inset-left, 0px)',
-        paddingRight: 'env(safe-area-inset-right, 0px)',
       }}
     >
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
@@ -43,7 +41,7 @@ export function MainMenuScreen({
 
       {/* ── Top bar — identity (left) + stats (right) ── */}
       <div className="relative z-10 shrink-0 flex items-center justify-between gap-3
-        px-4 pt-4 sm:px-6 sm:pt-5 md:px-8 md:pt-6 lg:px-14 lg:pt-10 xl:px-20 xl:pt-14">
+        pt-4 sm:pt-5 md:pt-6 lg:pt-10 xl:pt-14 px-4 sm:px-6 md:px-8 lg:px-14 xl:px-20">
 
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <Avatar

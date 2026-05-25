@@ -1,21 +1,9 @@
 import { useState } from 'react';
 import { ChevronLeft, Volume2, VolumeX, LogOut, MessageCircle, ChevronRight, Shield } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
-import { Browser } from '@capacitor/browser';
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
 import { Avatar } from '../components/Avatar';
 import { FeedbackDialog } from '../components/FeedbackDialog';
-
-const PRIVACY_POLICY_URL = 'https://pokerurmemory.onrender.com/privacy';
-
-function openUrl(url: string) {
-  if (Capacitor.isNativePlatform()) {
-    Browser.open({ url });
-  } else {
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }
-}
 
 export function SettingsScreen({
   profile,
@@ -38,8 +26,6 @@ export function SettingsScreen({
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        paddingLeft: 'env(safe-area-inset-left, 0px)',
-        paddingRight: 'env(safe-area-inset-right, 0px)',
       }}
     >
       <div className="absolute inset-0 felt-surface opacity-[0.22] pointer-events-none" />

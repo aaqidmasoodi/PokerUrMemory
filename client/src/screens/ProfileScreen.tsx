@@ -43,8 +43,6 @@ export function ProfileScreen({
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-        paddingLeft: 'env(safe-area-inset-left, 0px)',
-        paddingRight: 'env(safe-area-inset-right, 0px)',
       }}
     >
       <div className="absolute inset-0 felt-surface opacity-[0.22] pointer-events-none" />
