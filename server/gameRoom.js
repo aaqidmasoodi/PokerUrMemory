@@ -496,7 +496,7 @@ class GameRoom {
 
     // Countdown between hands: emit the remaining seconds every tick so clients can
     // show "Next round in N", then eliminate broke players and deal the next hand.
-    scheduleNextHand(seconds = 10) {
+    scheduleNextHand(seconds = 15) {
         if (this.nextHandInterval) { clearInterval(this.nextHandInterval); this.nextHandInterval = null; }
         let timeLeft = seconds;
         this.io.to(this.roomCode).emit('nextHandCountdown', timeLeft);
@@ -525,7 +525,7 @@ class GameRoom {
         this.gamePhase = 'showdown';
         this.broadcastState();
         setTimeout(() => this.broadcastLeaderboard(), 100);
-        this.scheduleNextHand(10);
+        this.scheduleNextHand(15);
     }
 
     broadcastLeaderboard() {
@@ -889,7 +889,7 @@ class GameRoom {
         this.pot = 0;
         this.broadcastState();
         setTimeout(() => this.broadcastLeaderboard(), 100);
-        this.scheduleNextHand(10);
+        this.scheduleNextHand(15);
     }
 }
 
