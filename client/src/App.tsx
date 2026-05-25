@@ -88,9 +88,9 @@ function PhaseBadge({
 // ─── Player seat ─────────────────────────────────────────────────────────────
 
 const SEAT_CFG = {
-  normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1",       avatar: "w-6 h-6 sm:w-8 sm:h-8 text-[9px] sm:text-sm", name: "text-[8px] sm:text-[11px] max-w-[52px] sm:max-w-[80px]", chips: "text-[7px] sm:text-[10px]", showBet: true,  ringPad: 5, numCls: "text-[15px]", flashCls: "text-[14px] sm:text-[18px]" },
-  compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5",         avatar: "w-5 h-5 text-[7px]",                           name: "text-[7px] max-w-[36px]",                               chips: "text-[6px]",               showBet: true,  ringPad: 3, numCls: "text-[11px]", flashCls: "text-[10px] sm:text-[12px]" },
-  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 py-[1px]",   avatar: "w-4 h-4 text-[6px]",                           name: "text-[6px] max-w-[26px]",                               chips: "text-[5px]",               showBet: true,  ringPad: 2, numCls: "text-[10px]", flashCls: "text-[8px] sm:text-[10px]" },
+  normal:  { pill: "gap-1.5 pl-1 pr-2.5 py-1 lg:gap-2 lg:pl-1.5 lg:pr-3.5 lg:py-1.5",       avatar: "w-6 h-6 sm:w-8 sm:h-8 lg:w-11 lg:h-11 text-[9px] sm:text-sm lg:text-base", name: "text-[8px] sm:text-[11px] lg:text-[14px] max-w-[52px] sm:max-w-[80px] lg:max-w-[120px]", chips: "text-[7px] sm:text-[10px] lg:text-[12px]", showBet: true,  ringPad: 5, numCls: "text-[15px] lg:text-[20px]", flashCls: "text-[14px] sm:text-[18px] lg:text-[22px]" },
+  compact: { pill: "gap-1 pl-0.5 pr-2 py-0.5 lg:gap-1.5 lg:pr-2.5 lg:py-1",                  avatar: "w-5 h-5 lg:w-7 lg:h-7 text-[7px] lg:text-[10px]",                         name: "text-[7px] lg:text-[10px] max-w-[36px] lg:max-w-[56px]",                               chips: "text-[6px] lg:text-[9px]",  showBet: true,  ringPad: 3, numCls: "text-[11px] lg:text-[15px]", flashCls: "text-[10px] sm:text-[12px] lg:text-[15px]" },
+  mini:    { pill: "gap-0.5 pl-0.5 pr-1.5 py-[1px] lg:gap-1 lg:pr-2 lg:py-0.5",              avatar: "w-4 h-4 lg:w-6 lg:h-6 text-[6px] lg:text-[9px]",                         name: "text-[6px] lg:text-[9px] max-w-[26px] lg:max-w-[40px]",                               chips: "text-[5px] lg:text-[8px]",  showBet: true,  ringPad: 2, numCls: "text-[10px] lg:text-[13px]", flashCls: "text-[8px] sm:text-[10px] lg:text-[13px]" },
 } as const;
 
 function PlayerSeat({
@@ -839,13 +839,13 @@ export default function App() {
       </div>
 
       {/* ── CENTER — pot + action log ── */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1.5">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/90 gold-border backdrop-blur-md shadow-md whitespace-nowrap">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1.5 lg:gap-2.5">
+        <div className="flex items-center gap-2 lg:gap-3 px-3 lg:px-5 py-1.5 lg:py-2.5 rounded-full bg-white/90 gold-border backdrop-blur-md shadow-md whitespace-nowrap">
           <div
-            className="w-3.5 h-3.5 rounded-full shrink-0 shadow-md"
+            className="w-3.5 h-3.5 lg:w-5 lg:h-5 rounded-full shrink-0 shadow-md"
             style={{ backgroundColor: potChipVariant === "gold" ? "var(--color-gold)" : potChipVariant === "blue" ? "var(--color-chip-blue)" : "var(--color-chip-red)" }}
           />
-          <span className="font-display font-bold gold-text text-[11px] sm:text-sm">
+          <span className="font-display font-bold gold-text text-[11px] sm:text-sm lg:text-xl xl:text-2xl">
             {gameState.pot.toLocaleString()}pts
           </span>
         </div>
@@ -856,7 +856,7 @@ export default function App() {
             : "bg-white/90 border border-black/[0.08]",
         )}>
           <p className={cn(
-            "font-display font-bold leading-tight text-[13px] sm:text-[15px]",
+            "font-display font-bold leading-tight text-[13px] sm:text-[15px] lg:text-xl xl:text-2xl",
             infoMsg.urgent ? "text-white" : "text-foreground/90",
           )}>
             {infoMsg.urgent && (
@@ -902,7 +902,7 @@ export default function App() {
 
       {/* ── FIXED ACTION BAR ── */}
       <div
-        className="fixed z-40 flex flex-col gap-1.5 items-stretch w-[112px] sm:w-[140px]"
+        className="fixed z-40 flex flex-col gap-1.5 lg:gap-2 items-stretch w-[112px] sm:w-[140px] lg:w-[180px] xl:w-[220px]"
         style={{
           bottom: 'calc(0.625rem + env(safe-area-inset-bottom, 0px))',
           right:  'calc(0.625rem + env(safe-area-inset-right, 0px))',
@@ -960,7 +960,7 @@ export default function App() {
       )}
       <div
         className={cn(
-          "fixed top-0 right-0 h-full z-[210] w-[280px] sm:w-[320px] flex flex-col",
+          "fixed top-0 right-0 h-full z-[210] w-[280px] sm:w-[320px] lg:w-[400px] xl:w-[480px] flex flex-col",
           "bg-white/97 border-l border-[color:var(--color-gold)]/30 shadow-2xl backdrop-blur-xl",
           "transform transition-transform duration-300 ease-out",
           showLog ? "translate-x-0" : "translate-x-full",
@@ -996,7 +996,7 @@ export default function App() {
       )}
       <div
         className={cn(
-          "fixed top-0 right-0 h-full z-[210] w-[300px] sm:w-[360px] flex flex-col",
+          "fixed top-0 right-0 h-full z-[210] w-[300px] sm:w-[360px] lg:w-[440px] xl:w-[520px] flex flex-col",
           "bg-white/97 border-l border-[color:var(--color-gold)]/30 shadow-2xl backdrop-blur-xl",
           "transform transition-transform duration-300 ease-out",
           showRules ? "translate-x-0" : "translate-x-full",
@@ -1017,7 +1017,7 @@ export default function App() {
       {/* ── BET SLIDER ── */}
       <div
         className={cn(
-          "fixed z-[110] w-[224px] sm:w-[264px]",
+          "fixed z-[110] w-[224px] sm:w-[264px] lg:w-[320px] xl:w-[380px]",
           "bg-white/97 border border-[color:var(--color-gold)]/40 rounded-2xl p-3.5 backdrop-blur-2xl shadow-xl",
           "transform transition-all duration-300 ease-out",
           showBetSlider ? "translate-x-0 opacity-100" : "translate-x-[120%] opacity-0 pointer-events-none",

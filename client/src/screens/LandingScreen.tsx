@@ -36,10 +36,10 @@ export function LandingScreen({ onLogin, onFacebookLogin }: { onLogin: () => voi
           src="/android-chrome-192x192.png"
           alt="PokerUrMemory"
           draggable={false}
-          className="w-20 h-20 [@media(orientation:landscape)]:w-16 [@media(orientation:landscape)]:h-16 rounded-[22px] shadow-[0_8px_28px_rgba(0,0,0,0.25)]"
+          className="w-20 h-20 lg:w-28 lg:h-28 xl:w-36 xl:h-36 2xl:w-44 2xl:h-44 [@media(orientation:landscape)]:w-16 [@media(orientation:landscape)]:h-16 rounded-[22px] xl:rounded-[32px] 2xl:rounded-[40px] shadow-[0_8px_28px_rgba(0,0,0,0.25)]"
         />
         <div className="text-center">
-          <h1 className="font-display text-[1.6rem] min-[390px]:text-[2.2rem] [@media(orientation:landscape)]:text-[1.7rem] font-bold blue-text leading-tight tracking-wide">
+          <h1 className="font-display text-[1.6rem] min-[390px]:text-[2.2rem] lg:text-[3rem] xl:text-[4rem] 2xl:text-[5rem] [@media(orientation:landscape)]:text-[1.7rem] font-bold blue-text leading-tight tracking-wide">
             PokerUrMemory
           </h1>
           <p className="text-[11px] text-gray-300 mt-1 tracking-[0.18em] uppercase">
@@ -60,17 +60,17 @@ export function LandingScreen({ onLogin, onFacebookLogin }: { onLogin: () => voi
         <div className="hidden [@media(orientation:landscape)]:block opacity-80 mb-2">
           <CardFan />
         </div>
-        <div className="w-full max-w-xs flex flex-col gap-3">
+        <div className="w-full max-w-xs lg:max-w-sm xl:max-w-md 2xl:max-w-lg flex flex-col gap-3 xl:gap-4 2xl:gap-5">
           <button
             onClick={onLogin}
-            className="w-full h-14 rounded-2xl font-semibold text-sm bg-white border border-black/[0.12] shadow-md flex items-center justify-center gap-3 active:scale-[0.97] transition-transform"
+            className="w-full h-14 lg:h-16 xl:h-[4.5rem] 2xl:h-20 rounded-2xl font-semibold text-sm xl:text-base 2xl:text-lg bg-white border border-black/[0.12] shadow-md flex items-center justify-center gap-3 active:scale-[0.97] transition-transform"
           >
             <GoogleIcon />
             Continue with Google
           </button>
           <button
             onClick={onFacebookLogin}
-            className="w-full h-14 rounded-2xl font-semibold text-sm text-white bg-[#1877F2] shadow-md flex items-center justify-center gap-3 active:scale-[0.97] transition-transform"
+            className="w-full h-14 lg:h-16 xl:h-[4.5rem] 2xl:h-20 rounded-2xl font-semibold text-sm xl:text-base 2xl:text-lg text-white bg-[#1877F2] shadow-md flex items-center justify-center gap-3 active:scale-[0.97] transition-transform"
           >
             <FacebookIcon />
             Continue with Facebook

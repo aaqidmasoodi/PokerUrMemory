@@ -4,7 +4,7 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
-@custom-variant landscape (@media (orientation: landscape));
+@custom-variant landscape (@media (orientation: landscape) and (max-height: 500px));
 @custom-variant portrait (@media (orientation: portrait));
 
 /* Traditional poker fonts */

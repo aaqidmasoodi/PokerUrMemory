@@ -141,7 +141,7 @@ export function LobbyScreen({
 
         {/* Left column — 2×2 seat grid */}
         <div className="portrait:shrink-0 landscape:flex-1 flex items-center justify-center min-h-0">
-          <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4 w-full max-w-[280px]">
+          <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4 lg:gap-5 xl:gap-6 w-full max-w-[280px] lg:max-w-[380px] xl:max-w-[480px] 2xl:max-w-[560px]">
             {Array.from({ length: slotCount }).map((_, idx) => {
               const member = members[idx];
               const isMeSlot = member?.userId === profile.id;
@@ -189,7 +189,7 @@ export function LobbyScreen({
                           url={member.avatarUrl}
                           name={member.username}
                           size="sm"
-                          className="w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl"
+                          className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 2xl:w-28 2xl:h-28 text-2xl sm:text-3xl lg:text-4xl xl:text-5xl"
                         />
                       </div>
                     </div>
@@ -198,7 +198,7 @@ export function LobbyScreen({
                       url={member.avatarUrl}
                       name={member.username}
                       size="sm"
-                      className="w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl"
+                      className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 2xl:w-28 2xl:h-28 text-2xl sm:text-3xl lg:text-4xl xl:text-5xl"
                     />
                   )}
 
@@ -223,7 +223,7 @@ export function LobbyScreen({
 
         {/* Right column — actions panel */}
         <div className="landscape:flex-1 portrait:shrink-0 portrait:w-full flex flex-col items-center justify-center landscape:px-4">
-          <div className="w-full max-w-[240px] flex flex-col gap-4">
+          <div className="w-full max-w-[240px] lg:max-w-[320px] xl:max-w-[400px] 2xl:max-w-[480px] flex flex-col gap-4 xl:gap-5 2xl:gap-6">
             {error && (
               <div className="rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-[11px] text-red-300 leading-snug">
                 {error}
@@ -251,7 +251,7 @@ export function LobbyScreen({
               <button
                 onClick={handleStart}
                 disabled={starting || filledSlots < 2}
-                className="w-full h-14 lg:h-16 rounded-2xl font-display tracking-[0.15em] uppercase text-[12px] lg:text-[13px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.4)] hover:brightness-110 active:scale-[0.97] transition-all flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full h-14 lg:h-16 xl:h-20 2xl:h-24 rounded-2xl font-display tracking-[0.15em] uppercase text-[12px] lg:text-[13px] xl:text-[16px] 2xl:text-[18px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.4)] hover:brightness-110 active:scale-[0.97] transition-all flex items-center justify-center gap-2.5 xl:gap-3 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Play className="w-4 h-4 lg:w-5 lg:h-5" />
                 {starting ? 'Starting…' : filledSlots < 2 ? 'Need 1 More Player' : 'Start Game'}
