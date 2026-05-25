@@ -8,7 +8,7 @@ import { MainMenuScreen } from "./screens/MainMenuScreen";
 import { MatchmakingScreen } from "./screens/MatchmakingScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
-import { RulesScreen, RulesBody } from "./screens/RulesScreen";
+import { RulesScreen, RulesBody, AboutScreen } from "./screens/RulesScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { IncomingInviteModal } from "./components/IncomingInviteModal";
 import { PokerBackground } from "./components/PokerBackground";
@@ -20,7 +20,7 @@ import { cn } from "./lib/utils";
 import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X, WifiOff, BookOpen } from "lucide-react";
 
 
-type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules' | 'lobby';
+type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules' | 'about' | 'lobby';
 
 let _globalMuted = false;
 function playSound(file: string, volume = 0.55) {
@@ -583,6 +583,8 @@ export default function App() {
       );
     } else if (appScreen === 'rules') {
       screen = <RulesScreen onBack={() => setAppScreen('menu')} />;
+    } else if (appScreen === 'about') {
+      screen = <AboutScreen onBack={() => setAppScreen('menu')} />;
     } else {
       screen = (
         <MainMenuScreen
@@ -592,6 +594,7 @@ export default function App() {
           onProfile={() => setAppScreen('profile')}
           onSettings={() => setAppScreen('settings')}
           onRules={() => setAppScreen('rules')}
+          onAbout={() => setAppScreen('about')}
         />
       );
     }

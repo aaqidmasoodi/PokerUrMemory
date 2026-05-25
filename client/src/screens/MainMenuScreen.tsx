@@ -1,6 +1,6 @@
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
-import { User, Settings, Spade, BookOpen, Users } from 'lucide-react';
+import { User, Settings, Spade, BookOpen, Users, Info } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function MainMenuScreen({
@@ -10,6 +10,7 @@ export function MainMenuScreen({
   onProfile,
   onSettings,
   onRules,
+  onAbout,
 }: {
   profile: Profile;
   onStartGame: () => void;
@@ -17,6 +18,7 @@ export function MainMenuScreen({
   onProfile: () => void;
   onSettings: () => void;
   onRules: () => void;
+  onAbout: () => void;
 }) {
   const winRate = profile.total_games > 0
     ? Math.round((profile.wins / profile.total_games) * 100)
@@ -133,14 +135,24 @@ export function MainMenuScreen({
           </button>
         </div>
 
-        <button
-          onClick={onRules}
-          className="h-10 sm:h-12 xl:h-14 2xl:h-16 px-3 sm:px-5 lg:px-6 xl:px-8 2xl:px-10 rounded-2xl font-display tracking-wider uppercase text-[9px] sm:text-[11px] xl:text-[13px] 2xl:text-[15px] font-bold bg-white text-foreground border border-black/[0.10] shadow-md hover:bg-white/90 active:scale-[0.97] transition-all flex items-center justify-center gap-2
-            landscape:h-9 landscape:sm:h-10 landscape:text-[8px] landscape:sm:text-[9px] landscape:px-2"
-        >
-          <BookOpen className="w-3 h-3 lg:w-4 lg:h-4 xl:w-5 xl:h-5 text-[color:var(--color-blue)] landscape:w-2.5" />
-          How to Play
-        </button>
+        <div className="flex gap-2 xl:gap-3">
+          <button
+            onClick={onRules}
+            className="h-10 sm:h-12 xl:h-14 2xl:h-16 px-3 sm:px-5 lg:px-6 xl:px-8 2xl:px-10 rounded-2xl font-display tracking-wider uppercase text-[9px] sm:text-[11px] xl:text-[13px] 2xl:text-[15px] font-bold bg-white text-foreground border border-black/[0.10] shadow-md hover:bg-white/90 active:scale-[0.97] transition-all flex items-center justify-center gap-2
+              landscape:h-9 landscape:sm:h-10 landscape:text-[8px] landscape:sm:text-[9px] landscape:px-2"
+          >
+            <BookOpen className="w-3 h-3 lg:w-4 lg:h-4 xl:w-5 xl:h-5 text-[color:var(--color-blue)] landscape:w-2.5" />
+            How to Play
+          </button>
+          <button
+            onClick={onAbout}
+            className="h-10 sm:h-12 xl:h-14 2xl:h-16 px-3 sm:px-5 lg:px-6 xl:px-8 2xl:px-10 rounded-2xl font-display tracking-wider uppercase text-[9px] sm:text-[11px] xl:text-[13px] 2xl:text-[15px] font-bold bg-white text-foreground border border-black/[0.10] shadow-md hover:bg-white/90 active:scale-[0.97] transition-all flex items-center justify-center gap-2
+              landscape:h-9 landscape:sm:h-10 landscape:text-[8px] landscape:sm:text-[9px] landscape:px-2"
+          >
+            <Info className="w-3 h-3 lg:w-4 lg:h-4 xl:w-5 xl:h-5 text-[color:var(--color-blue)] landscape:w-2.5" />
+            About
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { ChevronLeft, Eye, Coins, Shuffle, Trophy, Users } from 'lucide-react';
 
-export function RulesScreen({ onBack }: { onBack: () => void }) {
+// Shared screen shell — floating back pill + scrollable body.
+function InfoScreenShell({ label, onBack, children }: { label: string; onBack: () => void; children: React.ReactNode }) {
   return (
     <div
       className="h-dvh flex flex-col bg-transparent select-none"
@@ -24,20 +25,37 @@ export function RulesScreen({ onBack }: { onBack: () => void }) {
         >
           <ChevronLeft className="w-5 h-5 text-[color:var(--color-blue)]" />
           <span className="font-display text-[12px] font-bold blue-text tracking-wider uppercase">
-            How to Play
+            {label}
           </span>
         </button>
       </div>
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto overscroll-contain">
-        <RulesBody />
+        {children}
       </div>
     </div>
   );
 }
 
-export function RulesBody() {
+export function RulesScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <InfoScreenShell label="How to Play" onBack={onBack}>
+      <RulesBody />
+    </InfoScreenShell>
+  );
+}
+
+export function AboutScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <InfoScreenShell label="About" onBack={onBack}>
+      <AboutBody />
+    </InfoScreenShell>
+  );
+}
+
+// About PokerUrMemory — what the game is, not how to play it.
+export function AboutBody() {
   return (
     <div className="px-4 py-5 space-y-4 max-w-2xl mx-auto pb-10 [@media(orientation:landscape)]:px-6 [@media(orientation:landscape)]:py-6">
 
@@ -63,6 +81,14 @@ export function RulesBody() {
           Up to four players compete for points, each starting with <strong className="text-foreground">200 points</strong>.
         </p>
       </div>
+
+    </div>
+  );
+}
+
+export function RulesBody() {
+  return (
+    <div className="px-4 py-5 space-y-4 max-w-2xl mx-auto pb-10 [@media(orientation:landscape)]:px-6 [@media(orientation:landscape)]:py-6">
 
       {/* Section: The Deal */}
       <RuleSection
