@@ -137,10 +137,10 @@ export function LobbyScreen({
       </div>
 
       {/* Main content — two column layout */}
-      <div className="relative flex-1 flex portrait:flex-col landscape:flex-row portrait:justify-center landscape:items-center gap-4 landscape:gap-6 px-5 py-3 overflow-y-auto">
+      <div className="relative flex-1 flex portrait:flex-col landscape:flex-row portrait:justify-center landscape:items-center lg:flex-row lg:items-center lg:justify-center gap-4 landscape:gap-6 lg:gap-12 xl:gap-20 2xl:gap-28 px-5 py-3 overflow-y-auto">
 
         {/* Left column — 2×2 seat grid */}
-        <div className="portrait:shrink-0 landscape:flex-1 flex items-center justify-center min-h-0">
+        <div className="portrait:shrink-0 landscape:flex-1 lg:flex-none flex items-center justify-center min-h-0">
           <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4 lg:gap-5 xl:gap-6 w-full max-w-[280px] lg:max-w-[380px] xl:max-w-[480px] 2xl:max-w-[560px]">
             {Array.from({ length: slotCount }).map((_, idx) => {
               const member = members[idx];
@@ -153,7 +153,7 @@ export function LobbyScreen({
                     key={idx}
                     onClick={() => isHost && setShowFriends(true)}
                     disabled={!isHost}
-                    className="flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-white/15 bg-white/[0.03] text-white/25 disabled:cursor-default active:scale-[0.97] transition-transform backdrop-blur-sm hover:border-white/25 hover:bg-white/[0.06]"
+                    className="flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-white/15 bg-white/[0.03] text-white/25 disabled:cursor-default active:scale-[0.97] transition-transform backdrop-blur-sm hover:border-white/25 hover:bg-white/[0.06] min-h-[120px] lg:min-h-[180px] xl:min-h-[220px] 2xl:min-h-[260px]"
                   >
                     <Plus className="w-5 h-5" />
                     <span className="text-[9px] font-display tracking-[0.2em] uppercase">
@@ -166,7 +166,7 @@ export function LobbyScreen({
               return (
                 <div
                   key={member.userId}
-                  className={`relative flex flex-col items-center justify-center gap-3 rounded-3xl backdrop-blur-sm border
+                  className={`relative flex flex-col items-center justify-center gap-3 rounded-3xl backdrop-blur-sm border min-h-[120px] lg:min-h-[180px] xl:min-h-[220px] 2xl:min-h-[260px]
                     ${isMeSlot
                       ? 'bg-[color:var(--color-blue)]/15 border-[color:var(--color-blue)]/40 shadow-[0_0_24px_rgba(212,168,67,0.12)]'
                       : isHostSlot
@@ -222,7 +222,7 @@ export function LobbyScreen({
         </div>
 
         {/* Right column — actions panel */}
-        <div className="landscape:flex-1 portrait:shrink-0 portrait:w-full flex flex-col items-center justify-center landscape:px-4">
+        <div className="landscape:flex-1 lg:flex-none portrait:shrink-0 portrait:w-full flex flex-col items-center justify-center landscape:px-4">
           <div className="w-full max-w-[240px] lg:max-w-[320px] xl:max-w-[400px] 2xl:max-w-[480px] flex flex-col gap-4 xl:gap-5 2xl:gap-6">
             {error && (
               <div className="rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-[11px] text-red-300 leading-snug">
