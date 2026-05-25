@@ -114,6 +114,7 @@ export function useSocket() {
   const [actionLog, setActionLog] = useState<string>('');
   const [timer, setTimer] = useState<number | null>(null);
   const [showdownData, setShowdownData] = useState<ShowdownData | null>(null);
+  const [nextHandCountdown, setNextHandCountdown] = useState<number | null>(null);
   const [discardRevealData, setDiscardRevealData] = useState<DiscardRevealData | null>(null);
   const [selectedDrawCards, setSelectedDrawCards] = useState<number[]>([]);
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
@@ -232,6 +233,7 @@ export function useSocket() {
       if (state.phase !== 'waiting' && state.phase !== 'showdown') {
         setInGame(true);
         setShowdownData(null);
+        setNextHandCountdown(null);
       }
       if (state.phase !== 'draw') {
         setSelectedDrawCards([]);
@@ -296,6 +298,10 @@ export function useSocket() {
       setInGame(true);
       const handStr = data.hands?.map(h => `${h.playerName}: ${h.rankName}`).join(' · ');
       setGameLogs(prev => [`${data.winner.playerName} wins ${data.pot}pts with ${data.winner.rankName}${handStr ? ': ' + handStr : ''}`, ...prev].slice(0, 60));
+    });
+
+    newSocket.on('nextHandCountdown', (seconds: number) => {
+      setNextHandCountdown(seconds);
     });
 
     newSocket.on('bluffWin', (data: { winner: string; amount: number }) => {
@@ -502,6 +508,7 @@ export function useSocket() {
     actionLog,
     timer,
     showdownData,
+    nextHandCountdown,
     discardRevealData,
     selectedDrawCards,
     hasDiscarded,

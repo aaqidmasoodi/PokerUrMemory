@@ -5,6 +5,7 @@ interface ChipStackProps {
   variant?: "red" | "blue" | "black" | "gold";
   size?: "sm" | "md";
   className?: string;
+  showLabel?: boolean;
 }
 
 const variantVar: Record<NonNullable<ChipStackProps["variant"]>, string> = {
@@ -19,7 +20,7 @@ const sizeConfig = {
   md: { chip: "w-9 h-9", offset: 4, text: "text-sm"  },
 };
 
-export function ChipStack({ amount, variant = "red", size = "md", className }: ChipStackProps) {
+export function ChipStack({ amount, variant = "red", size = "md", className, showLabel = true }: ChipStackProps) {
   const cfg = sizeConfig[size];
   const stackHeight = Math.min(6, Math.max(1, Math.ceil(Math.log2(Math.max(2, amount / 25)))));
 
@@ -39,9 +40,11 @@ export function ChipStack({ amount, variant = "red", size = "md", className }: C
           />
         ))}
       </div>
-      <span className={cn("font-display font-bold gold-text", cfg.text)}>
-        ${amount.toLocaleString()}
-      </span>
+      {showLabel && (
+        <span className={cn("font-display font-bold gold-text", cfg.text)}>
+          ${amount.toLocaleString()}
+        </span>
+      )}
     </div>
   );
 }

@@ -354,7 +354,7 @@ export default function App() {
   const {
     socket,
     inGame, playerId, gameState,
-    myTurnData, actionLog, timer, showdownData, discardRevealData, selectedDrawCards, hasDiscarded,
+    myTurnData, actionLog, timer, showdownData, nextHandCountdown, discardRevealData, selectedDrawCards, hasDiscarded,
     turnTimer, gameLogs, disconnectNotice, roomClosedMsg, dismissRoomClosed,
     matchTimedOut, findGame, cancelSearch,
     playAction, toggleDrawCard, confirmDiscard, leaveGame,
@@ -714,9 +714,23 @@ export default function App() {
                 })}
               </div>
             ) : null}
-            <p className="text-[color:var(--color-gold)] animate-pulse mt-2 font-display tracking-widest text-[8px] uppercase opacity-80">
-              Next hand starting...
-            </p>
+            {nextHandCountdown != null && nextHandCountdown > 0 ? (
+              <div className="mt-2.5 flex items-center justify-center gap-2">
+                <span className="font-display tracking-widest text-[9px] sm:text-[11px] uppercase text-gray-500">
+                  Next round in
+                </span>
+                <span
+                  className="font-display font-black tabular-nums text-[color:var(--color-gold)] text-xl sm:text-3xl leading-none"
+                  style={{ textShadow: '0 0 16px rgba(212,168,67,0.5)' }}
+                >
+                  {nextHandCountdown}
+                </span>
+              </div>
+            ) : (
+              <p className="text-[color:var(--color-gold)] animate-pulse mt-2 font-display tracking-widest text-[8px] uppercase opacity-80">
+                Next round starting…
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -1030,8 +1044,14 @@ export default function App() {
         <p className="font-display text-[9px] tracking-widest uppercase text-gray-500 mb-1">
           {myTurnData?.currentBet === 0 ? "Bet Amount" : "Raise To"}
         </p>
-        <div className="pt-4 mb-3">
-          <ChipStack amount={raiseAmount[0]} variant="red" size="sm" />
+        <div className="pt-2 mb-3 flex items-center justify-center gap-3">
+          <ChipStack amount={raiseAmount[0]} variant="red" size="sm" showLabel={false} />
+          <div className="flex items-baseline gap-1">
+            <span className="font-display font-black gold-text tabular-nums text-5xl sm:text-6xl leading-none">
+              {raiseAmount[0]}
+            </span>
+            <span className="font-display text-[10px] tracking-widest uppercase text-gray-400">pts</span>
+          </div>
         </div>
         <div className="mb-3 px-1">
           <Slider

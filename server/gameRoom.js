@@ -83,6 +83,7 @@ class GameRoom {
         // fires on a room that's already being torn down.
         this.restartTimer = null;
         this.endGameTimer = null;
+        this.nextHandInterval = null;
         // Matchmaking fields
         this.gameSessionId = null;
         this.expectedPlayerCount = 0;
@@ -493,6 +494,25 @@ class GameRoom {
         this.endGameTimer = setTimeout(() => this.io.to(this.roomCode).emit('roomClosed', msg), 4000);
     }
 
+    // Countdown between hands: emit the remaining seconds every tick so clients can
+    // show "Next round in N", then eliminate broke players and deal the next hand.
+    scheduleNextHand(seconds = 10) {
+        if (this.nextHandInterval) { clearInterval(this.nextHandInterval); this.nextHandInterval = null; }
+        let timeLeft = seconds;
+        this.io.to(this.roomCode).emit('nextHandCountdown', timeLeft);
+        this.nextHandInterval = setInterval(() => {
+            timeLeft--;
+            this.io.to(this.roomCode).emit('nextHandCountdown', timeLeft);
+            if (timeLeft <= 0) {
+                clearInterval(this.nextHandInterval);
+                this.nextHandInterval = null;
+                this.eliminateBrokePlayers();
+                if (this.players.size <= 1) { this.endGame(); return; }
+                this.startNewHand();
+            }
+        }, 1000);
+    }
+
     showBluffWin(winner) {
         this.clearTurnTimer();
         winner.chips += this.pot;
@@ -505,12 +525,7 @@ class GameRoom {
         this.gamePhase = 'showdown';
         this.broadcastState();
         setTimeout(() => this.broadcastLeaderboard(), 100);
-        this.restartTimer = setTimeout(() => {
-            this.restartTimer = null;
-            this.eliminateBrokePlayers();
-            if (this.players.size <= 1) { this.endGame(); return; }
-            this.startNewHand();
-        }, 5000);
+        this.scheduleNextHand(10);
     }
 
     broadcastLeaderboard() {
@@ -786,6 +801,7 @@ class GameRoom {
         if (this.discardRevealInterval) { clearInterval(this.discardRevealInterval); this.discardRevealInterval = null; }
         if (this.restartTimer) { clearTimeout(this.restartTimer); this.restartTimer = null; }
         if (this.endGameTimer) { clearTimeout(this.endGameTimer); this.endGameTimer = null; }
+        if (this.nextHandInterval) { clearInterval(this.nextHandInterval); this.nextHandInterval = null; }
     }
 
     startShowdown() {
@@ -873,12 +889,7 @@ class GameRoom {
         this.pot = 0;
         this.broadcastState();
         setTimeout(() => this.broadcastLeaderboard(), 100);
-        this.restartTimer = setTimeout(() => {
-            this.restartTimer = null;
-            this.eliminateBrokePlayers();
-            if (this.players.size <= 1) { this.endGame(); return; }
-            this.startNewHand();
-        }, 7000);
+        this.scheduleNextHand(10);
     }
 }
 
