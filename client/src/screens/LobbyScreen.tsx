@@ -137,7 +137,7 @@ export function LobbyScreen({
       </div>
 
       {/* Main content — two column layout */}
-      <div className="relative flex-1 flex flex-row items-center gap-6 px-5 py-3 overflow-y-auto">
+      <div className="relative flex-1 flex portrait:flex-col landscape:flex-row items-center gap-4 landscape:gap-6 px-5 py-3 overflow-y-auto">
 
         {/* Left column — 2×2 seat grid */}
         <div className="flex-1 flex items-center justify-center min-h-0">
@@ -222,7 +222,7 @@ export function LobbyScreen({
         </div>
 
         {/* Right column — actions panel */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4">
+        <div className="landscape:flex-1 portrait:shrink-0 portrait:w-full flex flex-col items-center justify-center landscape:px-4">
           <div className="w-full max-w-[240px] flex flex-col gap-4">
             {error && (
               <div className="rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-[11px] text-red-300 leading-snug">
