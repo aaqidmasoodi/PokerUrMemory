@@ -16,7 +16,7 @@ function CardFan() {
   );
 }
 
-export function LandingScreen({ onLogin }: { onLogin: () => void }) {
+export function LandingScreen({ onLogin, onFacebookLogin }: { onLogin: () => void; onFacebookLogin: () => void }) {
   return (
     <div
       className="h-dvh flex flex-col [@media(orientation:landscape)]:flex-row bg-transparent overflow-hidden select-none"
@@ -68,12 +68,27 @@ export function LandingScreen({ onLogin }: { onLogin: () => void }) {
             <GoogleIcon />
             Continue with Google
           </button>
+          <button
+            onClick={onFacebookLogin}
+            className="w-full h-14 rounded-2xl font-semibold text-sm text-white bg-[#1877F2] shadow-md flex items-center justify-center gap-3 active:scale-[0.97] transition-transform"
+          >
+            <FacebookIcon />
+            Continue with Facebook
+          </button>
           <p className="text-center text-[10px] text-gray-300 tracking-wide">
             No account needed: sign in to play
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+      <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.792-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.268h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
+    </svg>
   );
 }
 

@@ -117,6 +117,26 @@ export function useAuth() {
     });
   }
 
+  async function signInWithFacebook() {
+    if (isNative) {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
+      });
+      if (error || !data?.url) {
+        console.error('[signInWithFacebook] failed to start OAuth:', error?.message);
+        return;
+      }
+      await Browser.open({ url: data.url });
+      return;
+    }
+
+    await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: { redirectTo: window.location.origin },
+    });
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
   }
@@ -150,5 +170,5 @@ export function useAuth() {
     return null;
   }
 
-  return { authState, user, profile, signInWithGoogle, signOut, createProfile, updateProfile };
+  return { authState, user, profile, signInWithGoogle, signInWithFacebook, signOut, createProfile, updateProfile };
 }

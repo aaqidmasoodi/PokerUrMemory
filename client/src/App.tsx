@@ -349,7 +349,7 @@ function ConfirmDialog({
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { authState, user, profile, signInWithGoogle, signOut, createProfile, updateProfile } = useAuth();
+  const { authState, user, profile, signInWithGoogle, signInWithFacebook, signOut, createProfile, updateProfile } = useAuth();
   const {
     socket,
     inGame, playerId, gameState,
@@ -517,7 +517,7 @@ export default function App() {
       </button>
     </div>
   );
-  if (authState === 'landing') return <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]"><LandingScreen onLogin={signInWithGoogle} /></div>;
+  if (authState === 'landing') return <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]"><LandingScreen onLogin={signInWithGoogle} onFacebookLogin={signInWithFacebook} /></div>;
   if (authState === 'onboarding' && user) return <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.70_0.08_228)_0%,oklch(0.50_0.09_236)_100%)]"><OnboardingScreen user={user} onComplete={createProfile} /></div>;
 
   // ── NON-GAME SCREENS ──────────────────────────────────────────────────────────

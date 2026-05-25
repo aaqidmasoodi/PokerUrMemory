@@ -79,140 +79,190 @@ export function LobbyScreen({
         paddingRight: 'env(safe-area-inset-right, 0px)',
       }}
     >
-      <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
+      <div className="absolute inset-0 felt-surface opacity-[0.22] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none" />
 
-      {/* Transition overlay - keeps showing party while game starts */}
+      {/* Transition overlay */}
       {lobbyTransitioning && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[var(--color-background)]/95 backdrop-blur-sm">
-          <div className="w-16 h-16 rounded-3xl bg-white/80 border border-black/[0.08] shadow-lg flex items-center justify-center gap-3 mb-6">
-            <Crown className="w-6 h-6 text-[color:var(--color-gold)]" />
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[oklch(0.30_0.05_232)]/95 backdrop-blur-sm">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(212,168,67,0.4)]">
+            <Crown className="w-8 h-8 text-white" />
           </div>
-          <p className="font-display text-sm tracking-wider uppercase text-gray-600 mb-2">
+          <p className="font-display text-sm tracking-[0.3em] uppercase text-white/80 mb-2">
             Starting Game…
           </p>
-          <p className="text-xs text-gray-300 text-center max-w-[200px] leading-relaxed">
+          <p className="text-xs text-white/50 text-center max-w-[200px] leading-relaxed">
             {members.map(m => m.username).join(' · ')} {members.length === 2 ? 'is ready' : 'are ready'} to play
           </p>
         </div>
       )}
 
-      {/* Back button — floating pill, no full-width bar */}
+      {/* Header */}
       <div
-        className="relative shrink-0"
-        style={{
-          paddingTop: 'calc(0.625rem + env(safe-area-inset-top, 0px))',
-          paddingLeft: 'calc(0.75rem + env(safe-area-inset-left, 0px))',
-          paddingBottom: '0.25rem',
-        }}
+        className="relative shrink-0 z-10 flex items-center px-4"
+        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))', paddingBottom: '0.75rem' }}
       >
         <button
           onClick={handleLeave}
-          className="flex items-center gap-1 h-10 pl-2 pr-4 rounded-full bg-white/90 backdrop-blur-sm border border-black/[0.08] shadow-md active:scale-95 transition-transform"
+          className="flex items-center gap-1 h-9 pl-2 pr-3 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm active:scale-95 transition-transform"
         >
-          <ChevronLeft className="w-5 h-5 text-[color:var(--color-blue)]" />
-          <span className="font-display text-[12px] font-bold blue-text tracking-wider uppercase">
-            Party
-          </span>
+          <ChevronLeft className="w-4 h-4 text-white/70" />
+          <span className="font-display text-[10px] font-bold text-white/70 tracking-widest uppercase">Leave</span>
         </button>
+        <div className="absolute inset-x-0 flex flex-col items-center pointer-events-none">
+          <p className="font-display text-[9px] tracking-[0.3em] uppercase text-white/60 font-semibold">Party Lobby</p>
+        </div>
+        {/* Slot indicator circles */}
+        <div className="ml-auto flex items-center gap-1.5">
+          {Array.from({ length: slotCount }).map((_, idx) => {
+            const m = members[idx];
+            const isMe = m?.userId === profile.id;
+            const isHostSlot = m?.userId === lobby?.hostUserId;
+            return (
+              <div
+                key={idx}
+                className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  !m
+                    ? 'bg-white/15 border border-white/25'
+                    : isMe
+                      ? 'bg-[color:var(--color-blue)]'
+                      : isHostSlot
+                        ? 'bg-[color:var(--color-gold)]'
+                        : 'bg-white/60'
+                }`}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      {/* Body */}
-      <div className="relative flex-1 flex flex-col [@media(orientation:landscape)]:flex-row overflow-hidden">
+      {/* Main content */}
+      <div className="relative flex-1 flex flex-col items-center gap-2 px-5 py-2 overflow-y-auto">
 
-        {/* Members slot grid */}
-        <div className="px-5 py-5 flex flex-col items-center gap-4
-          [@media(orientation:landscape)]:w-[45%] [@media(orientation:landscape)]:justify-center
-          [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-white/30">
+        {/* 2×2 seat grid — fills available space */}
+        <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4 flex-1 min-h-0 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg">
+          {Array.from({ length: slotCount }).map((_, idx) => {
+            const member = members[idx];
+            const isMeSlot = member?.userId === profile.id;
+            const isHostSlot = member?.userId === lobby?.hostUserId;
 
-          <p className="text-[10px] font-display tracking-widest uppercase text-gray-300 text-center">
-            {!lobby ? 'Setting up your party…'
-              : isHost
-                ? `${filledSlots} / ${slotCount} Players · You're the host`
-                : `${filledSlots} / ${slotCount} Players · ${hostMember?.username ?? 'Host'}'s party`}
-          </p>
-
-          <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
-            {Array.from({ length: slotCount }).map((_, idx) => {
-              const member = members[idx];
-              const isMeSlot = member?.userId === profile.id;
-              const isHostSlot = member?.userId === lobby?.hostUserId;
-
-              if (!member) {
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => isHost && setShowFriends(true)}
-                    disabled={!isHost}
-                    className="flex flex-col items-center justify-center gap-1.5 h-[88px] rounded-2xl bg-white/40 border-2 border-dashed border-black/15 text-gray-300 disabled:cursor-default active:scale-[0.97] transition-transform"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span className="text-[9px] font-display tracking-wider uppercase">
-                      {isHost ? 'Invite' : 'Empty'}
-                    </span>
-                  </button>
-                );
-              }
-
+            if (!member) {
               return (
-                <div
-                  key={member.userId}
-                  className="relative flex flex-col items-center justify-center gap-1.5 h-[88px] rounded-2xl bg-white border border-black/[0.08] shadow-md"
+                <button
+                  key={idx}
+                  onClick={() => isHost && setShowFriends(true)}
+                  disabled={!isHost}
+                  className="flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-white/15 bg-white/[0.03] text-white/25 disabled:cursor-default active:scale-[0.97] transition-transform backdrop-blur-sm hover:border-white/25 hover:bg-white/[0.06]"
                 >
-                  {isHostSlot && (
-                    <Crown className="absolute top-1.5 right-1.5 w-3 h-3 text-[color:var(--color-gold)]" />
-                  )}
-                  <Avatar url={member.avatarUrl} name={member.username} size="sm" />
-                  <span className="text-[10px] font-display font-semibold truncate max-w-[80px]">
-                    {isMeSlot ? 'You' : member.username}
+                  <Plus className="w-5 h-5" />
+                  <span className="text-[9px] font-display tracking-[0.2em] uppercase">
+                    {isHost ? 'Invite' : 'Open Seat'}
                   </span>
-                </div>
+                </button>
               );
-            })}
-          </div>
+            }
 
-          {/* Hint — only show when host has empty seats */}
-          {isHost && filledSlots < slotCount && (
-            <p className="text-[10px] text-gray-300 text-center max-w-[240px] leading-relaxed">
-              Tap an empty slot or <span className="font-semibold">Invite Friends</span> to fill the party. Online friends get an instant popup.
-            </p>
-          )}
+            return (
+              <div
+                key={member.userId}
+                className={`relative flex flex-col items-center justify-center gap-3 rounded-3xl backdrop-blur-sm border
+                  ${isMeSlot
+                    ? 'bg-[color:var(--color-blue)]/15 border-[color:var(--color-blue)]/40 shadow-[0_0_24px_rgba(0,100,255,0.12)]'
+                    : isHostSlot
+                      ? 'bg-white/[0.07] border-[color:var(--color-gold)]/35 shadow-[0_0_24px_rgba(212,168,67,0.08)]'
+                      : 'bg-white/[0.07] border-white/10'
+                  }`}
+              >
+                {isHostSlot && (
+                  <Crown className="absolute top-3 right-3 w-3.5 h-3.5 text-[color:var(--color-gold)]" />
+                )}
 
-          {error && (
-            <div className="w-full max-w-xs rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-[11px] text-red-700 leading-snug">
-              {error}
-            </div>
-          )}
+                {(isMeSlot || isHostSlot) ? (
+                  <div className={`p-[2px] rounded-full ${
+                    isMeSlot
+                      ? 'bg-gradient-to-br from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]'
+                      : 'bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)]'
+                  }`}>
+                    <div className="p-0.5 rounded-full bg-[oklch(0.35_0.05_232)]">
+                      <Avatar
+                        url={member.avatarUrl}
+                        name={member.username}
+                        size="sm"
+                        className="w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <Avatar
+                    url={member.avatarUrl}
+                    name={member.username}
+                    size="sm"
+                    className="w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl"
+                  />
+                )}
+
+                <div className="text-center">
+                  <p className={`text-[11px] sm:text-xs font-display font-bold tracking-wide ${
+                    isMeSlot ? 'blue-text' : 'text-white'
+                  }`}>
+                    {isMeSlot ? 'You' : member.username}
+                  </p>
+                  {isMeSlot && (
+                    <p className="text-[8px] text-white/35 tracking-widest uppercase mt-0.5">That's you</p>
+                  )}
+                  {isHostSlot && !isMeSlot && (
+                    <p className="text-[8px] text-white/35 tracking-widest uppercase mt-0.5">Host</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Actions */}
-        <div className="flex-1 px-5 pb-5 flex flex-col gap-2.5 justify-end [@media(orientation:landscape)]:justify-center [@media(orientation:landscape)]:py-5">
-          <div className="w-full max-w-xs mx-auto flex flex-col gap-2.5">
-            <button
-              onClick={() => setShowFriends(true)}
-              disabled={!lobby}
-              className="w-full h-12 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-white text-foreground border border-black/[0.10] shadow-md active:scale-[0.97] transition-transform flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <UserPlus className="w-3.5 h-3.5 text-[color:var(--color-blue)]" />
-              Invite Friends
-            </button>
+        {/* Hint — host with empty seats */}
+        {isHost && filledSlots < slotCount && (
+          <p className="shrink-0 text-[10px] text-white/40 text-center max-w-[240px] leading-relaxed">
+            Tap an open seat or <span className="text-white/60 font-semibold">Invite Friends</span> below.{' '}
+            Online friends receive an instant popup.
+          </p>
+        )}
 
-            {isHost && (
-              <button
-                onClick={handleStart}
-                disabled={starting || filledSlots < 2}
-                className="w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[12px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow-[0_4px_20px_rgba(0,0,0,0.2)] active:scale-[0.97] transition-transform flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Play className="w-4 h-4" />
-                {starting ? 'Starting…' : filledSlots < 2 ? 'Need 1 more player' : 'Start Game'}
-              </button>
-            )}
-
-            {lobby && !isHost && (
-              <div className="w-full h-14 rounded-2xl font-display tracking-wider uppercase text-[11px] bg-white text-gray-400 border border-black/[0.07] shadow-md flex items-center justify-center text-center px-4">
-                Waiting for {hostMember?.username ?? 'host'} to start…
-              </div>
-            )}
+        {error && (
+          <div className="shrink-0 w-full max-w-xs rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-[11px] text-red-300 leading-snug">
+            {error}
           </div>
+        )}
+
+        {/* Action bar */}
+        <div className="shrink-0 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg flex flex-col gap-2 pb-2">
+          <button
+            onClick={() => setShowFriends(true)}
+            disabled={!lobby}
+            className="w-full h-12 lg:h-13 rounded-2xl font-display tracking-[0.15em] uppercase text-[11px] font-bold bg-white/[0.08] border border-white/15 text-white backdrop-blur-sm hover:bg-white/[0.12] active:scale-[0.97] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <UserPlus className="w-4 h-4 text-white/60" />
+            Invite Friends
+          </button>
+
+          {isHost && (
+            <button
+              onClick={handleStart}
+              disabled={starting || filledSlots < 2}
+              className="w-full h-14 lg:h-16 rounded-2xl font-display tracking-[0.15em] uppercase text-[12px] lg:text-[13px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.4)] hover:brightness-110 active:scale-[0.97] transition-all flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Play className="w-4 h-4 lg:w-5 lg:h-5" />
+              {starting ? 'Starting…' : filledSlots < 2 ? 'Need 1 More Player' : 'Start Game'}
+            </button>
+          )}
+
+          {lobby && !isHost && (
+            <div className="w-full h-14 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center gap-2.5 px-4 backdrop-blur-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-gold)] animate-pulse shrink-0" />
+              <span className="font-display tracking-[0.15em] uppercase text-[10px] text-white/50">
+                Waiting for {hostMember?.username ?? 'host'} to start…
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

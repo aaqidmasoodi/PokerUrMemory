@@ -56,66 +56,57 @@ export function MatchmakingScreen({
         </button>
       </div>
 
-      {/* Main content */}
+      {/* Main content — single centered stack at every size */}
       {!timedOut ? (
-        <div className="relative flex-1 flex flex-col [@media(orientation:landscape)]:flex-row overflow-hidden">
+        <div className="relative flex-1 flex flex-col items-center justify-center gap-8 sm:gap-10 lg:gap-12 px-6 pb-10">
 
-          {/* Animation pane */}
-          <div className="flex items-center justify-center
-            py-8 [@media(orientation:landscape)]:py-0
-            [@media(orientation:landscape)]:flex-1 [@media(orientation:landscape)]:h-full
-            [@media(orientation:landscape)]:border-r [@media(orientation:landscape)]:border-white/30">
-            <div className="relative flex items-center justify-center w-28 h-28">
-              <div className="absolute inset-0 rounded-full border-2 border-[color:var(--color-blue)]/20 animate-ping" />
-              <div className="absolute inset-2 rounded-full border-2 border-[color:var(--color-blue)]/30 animate-ping" style={{ animationDelay: '0.3s' }} />
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] flex items-center justify-center shadow-lg">
-                <span className="text-white text-3xl">♠</span>
-              </div>
+          {/* Pulse animation */}
+          <div className="relative flex items-center justify-center w-28 h-28 lg:w-36 lg:h-36">
+            <div className="absolute inset-0 rounded-full border-2 border-[color:var(--color-blue)]/20 animate-ping" />
+            <div className="absolute inset-2 rounded-full border-2 border-[color:var(--color-blue)]/30 animate-ping" style={{ animationDelay: '0.3s' }} />
+            <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] flex items-center justify-center shadow-lg">
+              <span className="text-white text-3xl lg:text-4xl">♠</span>
             </div>
           </div>
 
-          {/* Status card pane */}
-          <div className="flex flex-col items-center justify-center
-            px-6 pb-10 [@media(orientation:landscape)]:pb-0
-            [@media(orientation:landscape)]:flex-1">
-            <div className="w-full max-w-xs bg-white/80 backdrop-blur-sm rounded-2xl border border-black/[0.07] shadow-lg px-6 py-6 flex flex-col gap-5">
-              <div className="text-center">
-                <h2 className="font-display text-xl font-bold blue-text">
-                  Finding Players{'.'.repeat(dots)}
-                </h2>
-                <p className="text-xs text-gray-500 mt-1">Waiting for another player to join</p>
-              </div>
+          {/* Status card */}
+          <div className="w-full max-w-xs sm:max-w-sm bg-white/80 backdrop-blur-sm rounded-2xl border border-black/[0.07] shadow-lg px-6 py-6 lg:px-8 lg:py-7 flex flex-col gap-5">
+            <div className="text-center">
+              <h2 className="font-display text-xl lg:text-2xl font-bold blue-text">
+                Finding Players{'.'.repeat(dots)}
+              </h2>
+              <p className="text-xs lg:text-sm text-gray-500 mt-1">Waiting for another player to join</p>
+            </div>
 
-              <div className="w-full">
-                <div className="w-full h-2 bg-black/10 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] transition-all duration-1000 ease-linear"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                <div className="flex justify-between mt-1.5">
-                  <p className="text-[10px] text-gray-500">{elapsed}s elapsed</p>
-                  <p className="text-[10px] text-gray-500">{Math.max(0, TIMEOUT_SECS - elapsed)}s remaining</p>
-                </div>
+            <div className="w-full">
+              <div className="w-full h-2 bg-black/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] transition-all duration-1000 ease-linear"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-1.5">
+                <p className="text-[10px] lg:text-xs text-gray-500">{elapsed}s elapsed</p>
+                <p className="text-[10px] lg:text-xs text-gray-500">{Math.max(0, TIMEOUT_SECS - elapsed)}s remaining</p>
               </div>
             </div>
           </div>
         </div>
       ) : (
         <div className="relative flex-1 flex flex-col items-center justify-center px-6">
-          <div className="w-full max-w-xs bg-white/80 backdrop-blur-sm rounded-2xl border border-black/[0.07] shadow-lg px-6 py-8 flex flex-col items-center gap-5 text-center">
-            <div className="w-20 h-20 rounded-full bg-black/5 flex items-center justify-center text-4xl">
+          <div className="w-full max-w-xs sm:max-w-sm bg-white/80 backdrop-blur-sm rounded-2xl border border-black/[0.07] shadow-lg px-6 py-8 lg:px-8 lg:py-10 flex flex-col items-center gap-5 text-center">
+            <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-black/5 flex items-center justify-center text-4xl lg:text-5xl">
               😔
             </div>
             <div>
-              <h2 className="font-display text-xl font-bold text-foreground">No Match Found</h2>
-              <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+              <h2 className="font-display text-xl lg:text-2xl font-bold text-foreground">No Match Found</h2>
+              <p className="text-sm lg:text-base text-gray-500 mt-2 leading-relaxed">
                 We couldn't find other players right now. Try again in a moment!
               </p>
             </div>
             <button
               onClick={onCancel}
-              className="w-full h-13 rounded-2xl font-display tracking-wider uppercase text-[11px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow active:scale-[0.97] transition-transform"
+              className="w-full h-13 lg:h-14 rounded-2xl font-display tracking-wider uppercase text-[11px] lg:text-[12px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-black/10 shadow hover:brightness-110 active:scale-[0.97] transition-all"
             >
               Back to Menu
             </button>
