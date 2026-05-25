@@ -59,7 +59,7 @@ export function SettingsScreen({
 
           {/* Avatar with gold ring */}
           <div className="p-[3px] rounded-full bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] shadow-[0_0_32px_rgba(212,168,67,0.25)]">
-            <div className="p-0.5 rounded-full bg-[oklch(0.35_0.05_232)]">
+            <div className="p-0.5 rounded-full bg-[oklch(0.22_0.06_148)]">
               <Avatar
                 url={profile.avatar_url}
                 name={profile.username}

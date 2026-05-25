@@ -84,7 +84,7 @@ export function LobbyScreen({
 
       {/* Transition overlay */}
       {lobbyTransitioning && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[oklch(0.30_0.05_232)]/95 backdrop-blur-sm">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[oklch(0.16_0.06_148)]/95 backdrop-blur-sm">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)] flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(212,168,67,0.4)]">
             <Crown className="w-8 h-8 text-white" />
           </div>
@@ -168,7 +168,7 @@ export function LobbyScreen({
                   key={member.userId}
                   className={`relative flex flex-col items-center justify-center gap-3 rounded-3xl backdrop-blur-sm border
                     ${isMeSlot
-                      ? 'bg-[color:var(--color-blue)]/15 border-[color:var(--color-blue)]/40 shadow-[0_0_24px_rgba(0,100,255,0.12)]'
+                      ? 'bg-[color:var(--color-blue)]/15 border-[color:var(--color-blue)]/40 shadow-[0_0_24px_rgba(212,168,67,0.12)]'
                       : isHostSlot
                         ? 'bg-white/[0.07] border-[color:var(--color-gold)]/35 shadow-[0_0_24px_rgba(212,168,67,0.08)]'
                         : 'bg-white/[0.07] border-white/10'
@@ -184,7 +184,7 @@ export function LobbyScreen({
                         ? 'bg-gradient-to-br from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]'
                         : 'bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)]'
                     }`}>
-                      <div className="p-0.5 rounded-full bg-[oklch(0.35_0.05_232)]">
+                      <div className="p-0.5 rounded-full bg-[oklch(0.22_0.06_148)]">
                         <Avatar
                           url={member.avatarUrl}
                           name={member.username}

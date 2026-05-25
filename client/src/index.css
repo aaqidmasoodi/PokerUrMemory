@@ -100,16 +100,16 @@
   --input: oklch(0.99 0.006 230);
   --ring: oklch(0.74 0.14 83);
   /* Felt + gold + chips */
-  --felt: oklch(0.50 0.13 210);
-  --felt-deep: oklch(0.36 0.11 218);
+  --felt: oklch(0.44 0.14 152);
+  --felt-deep: oklch(0.30 0.12 148);
   --gold: oklch(0.74 0.14 83);
   --gold-soft: oklch(0.60 0.13 76);
   --chip-red: oklch(0.55 0.22 25);
   --chip-blue: oklch(0.50 0.18 245);
   --chip-teal: oklch(0.60 0.14 185);
   --chip-black: oklch(0.18 0.04 240);
-  --blue: oklch(0.52 0.22 255);
-  --blue-soft: oklch(0.38 0.20 260);
+  --blue: oklch(0.58 0.17 80);
+  --blue-soft: oklch(0.44 0.15 75);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -177,7 +177,7 @@
   }
 
   body {
-    background-color: oklch(0.13 0.04 236);
+    background-color: oklch(0.12 0.05 148);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -245,7 +245,7 @@
   }
 
   .blue-text {
-    background: linear-gradient(180deg, oklch(0.58 0.22 252), oklch(0.38 0.20 260));
+    background: linear-gradient(180deg, oklch(0.72 0.16 86), oklch(0.50 0.15 73));
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;

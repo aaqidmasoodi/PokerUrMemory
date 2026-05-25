@@ -508,7 +508,7 @@ export default function App() {
 
   // ── AUTH SCREENS ──────────────────────────────────────────────────────────────
   if (authState === 'loading') return (
-    <div className="h-full flex flex-col items-center justify-center gap-6 bg-[radial-gradient(ellipse_at_top,oklch(0.28_0.07_236)_0%,oklch(0.13_0.04_236)_100%)]">
+    <div className="h-full flex flex-col items-center justify-center gap-6 bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.09_142)_0%,oklch(0.11_0.05_148)_100%)]">
       <div className="w-8 h-8 border-2 border-[color:var(--color-blue)]/30 border-t-[color:var(--color-blue)] rounded-full animate-spin" />
       <button
         onClick={signOut}
@@ -518,8 +518,8 @@ export default function App() {
       </button>
     </div>
   );
-  if (authState === 'landing') return <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.28_0.07_236)_0%,oklch(0.13_0.04_236)_100%)] relative"><PokerBackground /><LandingScreen onLogin={signInWithGoogle} onFacebookLogin={signInWithFacebook} /></div>;
-  if (authState === 'onboarding' && user) return <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.28_0.07_236)_0%,oklch(0.13_0.04_236)_100%)] relative"><PokerBackground /><OnboardingScreen user={user} onComplete={createProfile} /></div>;
+  if (authState === 'landing') return <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.09_142)_0%,oklch(0.11_0.05_148)_100%)] relative"><PokerBackground /><LandingScreen onLogin={signInWithGoogle} onFacebookLogin={signInWithFacebook} /></div>;
+  if (authState === 'onboarding' && user) return <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.09_142)_0%,oklch(0.11_0.05_148)_100%)] relative"><PokerBackground /><OnboardingScreen user={user} onComplete={createProfile} /></div>;
 
   // ── NON-GAME SCREENS ──────────────────────────────────────────────────────────
   if (!inGame) {
@@ -597,7 +597,7 @@ export default function App() {
     }
 
     return (
-      <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.28_0.07_236)_0%,oklch(0.13_0.04_236)_100%)]">
+      <div className="h-full bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.09_142)_0%,oklch(0.11_0.05_148)_100%)]">
         <PokerBackground />
         {gameJustStarted && !gameState && (
           <div className="fixed inset-0 z-[500] flex items-center justify-center bg-[var(--color-background)]">
@@ -667,7 +667,7 @@ export default function App() {
   })();
 
   return (
-    <main className="h-dvh w-full bg-[radial-gradient(ellipse_at_top,oklch(0.28_0.07_236)_0%,oklch(0.13_0.04_236)_100%)] text-foreground overflow-hidden relative">
+    <main className="h-dvh w-full bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.09_142)_0%,oklch(0.11_0.05_148)_100%)] text-foreground overflow-hidden relative">
       <PokerBackground />
 
       {/* ── EXIT DIALOG ── */}
