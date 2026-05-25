@@ -137,10 +137,10 @@ export function LobbyScreen({
       </div>
 
       {/* Main content — two column layout */}
-      <div className="relative flex-1 flex portrait:flex-col landscape:flex-row items-center gap-4 landscape:gap-6 px-5 py-3 overflow-y-auto">
+      <div className="relative flex-1 flex portrait:flex-col landscape:flex-row portrait:justify-center landscape:items-center gap-4 landscape:gap-6 px-5 py-3 overflow-y-auto">
 
         {/* Left column — 2×2 seat grid */}
-        <div className="flex-1 flex items-center justify-center min-h-0">
+        <div className="portrait:shrink-0 landscape:flex-1 flex items-center justify-center min-h-0">
           <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4 w-full max-w-[280px]">
             {Array.from({ length: slotCount }).map((_, idx) => {
               const member = members[idx];
