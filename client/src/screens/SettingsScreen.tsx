@@ -148,10 +148,7 @@ export function SettingsScreen({
                 <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 text-white/25 shrink-0" />
               </button>
 
-              <button
-                onClick={() => openUrl(PRIVACY_POLICY_URL)}
-                className="flex items-center justify-between bg-white/[0.07] border border-white/10 rounded-2xl px-4 py-3.5 lg:px-5 lg:py-4 backdrop-blur-sm hover:bg-white/[0.10] active:bg-white/[0.10] transition-colors"
-              >
+              <div className="flex items-center justify-between bg-white/[0.07] border border-white/10 rounded-2xl px-4 py-3.5 lg:px-5 lg:py-4 cursor-default">
                 <div className="flex items-center gap-3">
                   <Shield className="w-4 h-4 lg:w-5 lg:h-5 text-white/50" />
                   <div>
@@ -160,7 +157,7 @@ export function SettingsScreen({
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 text-white/25 shrink-0" />
-              </button>
+              </div>
             </div>
 
             {/* Sign Out — phone only */}
