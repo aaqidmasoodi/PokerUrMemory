@@ -53,7 +53,7 @@ export function MainMenuScreen({
             className="sm:w-12 sm:h-12 sm:text-lg lg:w-14 lg:h-14 lg:text-xl border-2 border-white shadow-sm shrink-0"
           />
           <div className="min-w-0">
-            <p className="font-bold text-sm sm:text-base lg:text-xl text-foreground leading-tight truncate">
+            <p className="font-bold text-sm sm:text-base lg:text-xl text-white leading-tight truncate">
               {profile.username}
               {profile.country_code && (
                 <span className="ml-1.5">{getFlagEmoji(profile.country_code)}</span>

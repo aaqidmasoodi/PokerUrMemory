@@ -136,133 +136,137 @@ export function LobbyScreen({
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="relative flex-1 flex flex-col items-center gap-2 px-5 py-2 overflow-y-auto">
+      {/* Main content — two column layout */}
+      <div className="relative flex-1 flex flex-row items-center gap-6 px-5 py-3 overflow-y-auto">
 
-        {/* 2×2 seat grid — fills available space */}
-        <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4 flex-1 min-h-0 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg">
-          {Array.from({ length: slotCount }).map((_, idx) => {
-            const member = members[idx];
-            const isMeSlot = member?.userId === profile.id;
-            const isHostSlot = member?.userId === lobby?.hostUserId;
+        {/* Left column — 2×2 seat grid */}
+        <div className="flex-1 flex items-center justify-center min-h-0">
+          <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4 w-full max-w-[280px]">
+            {Array.from({ length: slotCount }).map((_, idx) => {
+              const member = members[idx];
+              const isMeSlot = member?.userId === profile.id;
+              const isHostSlot = member?.userId === lobby?.hostUserId;
 
-            if (!member) {
+              if (!member) {
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => isHost && setShowFriends(true)}
+                    disabled={!isHost}
+                    className="flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-white/15 bg-white/[0.03] text-white/25 disabled:cursor-default active:scale-[0.97] transition-transform backdrop-blur-sm hover:border-white/25 hover:bg-white/[0.06]"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span className="text-[9px] font-display tracking-[0.2em] uppercase">
+                      {isHost ? 'Invite' : 'Open Seat'}
+                    </span>
+                  </button>
+                );
+              }
+
               return (
-                <button
-                  key={idx}
-                  onClick={() => isHost && setShowFriends(true)}
-                  disabled={!isHost}
-                  className="flex flex-col items-center justify-center gap-2 rounded-3xl border-2 border-dashed border-white/15 bg-white/[0.03] text-white/25 disabled:cursor-default active:scale-[0.97] transition-transform backdrop-blur-sm hover:border-white/25 hover:bg-white/[0.06]"
+                <div
+                  key={member.userId}
+                  className={`relative flex flex-col items-center justify-center gap-3 rounded-3xl backdrop-blur-sm border
+                    ${isMeSlot
+                      ? 'bg-[color:var(--color-blue)]/15 border-[color:var(--color-blue)]/40 shadow-[0_0_24px_rgba(0,100,255,0.12)]'
+                      : isHostSlot
+                        ? 'bg-white/[0.07] border-[color:var(--color-gold)]/35 shadow-[0_0_24px_rgba(212,168,67,0.08)]'
+                        : 'bg-white/[0.07] border-white/10'
+                    }`}
                 >
-                  <Plus className="w-5 h-5" />
-                  <span className="text-[9px] font-display tracking-[0.2em] uppercase">
-                    {isHost ? 'Invite' : 'Open Seat'}
-                  </span>
-                </button>
-              );
-            }
+                  {isHostSlot && (
+                    <Crown className="absolute top-3 right-3 w-3.5 h-3.5 text-[color:var(--color-gold)]" />
+                  )}
 
-            return (
-              <div
-                key={member.userId}
-                className={`relative flex flex-col items-center justify-center gap-3 rounded-3xl backdrop-blur-sm border
-                  ${isMeSlot
-                    ? 'bg-[color:var(--color-blue)]/15 border-[color:var(--color-blue)]/40 shadow-[0_0_24px_rgba(0,100,255,0.12)]'
-                    : isHostSlot
-                      ? 'bg-white/[0.07] border-[color:var(--color-gold)]/35 shadow-[0_0_24px_rgba(212,168,67,0.08)]'
-                      : 'bg-white/[0.07] border-white/10'
-                  }`}
-              >
-                {isHostSlot && (
-                  <Crown className="absolute top-3 right-3 w-3.5 h-3.5 text-[color:var(--color-gold)]" />
-                )}
-
-                {(isMeSlot || isHostSlot) ? (
-                  <div className={`p-[2px] rounded-full ${
-                    isMeSlot
-                      ? 'bg-gradient-to-br from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]'
-                      : 'bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)]'
-                  }`}>
-                    <div className="p-0.5 rounded-full bg-[oklch(0.35_0.05_232)]">
-                      <Avatar
-                        url={member.avatarUrl}
-                        name={member.username}
-                        size="sm"
-                        className="w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl"
-                      />
+                  {(isMeSlot || isHostSlot) ? (
+                    <div className={`p-[2px] rounded-full ${
+                      isMeSlot
+                        ? 'bg-gradient-to-br from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]'
+                        : 'bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)]'
+                    }`}>
+                      <div className="p-0.5 rounded-full bg-[oklch(0.35_0.05_232)]">
+                        <Avatar
+                          url={member.avatarUrl}
+                          name={member.username}
+                          size="sm"
+                          className="w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl"
+                        />
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <Avatar
-                    url={member.avatarUrl}
-                    name={member.username}
-                    size="sm"
-                    className="w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl"
-                  />
-                )}
+                  ) : (
+                    <Avatar
+                      url={member.avatarUrl}
+                      name={member.username}
+                      size="sm"
+                      className="w-14 h-14 sm:w-16 sm:h-16 text-2xl sm:text-3xl"
+                    />
+                  )}
 
-                <div className="text-center">
-                  <p className={`text-[11px] sm:text-xs font-display font-bold tracking-wide ${
-                    isMeSlot ? 'blue-text' : 'text-white'
-                  }`}>
-                    {isMeSlot ? 'You' : member.username}
-                  </p>
-                  {isMeSlot && (
-                    <p className="text-[8px] text-white/35 tracking-widest uppercase mt-0.5">That's you</p>
-                  )}
-                  {isHostSlot && !isMeSlot && (
-                    <p className="text-[8px] text-white/35 tracking-widest uppercase mt-0.5">Host</p>
-                  )}
+                  <div className="text-center">
+                    <p className={`text-[11px] sm:text-xs font-display font-bold tracking-wide ${
+                      isMeSlot ? 'blue-text' : 'text-white'
+                    }`}>
+                      {isMeSlot ? 'You' : member.username}
+                    </p>
+                    {isMeSlot && (
+                      <p className="text-[8px] text-white/35 tracking-widest uppercase mt-0.5">That's you</p>
+                    )}
+                    {isHostSlot && !isMeSlot && (
+                      <p className="text-[8px] text-white/35 tracking-widest uppercase mt-0.5">Host</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
-        {/* Hint — host with empty seats */}
-        {isHost && filledSlots < slotCount && (
-          <p className="shrink-0 text-[10px] text-white/40 text-center max-w-[240px] leading-relaxed">
-            Tap an open seat or <span className="text-white/60 font-semibold">Invite Friends</span> below.{' '}
-            Online friends receive an instant popup.
-          </p>
-        )}
+        {/* Right column — actions panel */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4">
+          <div className="w-full max-w-[240px] flex flex-col gap-4">
+            {error && (
+              <div className="rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-[11px] text-red-300 leading-snug">
+                {error}
+              </div>
+            )}
 
-        {error && (
-          <div className="shrink-0 w-full max-w-xs rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-[11px] text-red-300 leading-snug">
-            {error}
-          </div>
-        )}
+            {/* Hint — host with empty seats */}
+            {isHost && filledSlots < slotCount && (
+              <p className="text-[10px] text-white/40 text-center leading-relaxed">
+                Tap an open seat or <span className="text-white/60 font-semibold">Invite Friends</span> below.{' '}
+                Online friends receive an instant popup.
+              </p>
+            )}
 
-        {/* Action bar */}
-        <div className="shrink-0 w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg flex flex-col gap-2 pb-2">
-          <button
-            onClick={() => setShowFriends(true)}
-            disabled={!lobby}
-            className="w-full h-12 lg:h-13 rounded-2xl font-display tracking-[0.15em] uppercase text-[11px] font-bold bg-white/[0.08] border border-white/15 text-white backdrop-blur-sm hover:bg-white/[0.12] active:scale-[0.97] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <UserPlus className="w-4 h-4 text-white/60" />
-            Invite Friends
-          </button>
-
-          {isHost && (
             <button
-              onClick={handleStart}
-              disabled={starting || filledSlots < 2}
-              className="w-full h-14 lg:h-16 rounded-2xl font-display tracking-[0.15em] uppercase text-[12px] lg:text-[13px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.4)] hover:brightness-110 active:scale-[0.97] transition-all flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={() => setShowFriends(true)}
+              disabled={!lobby}
+              className="w-full h-12 lg:h-13 rounded-2xl font-display tracking-[0.15em] uppercase text-[11px] font-bold bg-white/[0.08] border border-white/15 text-white backdrop-blur-sm hover:bg-white/[0.12] active:scale-[0.97] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Play className="w-4 h-4 lg:w-5 lg:h-5" />
-              {starting ? 'Starting…' : filledSlots < 2 ? 'Need 1 More Player' : 'Start Game'}
+              <UserPlus className="w-4 h-4 text-white/60" />
+              Invite Friends
             </button>
-          )}
 
-          {lobby && !isHost && (
-            <div className="w-full h-14 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center gap-2.5 px-4 backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-gold)] animate-pulse shrink-0" />
-              <span className="font-display tracking-[0.15em] uppercase text-[10px] text-white/50">
-                Waiting for {hostMember?.username ?? 'host'} to start…
-              </span>
-            </div>
-          )}
+            {isHost && (
+              <button
+                onClick={handleStart}
+                disabled={starting || filledSlots < 2}
+                className="w-full h-14 lg:h-16 rounded-2xl font-display tracking-[0.15em] uppercase text-[12px] lg:text-[13px] font-bold bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)] text-white border border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.4)] hover:brightness-110 active:scale-[0.97] transition-all flex items-center justify-center gap-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Play className="w-4 h-4 lg:w-5 lg:h-5" />
+                {starting ? 'Starting…' : filledSlots < 2 ? 'Need 1 More Player' : 'Start Game'}
+              </button>
+            )}
+
+            {lobby && !isHost && (
+              <div className="w-full h-14 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center gap-2.5 px-4 backdrop-blur-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--color-gold)] animate-pulse shrink-0" />
+                <span className="font-display tracking-[0.15em] uppercase text-[10px] text-white/50">
+                  Waiting for {hostMember?.username ?? 'host'} to start…
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
