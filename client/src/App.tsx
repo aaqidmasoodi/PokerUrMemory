@@ -711,7 +711,7 @@ export default function App() {
                     <div key={i} className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] sm:text-xs",
                       isWinner ? "bg-[color:var(--color-gold)]/15 border border-[color:var(--color-gold)]/40" : "bg-black/5")}>
                       <span className="font-bold text-foreground">{h.playerName}:</span>
-                      <span className="text-[color:var(--color-chip-teal)] font-bold">{h.rankName}</span>
+                      <span className="text-[color:var(--color-chip-teal)] font-bold">{h.description ?? h.rankName}</span>
                     </div>
                   );
                 })}

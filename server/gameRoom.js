@@ -876,11 +876,13 @@ class GameRoom {
                 playerName: h.playerName,
                 hand: h.hand,
                 rankName: h.result.rankName,
+                description: h.result.description,
             })),
             winner: {
                 playerId: winner.playerId,
                 playerName: winner.playerName,
                 rankName: winner.result.rankName,
+                description: winner.result.description,
             },
             winnings: Array.from(winnings.entries()).map(([playerId, amount]) => ({ playerId, amount })),
             pot: totalPot,

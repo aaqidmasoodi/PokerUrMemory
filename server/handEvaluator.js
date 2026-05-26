@@ -1,5 +1,11 @@
 const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
+// Display names indexed the same way as VALUES (index 0 === '2', index 12 === 'A').
+const NAME_SINGULAR = ['Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Jack', 'Queen', 'King', 'Ace'];
+const NAME_PLURAL = ['Twos', 'Threes', 'Fours', 'Fives', 'Sixes', 'Sevens', 'Eights', 'Nines', 'Tens', 'Jacks', 'Queens', 'Kings', 'Aces'];
+const singular = v => NAME_SINGULAR[v] ?? '?';
+const plural = v => NAME_PLURAL[v] ?? '?';
+
 // Detect a 5-card straight, including the ace-low "wheel" (A-2-3-4-5).
 // Returns the tie-breaker order (highest card first) when it's a straight, else null.
 // For the wheel the ace counts low, so the straight is 5-high: [3,2,1,0,-1].
@@ -24,7 +30,20 @@ function evaluateHand(cards) {
 
     const valueCounts = {};
     values.forEach(v => valueCounts[v] = (valueCounts[v] || 0) + 1);
-    const counts = Object.values(valueCounts).sort((a, b) => b - a);
+
+    // Group distinct values, most frequent first, then highest value first. This is the
+    // backbone of correct tie-breaking: the cards that define the hand (quads, trips,
+    // pairs) must be compared before kickers. e.g. a pair of 7s must rank by the 7,
+    // not by an ace kicker.
+    const groups = Object.keys(valueCounts)
+        .map(v => ({ value: Number(v), count: valueCounts[v] }))
+        .sort((a, b) => b.count - a.count || b.value - a.value);
+    const counts = groups.map(g => g.count);
+
+    // Expand the grouped values back into a flat tie-breaker list (pair value, pair value,
+    // kicker, kicker, …) so compareHands can walk it element by element.
+    const groupedTieBreakers = [];
+    groups.forEach(g => { for (let i = 0; i < g.count; i++) groupedTieBreakers.push(g.value); });
 
     const isFlush = suits.every(s => s === suits[0]);
     const order = straightOrder(values);
@@ -33,19 +52,38 @@ function evaluateHand(cards) {
     // Royal = ace-high straight flush. The wheel (order[0] === 3) is not royal.
     const isRoyal = isStraightFlush && order[0] === 12;
 
-    // Straights use the straight order (ace-low aware) for tie-breaking; everything else uses raw values.
+    // Straights use the straight order (ace-low aware) for tie-breaking; everything else
+    // uses the count-grouped order computed above.
     const straightTieBreakers = order ?? values;
 
-    if (isRoyal) return { rank: 9, rankName: 'Royal Flush', tieBreakers: straightTieBreakers };
-    if (isStraightFlush) return { rank: 8, rankName: 'Straight Flush', tieBreakers: straightTieBreakers };
-    if (counts[0] === 4) return { rank: 7, rankName: 'Four of a Kind', tieBreakers: values };
-    if (counts[0] === 3 && counts[1] === 2) return { rank: 6, rankName: 'Full House', tieBreakers: values };
-    if (isFlush) return { rank: 5, rankName: 'Flush', tieBreakers: values };
-    if (isStraight) return { rank: 4, rankName: 'Straight', tieBreakers: straightTieBreakers };
-    if (counts[0] === 3) return { rank: 3, rankName: 'Three of a Kind', tieBreakers: values };
-    if (counts[0] === 2 && counts[1] === 2) return { rank: 2, rankName: 'Two Pair', tieBreakers: values };
-    if (counts[0] === 2) return { rank: 1, rankName: 'Pair', tieBreakers: values };
-    return { rank: 0, rankName: 'High Card', tieBreakers: values };
+    if (isRoyal) {
+        return { rank: 9, rankName: 'Royal Flush', description: 'Royal Flush', tieBreakers: straightTieBreakers };
+    }
+    if (isStraightFlush) {
+        return { rank: 8, rankName: 'Straight Flush', description: `Straight Flush, ${singular(order[0])} High`, tieBreakers: straightTieBreakers };
+    }
+    if (counts[0] === 4) {
+        return { rank: 7, rankName: 'Four of a Kind', description: `Four of a Kind, ${plural(groups[0].value)}`, tieBreakers: groupedTieBreakers };
+    }
+    if (counts[0] === 3 && counts[1] === 2) {
+        return { rank: 6, rankName: 'Full House', description: `Full House, ${plural(groups[0].value)} over ${plural(groups[1].value)}`, tieBreakers: groupedTieBreakers };
+    }
+    if (isFlush) {
+        return { rank: 5, rankName: 'Flush', description: `Flush, ${singular(values[0])} High`, tieBreakers: groupedTieBreakers };
+    }
+    if (isStraight) {
+        return { rank: 4, rankName: 'Straight', description: `Straight, ${singular(order[0])} High`, tieBreakers: straightTieBreakers };
+    }
+    if (counts[0] === 3) {
+        return { rank: 3, rankName: 'Three of a Kind', description: `Three of a Kind, ${plural(groups[0].value)}`, tieBreakers: groupedTieBreakers };
+    }
+    if (counts[0] === 2 && counts[1] === 2) {
+        return { rank: 2, rankName: 'Two Pair', description: `Two Pair, ${plural(groups[0].value)} & ${plural(groups[1].value)}`, tieBreakers: groupedTieBreakers };
+    }
+    if (counts[0] === 2) {
+        return { rank: 1, rankName: 'Pair', description: `Pair of ${plural(groups[0].value)}`, tieBreakers: groupedTieBreakers };
+    }
+    return { rank: 0, rankName: 'High Card', description: `${singular(values[0])} High`, tieBreakers: groupedTieBreakers };
 }
 
 // Returns > 0 if hand `a` beats hand `b`, < 0 if `b` beats `a`, 0 on a true tie.

@@ -82,11 +82,12 @@ export interface ShowdownHandEntry {
   playerName: string;
   hand: CardData[];
   rankName: string;
+  description?: string;
 }
 
 export interface ShowdownData {
   isBluff?: boolean;
-  winner: { playerId?: string; playerName: string; rankName?: string };
+  winner: { playerId?: string; playerName: string; rankName?: string; description?: string };
   amount?: number;
   hands?: ShowdownHandEntry[];
   winnings?: { playerId: string; amount: number }[];
@@ -296,8 +297,8 @@ export function useSocket() {
       setShowdownData(data);
       setMyTurnData(null);
       setInGame(true);
-      const handStr = data.hands?.map(h => `${h.playerName}: ${h.rankName}`).join(' · ');
-      setGameLogs(prev => [`${data.winner.playerName} wins ${data.pot}pts with ${data.winner.rankName}${handStr ? ': ' + handStr : ''}`, ...prev].slice(0, 60));
+      const handStr = data.hands?.map(h => `${h.playerName}: ${h.description ?? h.rankName}`).join(' · ');
+      setGameLogs(prev => [`${data.winner.playerName} wins ${data.pot}pts with ${data.winner.description ?? data.winner.rankName}${handStr ? ': ' + handStr : ''}`, ...prev].slice(0, 60));
     });
 
     newSocket.on('nextHandCountdown', (seconds: number) => {
