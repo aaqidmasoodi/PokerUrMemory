@@ -137,11 +137,11 @@ export function LobbyScreen({
       </div>
 
       {/* Main content — two column layout */}
-      <div className="relative flex-1 flex portrait:flex-col landscape:flex-row portrait:justify-center landscape:items-center lg:flex-row lg:items-center lg:justify-center gap-4 landscape:gap-6 lg:gap-12 xl:gap-20 2xl:gap-28 px-5 py-3 overflow-y-auto">
+      <div className="relative flex-1 flex flex-row items-center justify-center portrait:flex-col portrait:justify-center gap-6 lg:gap-12 xl:gap-20 2xl:gap-28 px-5 py-3 overflow-y-auto">
 
         {/* Left column — 2×2 seat grid */}
-        <div className="portrait:shrink-0 landscape:flex-1 lg:flex-none flex items-center justify-center min-h-0">
-          <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4 lg:gap-5 xl:gap-6 w-full max-w-[280px] lg:max-w-[380px] xl:max-w-[480px] 2xl:max-w-[560px]">
+        <div className="shrink-0 w-[280px] lg:w-[380px] xl:w-[480px] 2xl:w-[560px] flex items-center justify-center min-h-0">
+          <div className="grid grid-cols-2 grid-rows-2 gap-3 sm:gap-4 lg:gap-5 xl:gap-6 w-full">
             {Array.from({ length: slotCount }).map((_, idx) => {
               const member = members[idx];
               const isMeSlot = member?.userId === profile.id;
@@ -222,8 +222,8 @@ export function LobbyScreen({
         </div>
 
         {/* Right column — actions panel */}
-        <div className="landscape:flex-1 lg:flex-none portrait:shrink-0 portrait:w-full flex flex-col items-center justify-center landscape:px-4">
-          <div className="w-full max-w-[240px] lg:max-w-[320px] xl:max-w-[400px] 2xl:max-w-[480px] flex flex-col gap-4 xl:gap-5 2xl:gap-6">
+        <div className="shrink-0 w-[220px] portrait:w-full lg:w-[320px] xl:w-[400px] 2xl:w-[480px] flex flex-col items-center justify-center">
+          <div className="w-full flex flex-col gap-4 xl:gap-5 2xl:gap-6">
             {error && (
               <div className="rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-[11px] text-red-300 leading-snug">
                 {error}

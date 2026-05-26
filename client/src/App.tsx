@@ -297,7 +297,7 @@ function DiscardRevealOverlay({
     : "grid grid-cols-2 gap-4 sm:gap-6";
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[oklch(0.95_0.025_232)]/95 backdrop-blur-sm px-4">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.09_142)_0%,oklch(0.11_0.05_148)_100%)] px-4">
       <p className="font-display text-[10px] sm:text-xs uppercase tracking-[0.2em] gold-text mb-5">
         Cards Discarded
       </p>
@@ -527,7 +527,7 @@ export default function App() {
 
     if (roomClosedMsg) {
       screen = (
-        <div className="h-dvh flex flex-col items-center justify-center bg-[var(--color-background)] p-6">
+        <div className="h-dvh flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.09_142)_0%,oklch(0.11_0.05_148)_100%)] p-6">
           <div className="bg-white border border-[color:var(--color-gold)]/30 rounded-2xl p-6 max-w-[280px] w-full shadow-2xl text-center">
             <div className="w-10 h-10 rounded-full bg-[color:var(--color-gold)]/10 border border-[color:var(--color-gold)]/30 grid place-items-center mx-auto mb-4">
               <LogOut className="w-4 h-4 text-[color:var(--color-gold)]" />
