@@ -38,49 +38,50 @@ function speak(text: string) {
 
 // ─── Phase badge ─────────────────────────────────────────────────────────────
 
-function PhaseBadge({
-  phase, timer,
-}: {
-  phase: Phase; timer?: number | null;
-}) {
-  const map: Record<Phase, string> = {
-    waiting: "Waiting", memoryReveal: "Memory", firstBetting: "Betting",
-    draw: "Draw", discardReveal: "Discards", drawReveal: "Reveal", secondBetting: "Betting", showdown: "Showdown",
-  };
-  const isEye = phase === "memoryReveal" || phase === "drawReveal";
+const PHASE_LABELS: Record<Phase, string> = {
+  waiting: "Waiting", memoryReveal: "Memory", firstBetting: "Betting",
+  draw: "Draw", discardReveal: "Discards", drawReveal: "Reveal", secondBetting: "Betting", showdown: "Showdown",
+};
+
+function phaseTimer(phase: Phase, timer?: number | null): number | null {
+  // Betting phases use the per-turn ring on the seat, not the global timer badge.
   const isBetting = phase === "firstBetting" || phase === "secondBetting";
+  if (isBetting) return null;
+  const t = typeof timer === "number" ? timer : null;
+  return t != null && t > 0 ? t : null;
+}
 
-  const displayTimer: number | null = isBetting
-    ? null
-    : (typeof timer === "number" ? timer : null);
-
-  const hasTimer = displayTimer != null && displayTimer > 0;
-  const timerColor = "var(--color-gold)";
-
+function PhaseBadge({ phase }: { phase: Phase }) {
+  const isEye = phase === "memoryReveal" || phase === "drawReveal";
   return (
     <div className="pointer-events-none">
-      <div className={cn(
-        "flex flex-col items-center rounded-2xl bg-white/90 gold-border backdrop-blur-sm shadow-md",
-        hasTimer ? "px-3 pt-1.5 pb-2" : "px-2.5 py-1.5",
-      )}>
-        <div className="flex items-center gap-1.5">
-          {isEye
-            ? <Eye className="w-3 h-3 text-[color:var(--color-gold)]" />
-            : <Clock className="w-3 h-3 text-[color:var(--color-gold)]" />
-          }
-          <span className="font-display text-[9px] sm:text-[11px] font-semibold tracking-widest uppercase gold-text whitespace-nowrap">
-            {map[phase]}
-          </span>
-        </div>
-        {hasTimer && (
-          <span
-            className="font-display font-black leading-none tabular-nums text-[38px] sm:text-[52px] mt-0.5"
-            style={{ color: timerColor, textShadow: `0 0 18px ${timerColor}99, 0 0 40px ${timerColor}44` }}
-          >
-            {displayTimer}
-          </span>
-        )}
+      <div className="flex items-center gap-1.5 rounded-2xl bg-white/90 gold-border backdrop-blur-sm shadow-md px-2.5 py-1.5">
+        {isEye
+          ? <Eye className="w-3 h-3 text-[color:var(--color-gold)]" />
+          : <Clock className="w-3 h-3 text-[color:var(--color-gold)]" />
+        }
+        <span className="font-display text-[9px] sm:text-[11px] font-semibold tracking-widest uppercase gold-text whitespace-nowrap">
+          {PHASE_LABELS[phase]}
+        </span>
       </div>
+    </div>
+  );
+}
+
+// Big countdown — rendered on its own row *below* the rules/log buttons so it
+// never stacks on top of an opponent's cards.
+function TimerBadge({ phase, timer }: { phase: Phase; timer?: number | null }) {
+  const displayTimer = phaseTimer(phase, timer);
+  if (displayTimer == null) return null;
+  const timerColor = "var(--color-gold)";
+  return (
+    <div className="pointer-events-none flex items-center justify-center rounded-2xl bg-white/90 gold-border backdrop-blur-sm shadow-md px-4 py-1">
+      <span
+        className="font-display font-black leading-none tabular-nums text-[34px] sm:text-[48px]"
+        style={{ color: timerColor, textShadow: `0 0 18px ${timerColor}99, 0 0 40px ${timerColor}44` }}
+      >
+        {displayTimer}
+      </span>
     </div>
   );
 }
@@ -791,23 +792,26 @@ export default function App() {
           </button>
         </div>
 
-        {/* Right: phase badge + rules + log */}
-        <div className="flex items-start gap-1.5 pointer-events-auto">
-          <PhaseBadge phase={phase} timer={timer} />
-          <button
-            onClick={() => setShowRules(r => !r)}
-            className="w-8 h-8 grid place-items-center rounded-full bg-white/90 gold-border shadow-sm shrink-0"
-            title="Rules"
-          >
-            <BookOpen className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
-          </button>
-          <button
-            onClick={() => setShowLog(l => !l)}
-            className="w-8 h-8 grid place-items-center rounded-full bg-white/90 gold-border shadow-sm shrink-0"
-            title="Game Log"
-          >
-            <ScrollText className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
-          </button>
+        {/* Right: phase badge + rules + log on top, big timer below */}
+        <div className="flex flex-col items-end gap-1.5 pointer-events-auto">
+          <div className="flex items-start gap-1.5">
+            <PhaseBadge phase={phase} />
+            <button
+              onClick={() => setShowRules(r => !r)}
+              className="w-8 h-8 grid place-items-center rounded-full bg-white/90 gold-border shadow-sm shrink-0"
+              title="Rules"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
+            </button>
+            <button
+              onClick={() => setShowLog(l => !l)}
+              className="w-8 h-8 grid place-items-center rounded-full bg-white/90 gold-border shadow-sm shrink-0"
+              title="Game Log"
+            >
+              <ScrollText className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
+            </button>
+          </div>
+          <TimerBadge phase={phase} timer={timer} />
         </div>
       </div>
 
@@ -817,10 +821,12 @@ export default function App() {
       {/* ── OPPONENTS ── */}
       <div
         className={cn(
-          "absolute left-0 right-0 flex items-start z-10",
-          opponents.length <= 1 ? "justify-center px-4" :
-          opponents.length === 2 ? "justify-around px-2" :
-          "justify-between px-3",
+          // Centered (not edge-justified) so seats never slide under the corner
+          // controls; gaps keep multiple opponents from crowding each other.
+          "absolute left-0 right-0 flex items-start justify-center z-10 px-2",
+          opponents.length <= 1 ? "" :
+          opponents.length === 2 ? "gap-10 sm:gap-24" :
+          "gap-2 sm:gap-6",
         )}
         style={{ top: 'calc(7% + env(safe-area-inset-top, 0px))' }}
       >
