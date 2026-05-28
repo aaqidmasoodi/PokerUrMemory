@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import type { Profile } from '../lib/supabase';
 import { getCountryName, getFlagEmoji } from '../lib/countries';
-import { ChevronLeft, Check } from 'lucide-react';
+import { ChevronLeft, Check, Coins, Flame, Trophy, Award } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
+
+const HAND_RANK_NAMES = [
+  'High Card', 'Pair', 'Two Pair', 'Three of a Kind', 'Straight',
+  'Flush', 'Full House', 'Four of a Kind', 'Straight Flush', 'Royal Flush',
+];
 
 export function ProfileScreen({
   profile,
@@ -21,11 +26,27 @@ export function ProfileScreen({
   const winRate = profile.total_games > 0
     ? Math.round((profile.wins / profile.total_games) * 100)
     : 0;
+  const handWinRate = profile.hands_played > 0
+    ? Math.round((profile.hands_won / profile.hands_played) * 100)
+    : 0;
+  const bestHandText = profile.best_hand_rank >= 0
+    ? (profile.best_hand_name ?? HAND_RANK_NAMES[profile.best_hand_rank] ?? '—')
+    : '—';
 
-  const stats = [
+  const gameStats = [
     { label: 'Games', value: profile.total_games },
     { label: 'Wins', value: profile.wins },
     { label: 'Win Rate', value: `${winRate}%` },
+  ];
+  const handStats = [
+    { label: 'Hands', value: profile.hands_played },
+    { label: 'Hand Wins', value: profile.hands_won },
+    { label: 'Hand %', value: `${handWinRate}%` },
+  ];
+  const highlights = [
+    { icon: <Coins className="w-3.5 h-3.5" />, label: 'Points Won', value: `${profile.pots_won_total.toLocaleString()}pts` },
+    { icon: <Flame className="w-3.5 h-3.5" />, label: 'Biggest Pot', value: `${profile.biggest_pot_won.toLocaleString()}pts` },
+    { icon: profile.best_hand_rank >= 7 ? <Trophy className="w-3.5 h-3.5" /> : <Award className="w-3.5 h-3.5" />, label: 'Best Hand', value: bestHandText },
   ];
 
   async function handleSave() {
@@ -108,12 +129,39 @@ export function ProfileScreen({
             )}
           </div>
 
-          {/* Stats — dark game-UI cards */}
-          <div className="flex gap-2.5 sm:gap-3 lg:gap-4 w-full max-w-xs justify-center">
-            {stats.map(s => (
-              <div key={s.label} className="flex-1 flex flex-col items-center bg-white/[0.07] border border-white/10 rounded-2xl py-3 lg:py-4 backdrop-blur-sm">
-                <span className="font-display text-lg sm:text-2xl lg:text-3xl font-bold text-white leading-tight">{s.value}</span>
-                <span className="text-[8px] lg:text-[9px] text-white/40 tracking-widest uppercase mt-1">{s.label}</span>
+          {/* Stats — dark game-UI cards (game-level row) */}
+          <div className="flex gap-2 sm:gap-2.5 w-full max-w-xs justify-center">
+            {gameStats.map(s => (
+              <div key={s.label} className="flex-1 flex flex-col items-center bg-white/[0.07] border border-white/10 rounded-2xl py-2.5 lg:py-3 backdrop-blur-sm">
+                <span className="font-display text-base sm:text-xl lg:text-2xl font-bold text-white leading-tight tabular-nums">{s.value}</span>
+                <span className="text-[8px] lg:text-[9px] text-white/40 tracking-widest uppercase mt-0.5">{s.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Hand-level row */}
+          <div className="flex gap-2 sm:gap-2.5 w-full max-w-xs justify-center">
+            {handStats.map(s => (
+              <div key={s.label} className="flex-1 flex flex-col items-center bg-white/[0.07] border border-white/10 rounded-2xl py-2.5 lg:py-3 backdrop-blur-sm">
+                <span className="font-display text-base sm:text-xl lg:text-2xl font-bold text-white leading-tight tabular-nums">{s.value}</span>
+                <span className="text-[8px] lg:text-[9px] text-white/40 tracking-widest uppercase mt-0.5">{s.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Highlight rows */}
+          <div className="flex flex-col gap-1.5 w-full max-w-xs">
+            {highlights.map(h => (
+              <div key={h.label} className="flex items-center gap-3 bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2">
+                <div className="w-7 h-7 rounded-lg bg-[color:var(--color-gold)]/15 text-[color:var(--color-gold)] grid place-items-center shrink-0">
+                  {h.icon}
+                </div>
+                <span className="text-[10px] text-white/50 tracking-widest uppercase font-display font-semibold">
+                  {h.label}
+                </span>
+                <span className="ml-auto text-[12px] font-bold text-white tabular-nums">
+                  {h.value}
+                </span>
               </div>
             ))}
           </div>

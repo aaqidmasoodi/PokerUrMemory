@@ -39,4 +39,33 @@ async function recordGameResult({ gameSessionId, players }) {
   ));
 }
 
-module.exports = { supabase, recordGameResult };
+// Record a single completed hand. Idempotent on (gameSessionId, handNumber) — safe
+// to call twice without doubling stats. `players` shape:
+//   { userId, amountWon, amountContributed, handRank, handDescription, folded }
+async function recordHand({ gameSessionId, handNumber, potAmount, endedBy, players }) {
+  if (!gameSessionId) return;
+
+  const payload = players
+    .filter(p => p.userId)
+    .map(p => ({
+      user_id:            p.userId,
+      amount_won:         p.amountWon ?? 0,
+      amount_contributed: p.amountContributed ?? 0,
+      hand_rank:          p.handRank ?? null,
+      hand_description:   p.handDescription ?? null,
+      folded:             !!p.folded,
+    }));
+
+  if (payload.length === 0) return;
+
+  const { error } = await supabase.rpc('record_hand', {
+    p_game_id:     gameSessionId,
+    p_hand_number: handNumber,
+    p_pot_amount:  potAmount,
+    p_ended_by:    endedBy,
+    p_players:     payload,
+  });
+  if (error) throw error;
+}
+
+module.exports = { supabase, recordGameResult, recordHand };

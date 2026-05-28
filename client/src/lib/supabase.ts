@@ -12,5 +12,11 @@ export type Profile = {
   avatar_url: string | null;
   total_games: number;
   wins: number;
+  hands_played: number;
+  hands_won: number;
+  pots_won_total: number;
+  biggest_pot_won: number;
+  best_hand_rank: number;
+  best_hand_name: string | null;
   created_at: string;
 };

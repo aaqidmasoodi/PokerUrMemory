@@ -11,6 +11,7 @@ import { SettingsScreen } from "./screens/SettingsScreen";
 import { RulesScreen, RulesBody, AboutScreen } from "./screens/RulesScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { IncomingInviteModal } from "./components/IncomingInviteModal";
+import { PlayerStatsModal } from "./components/PlayerStatsModal";
 import { PokerBackground } from "./components/PokerBackground";
 import { PlayingCard } from "./components/poker/PlayingCard";
 import { ChipStack } from "./components/poker/ChipStack";
@@ -371,6 +372,7 @@ export default function App() {
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [muted, setMuted] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const [viewingOpponent, setViewingOpponent] = useState<{ userId: string; name: string } | null>(null);
 
   useEffect(() => {
     _globalMuted = muted;
@@ -837,16 +839,24 @@ export default function App() {
           const cardSpacing = opponents.length >= 3 ? "-space-x-3" : opponents.length >= 2 ? "-space-x-2" : "-space-x-1";
           return (
             <div key={idx} className="flex flex-col items-center gap-0.5">
-              <PlayerSeat
-                name={opp.name} chips={opp.chips} bet={opp.currentBet}
-                avatar={opp.name.charAt(0).toUpperCase()}
-                active={opp.isCurrentTurn && !isShowdown && !opp.disconnected}
-                folded={opp.folded}
-                disconnected={opp.disconnected}
-                turnTimeLeft={oppTurnTimeLeft}
-                size={seatSize}
-                flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
-              />
+              <button
+                type="button"
+                onClick={() => opp.userId && setViewingOpponent({ userId: opp.userId, name: opp.name })}
+                disabled={!opp.userId}
+                className="active:scale-[0.95] transition-transform disabled:cursor-default"
+                title={opp.userId ? "View stats" : undefined}
+              >
+                <PlayerSeat
+                  name={opp.name} chips={opp.chips} bet={opp.currentBet}
+                  avatar={opp.name.charAt(0).toUpperCase()}
+                  active={opp.isCurrentTurn && !isShowdown && !opp.disconnected}
+                  folded={opp.folded}
+                  disconnected={opp.disconnected}
+                  turnTimeLeft={oppTurnTimeLeft}
+                  size={seatSize}
+                  flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
+                />
+              </button>
               <div className={cn("flex", cardSpacing)}>
                 {opp.hand.map((c, ci) => (
                   <PlayingCard
@@ -1099,6 +1109,14 @@ export default function App() {
           <ActionButton label="Cancel" onClick={() => setShowBetSlider(false)} className="w-full" />
         </div>
       </div>
+
+      {viewingOpponent && (
+        <PlayerStatsModal
+          userId={viewingOpponent.userId}
+          fallbackName={viewingOpponent.name}
+          onClose={() => setViewingOpponent(null)}
+        />
+      )}
     </main>
   );
 }

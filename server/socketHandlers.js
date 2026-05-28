@@ -1,5 +1,5 @@
 const { GameRoom } = require('./gameRoom');
-const { recordGameResult, supabase } = require('./supabase');
+const { recordGameResult, recordHand, supabase } = require('./supabase');
 const crypto = require('crypto');
 
 // ── In-memory matchmaking queue ───────────────────────────────────────────────
@@ -491,6 +491,12 @@ function setupSocketHandlers(io, rooms) {
       room.onGameOver = (players) => {
         recordGameResult({ gameSessionId: room.gameSessionId, players }).catch(err => {
           console.error('[stats] recordGameResult failed:', err);
+        });
+      };
+
+      room.onHandComplete = (snapshot) => {
+        recordHand({ gameSessionId: room.gameSessionId, ...snapshot }).catch(err => {
+          console.error('[stats] recordHand failed:', err);
         });
       };
 

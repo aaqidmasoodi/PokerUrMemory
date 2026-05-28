@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { ChevronLeft, Crown, Plus, Search, UserPlus, UserMinus, Play, X } from 'lucide-react';
 import { supabase, type Profile } from '../lib/supabase';
 import { Avatar } from '../components/Avatar';
+import { PlayerStatsModal } from '../components/PlayerStatsModal';
 import type { Lobby } from '../hooks/useSocket';
 
 const MAX_MEMBERS = 4;
@@ -33,6 +34,10 @@ export function LobbyScreen({
   const [showFriends, setShowFriends] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
+  const viewingMember = viewingUserId
+    ? lobby?.members.find(m => m.userId === viewingUserId) ?? null
+    : null;
 
   // Auto-create a lobby on mount if we don't have one yet
   useEffect(() => {
@@ -164,9 +169,11 @@ export function LobbyScreen({
               }
 
               return (
-                <div
+                <button
                   key={member.userId}
-                  className={`relative flex flex-col items-center justify-center gap-3 rounded-3xl backdrop-blur-sm border min-h-[120px] lg:min-h-[180px] xl:min-h-[220px] 2xl:min-h-[260px]
+                  type="button"
+                  onClick={() => setViewingUserId(member.userId)}
+                  className={`relative flex flex-col items-center justify-center gap-3 rounded-3xl backdrop-blur-sm border min-h-[120px] lg:min-h-[180px] xl:min-h-[220px] 2xl:min-h-[260px] active:scale-[0.97] transition-transform
                     ${isMeSlot
                       ? 'bg-[color:var(--color-blue)]/15 border-[color:var(--color-blue)]/40 shadow-[0_0_24px_rgba(212,168,67,0.12)]'
                       : isHostSlot
@@ -215,7 +222,7 @@ export function LobbyScreen({
                       <p className="text-[8px] text-white/35 tracking-widest uppercase mt-0.5">Host</p>
                     )}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -279,7 +286,17 @@ export function LobbyScreen({
         inLobbyUserIds={new Set(members.map(m => m.userId))}
         canInvite={isHost && filledSlots < MAX_MEMBERS}
         onInvite={handleInvite}
+        onViewProfile={(userId) => setViewingUserId(userId)}
       />
+
+      {viewingUserId && (
+        <PlayerStatsModal
+          userId={viewingUserId}
+          fallbackName={viewingMember?.username}
+          fallbackAvatarUrl={viewingMember?.avatarUrl}
+          onClose={() => setViewingUserId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -294,6 +311,7 @@ function FriendsPanel({
   inLobbyUserIds,
   canInvite,
   onInvite,
+  onViewProfile,
 }: {
   open: boolean;
   onClose: () => void;
@@ -302,6 +320,7 @@ function FriendsPanel({
   inLobbyUserIds: Set<string>;
   canInvite: boolean;
   onInvite: (toUserId: string) => Promise<{ success: boolean; error?: string }>;
+  onViewProfile: (userId: string) => void;
 }) {
   const [friends, setFriends] = useState<FriendRow[]>([]);
   const [query, setQuery] = useState('');
@@ -464,6 +483,7 @@ function FriendsPanel({
               title="Search Results"
               users={searchResults}
               emptyText={loadingSearch ? 'Searching…' : 'No matches'}
+              onViewProfile={onViewProfile}
               renderActions={(u) => (
                 <div className="flex items-center gap-1.5">
                   {friendIds.has(u.id) ? (
@@ -498,6 +518,7 @@ function FriendsPanel({
               title="Your Friends"
               users={sortedFriends.map(f => f.profile)}
               emptyText="No friends yet. Search by username to add some."
+              onViewProfile={onViewProfile}
               renderActions={(u) => (
                 <div className="flex items-center gap-1.5">
                   {canInvite && !inLobbyUserIds.has(u.id) ? (
@@ -540,6 +561,7 @@ function UserList({
   renderActions,
   onlineUserIds,
   feedback,
+  onViewProfile,
 }: {
   title: string;
   users: Profile[];
@@ -547,6 +569,7 @@ function UserList({
   renderActions: (u: Profile) => React.ReactNode;
   onlineUserIds: Set<string>;
   feedback: { userId: string; text: string; ok: boolean } | null;
+  onViewProfile?: (userId: string) => void;
 }) {
   return (
     <div className="py-2">
@@ -564,18 +587,24 @@ function UserList({
             const fb = feedback?.userId === u.id ? feedback : null;
             return (
               <li key={u.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50">
-                <div className="relative">
-                  <Avatar url={u.avatar_url} name={u.username} size="sm" />
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${
-                      isOnline ? 'bg-green-500' : 'bg-gray-300'
-                    }`}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold truncate">{u.username}</p>
-                  <p className="text-[9px] text-gray-300">{isOnline ? 'Online' : 'Offline'}</p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onViewProfile?.(u.id)}
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-70 transition-opacity"
+                >
+                  <div className="relative shrink-0">
+                    <Avatar url={u.avatar_url} name={u.username} size="sm" />
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${
+                        isOnline ? 'bg-green-500' : 'bg-gray-300'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold truncate">{u.username}</p>
+                    <p className="text-[9px] text-gray-300">{isOnline ? 'Online' : 'Offline'}</p>
+                  </div>
+                </button>
                 {fb ? (
                   <span className={`text-[9px] font-display tracking-wider uppercase ${fb.ok ? 'text-green-600' : 'text-red-500'}`}>
                     {fb.text}

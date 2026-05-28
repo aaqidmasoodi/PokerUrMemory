@@ -89,6 +89,11 @@ class GameRoom {
         this.expectedPlayerCount = 0;
         this.matchedUserIds = [];
         this.onGameOver = null;
+        // Monotonic per-game hand counter. Incremented at the START of each hand so
+        // recordHand always sees a stable value when the hand resolves.
+        this.handNumber = 0;
+        // Set by socketHandlers — invoked with hand snapshot after every showdown/bluff-win.
+        this.onHandComplete = null;
     }
 
     addPlayer(socketId, name, userId = null) {
@@ -149,6 +154,7 @@ class GameRoom {
             this.clearAllTimers();
             return;
         }
+        this.handNumber++;
         this.deck = createDeck();
         this.pot = 0;
         this.currentBet = 0;
@@ -247,6 +253,7 @@ class GameRoom {
 
         return {
             id: player.id,
+            userId: player.userId,
             name: player.name,
             chips: player.chips,
             currentBet: player.currentBet,
@@ -509,15 +516,34 @@ class GameRoom {
 
     showBluffWin(winner) {
         this.clearTurnTimer();
-        winner.chips += this.pot;
-        this.io.to(this.roomCode).emit('actionLog', `${winner.name} wins ${this.pot}pts!`);
+        const potAmount = this.pot;
+        // Snapshot what each player put in BEFORE we mutate chips/pot, so the
+        // recorded hand reflects the true per-player contribution.
+        const handSnapshot = Array.from(this.players.values()).map(p => ({
+            userId: p.userId,
+            amountWon: p.id === winner.id ? potAmount : 0,
+            amountContributed: p.committed || 0,
+            handRank: null,
+            handDescription: null,
+            folded: p.folded,
+        }));
+        winner.chips += potAmount;
+        this.io.to(this.roomCode).emit('actionLog', `${winner.name} wins ${potAmount}pts!`);
         this.io.to(this.roomCode).emit('bluffWin', {
             winner: winner.name,
-            amount: this.pot,
+            amount: potAmount,
         });
         this.pot = 0;
         this.gamePhase = 'showdown';
         this.broadcastState();
+        if (this.onHandComplete) {
+            this.onHandComplete({
+                handNumber: this.handNumber,
+                potAmount,
+                endedBy: 'fold',
+                players: handSnapshot,
+            });
+        }
         setTimeout(() => this.broadcastLeaderboard(), 100);
         this.scheduleNextHand(15);
     }
@@ -881,6 +907,29 @@ class GameRoom {
             winnings: Array.from(winnings.entries()).map(([playerId, amount]) => ({ playerId, amount })),
             pot: totalPot,
         });
+
+        // Build the per-hand snapshot for stats. Folded players don't have a
+        // result (they never showed); non-folded players carry their evaluated
+        // rank/description even if they didn't win a side pot.
+        if (this.onHandComplete) {
+            const handSnapshot = Array.from(this.players.values()).map(p => {
+                const result = resultById.get(p.id);
+                return {
+                    userId: p.userId,
+                    amountWon: winnings.get(p.id) || 0,
+                    amountContributed: p.committed || 0,
+                    handRank: result ? result.rank : null,
+                    handDescription: result ? result.description : null,
+                    folded: p.folded,
+                };
+            });
+            this.onHandComplete({
+                handNumber: this.handNumber,
+                potAmount: totalPot,
+                endedBy: 'showdown',
+                players: handSnapshot,
+            });
+        }
 
         this.pot = 0;
         this.broadcastState();
