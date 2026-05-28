@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { supabase, type Profile } from '../lib/supabase';
+import { setCachedProfile } from '../lib/profileCache';
 
 export type AuthState = 'loading' | 'landing' | 'onboarding' | 'ready';
 
@@ -35,6 +36,7 @@ export function useAuth() {
 
     if (data) {
       setProfile(data);
+      setCachedProfile(data);
       setAuthState('ready');
       return true;
     }
@@ -152,6 +154,7 @@ export function useAuth() {
 
     if (error) return error.message;
     setProfile(data);
+    setCachedProfile(data);
     setAuthState('ready');
     return null;
   }
@@ -167,6 +170,7 @@ export function useAuth() {
 
     if (error) return error.message;
     setProfile(data);
+    setCachedProfile(data);
     return null;
   }
 

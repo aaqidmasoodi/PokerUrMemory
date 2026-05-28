@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { ChevronLeft, Crown, Plus, Search, UserPlus, UserMinus, Play, X } from 'lucide-react';
 import { supabase, type Profile } from '../lib/supabase';
 import { Avatar } from '../components/Avatar';
@@ -67,6 +67,15 @@ export function LobbyScreen({
     onLeaveLobby();
     onBack();
   };
+
+  // Auto-dismiss friends sheet when a new member joins the lobby
+  const prevFilledSlotsRef = useRef(filledSlots);
+  useEffect(() => {
+    if (showFriends && filledSlots > prevFilledSlotsRef.current) {
+      setShowFriends(false);
+    }
+    prevFilledSlotsRef.current = filledSlots;
+  }, [filledSlots, showFriends]);
 
   const handleInvite = useCallback(async (toUserId: string) => {
     const res = await onInvite(toUserId);
@@ -286,7 +295,7 @@ export function LobbyScreen({
         inLobbyUserIds={new Set(members.map(m => m.userId))}
         canInvite={isHost && filledSlots < MAX_MEMBERS}
         onInvite={handleInvite}
-        onViewProfile={(userId) => setViewingUserId(userId)}
+        onViewProfile={(userId) => { setShowFriends(false); setViewingUserId(userId); }}
       />
 
       {viewingUserId && (
@@ -440,8 +449,8 @@ function FriendsPanel({
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.07]">
           <span className="font-display text-xs tracking-widest uppercase blue-text font-semibold">Friends</span>
-          <button onClick={onClose} className="w-7 h-7 grid place-items-center rounded-full hover:bg-gray-100">
-            <X className="w-3.5 h-3.5 text-gray-300" />
+          <button onClick={onClose} className="w-9 h-9 grid place-items-center rounded-full bg-black/[0.06] hover:bg-black/[0.12] active:scale-90 transition-all">
+            <X className="w-5 h-5 text-gray-600" />
           </button>
         </div>
 
