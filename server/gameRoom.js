@@ -425,9 +425,6 @@ class GameRoom {
         } while (attempts < this.players.size && this.players.get(playerArray[this.currentPlayerIndex])?.folded);
 
         if (this.shouldEndBettingRound()) {
-            if (this.getActivePlayers().some(p => p.currentBet >= MAX_BET)) {
-                this.io.to(this.roomCode).emit('actionLog', `Bet limit of ${MAX_BET}pts reached: moving to next phase.`);
-            }
             this.endBettingRound();
             return;
         }
@@ -439,9 +436,6 @@ class GameRoom {
     shouldEndBettingRound() {
         const activePlayers = this.getActivePlayers();
         if (activePlayers.length <= 1) return true;
-
-        // End immediately when any player hits the $20 bet cap
-        if (activePlayers.some(p => p.currentBet >= MAX_BET)) return true;
 
         if (this.playersActedThisRound >= activePlayers.length) {
             if (this.currentBet === 0) return true;

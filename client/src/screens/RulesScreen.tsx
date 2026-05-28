@@ -113,7 +113,7 @@ export function RulesBody() {
           'The pot is the shared prize pool: every ante, bet, and call flows into it and it keeps growing throughout the round.',
           'You can check, bet, call, raise, or fold during each betting round.',
           'The maximum any player can bet per round is 20 points total.',
-          'The moment a player reaches 20, that betting round ends immediately.',
+          'If a player raises to the 20-point cap, everyone else still gets a chance to call or fold before the round ends.',
           'The winner of each round claims the entire pot, adding those points directly to their stack.',
         ]}
       />
