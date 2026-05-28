@@ -77,6 +77,7 @@ export function SettingsScreen({
               )}
             </p>
             <p className="text-[10px] text-white/40 tracking-widest uppercase mt-1.5">Account</p>
+            <p className="text-[10px] text-white/25 tracking-widest mt-1">v{__APP_VERSION__}</p>
           </div>
 
           {/* Sign Out — md+ only (phone has it at bottom of list) */}
