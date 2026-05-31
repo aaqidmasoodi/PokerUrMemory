@@ -10,6 +10,8 @@ import { ProfileScreen } from "./screens/ProfileScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { RulesScreen, RulesBody, AboutScreen } from "./screens/RulesScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
+import { ScheduledGamesScreen } from "./screens/ScheduledGamesScreen";
+import { WaitingRoomScreen } from "./screens/WaitingRoomScreen";
 import { IncomingInviteModal } from "./components/IncomingInviteModal";
 import { PlayerStatsModal } from "./components/PlayerStatsModal";
 import { PokerBackground } from "./components/PokerBackground";
@@ -21,7 +23,7 @@ import { cn } from "./lib/utils";
 import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X, WifiOff, BookOpen } from "lucide-react";
 
 
-type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules' | 'about' | 'lobby';
+type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules' | 'about' | 'lobby' | 'scheduled';
 
 let _globalMuted = false;
 function playSound(file: string, volume = 0.55) {
@@ -323,6 +325,121 @@ function DiscardRevealOverlay({
   );
 }
 
+// ─── Scheduled game ready toast ───────────────────────────────────────────────
+
+function ScheduledGameToast({
+  data,
+  inGame,
+  onAccept,
+  onDecline,
+}: {
+  data: { roomCode: string; hostName: string; joinWindowSecs: number };
+  inGame: boolean;
+  onAccept: (leaveFirst: boolean) => Promise<{ success: boolean; error?: string }>;
+  onDecline: () => void;
+}) {
+  const [secondsLeft, setSecondsLeft] = useState(data.joinWindowSecs);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setSecondsLeft(s => {
+        if (s <= 1) { clearInterval(t); onDecline(); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleAccept = async (leaveFirst: boolean) => {
+    setBusy(true);
+    const res = await onAccept(leaveFirst);
+    if (res.error) { setError(res.error); setBusy(false); }
+  };
+
+  const pct = (secondsLeft / data.joinWindowSecs) * 100;
+
+  return (
+    <div
+      className="fixed left-3 right-3 sm:left-auto sm:right-4 sm:w-80 z-[350]
+        bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.18)] border border-black/[0.07]
+        overflow-hidden
+        animate-in slide-in-from-bottom-4 duration-300"
+      style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+    >
+      {/* Countdown bar */}
+      <div className="h-[3px] bg-gray-100">
+        <div
+          className="h-full bg-[color:var(--color-blue)] transition-all duration-1000 ease-linear"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+
+      <div className="p-3.5">
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="w-9 h-9 shrink-0 rounded-xl bg-[color:var(--color-blue)]/10 grid place-items-center text-base">
+            🃏
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display font-bold text-[12px] text-gray-900 leading-tight">
+              Scheduled game starting!
+            </p>
+            <p className="text-[11px] text-gray-500 leading-snug mt-0.5 truncate">
+              <span className="font-semibold text-gray-700">{data.hostName}</span> launched the table
+            </p>
+          </div>
+          <span className="shrink-0 font-display font-bold text-[11px] text-[color:var(--color-blue)] tabular-nums">
+            {secondsLeft}s
+          </span>
+        </div>
+
+        {error && (
+          <p className="text-[10px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5 mb-2.5 leading-snug">
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            onClick={onDecline}
+            disabled={busy}
+            className="flex-1 h-9 rounded-xl font-display tracking-wider uppercase text-[10px] font-bold
+              bg-gray-100 text-gray-500 border border-gray-200
+              active:scale-[0.97] transition-all disabled:opacity-50"
+          >
+            Decline
+          </button>
+          {inGame ? (
+            <button
+              onClick={() => handleAccept(true)}
+              disabled={busy}
+              className="flex-1 h-9 rounded-xl font-display tracking-wider uppercase text-[10px] font-bold
+                bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]
+                text-white border border-black/10 shadow
+                active:scale-[0.97] transition-all disabled:opacity-50"
+            >
+              {busy ? 'Joining…' : 'Leave & Join'}
+            </button>
+          ) : (
+            <button
+              onClick={() => handleAccept(false)}
+              disabled={busy}
+              className="flex-1 h-9 rounded-xl font-display tracking-wider uppercase text-[10px] font-bold
+                bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]
+                text-white border border-black/10 shadow
+                active:scale-[0.97] transition-all disabled:opacity-50"
+            >
+              {busy ? 'Joining…' : 'Join Game'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Confirm dialog ───────────────────────────────────────────────────────────
 
 function ConfirmDialog({
@@ -361,7 +478,9 @@ export default function App() {
     matchTimedOut, findGame, cancelSearch,
     playAction, toggleDrawCard, confirmDiscard, leaveGame,
     lobby, lobbyTransitioning, incomingInvite, inviteDeclinedNotice,
-    registerUser, createLobby, leaveLobby, inviteToLobby, acceptInvite, declineInvite, startLobby,
+    registerUser, createLobby, leaveLobby, inviteToLobby, acceptInvite, declineInvite, startLobby, startScheduledGame,
+    scheduledGameReady, acceptScheduledGame, dismissScheduledGameReady,
+    waitingRoom, beginScheduledGame, leaveWaitingRoom,
   } = useSocket();
   const onlineUserIds = usePresence(profile?.id ?? null, profile?.username ?? null);
 
@@ -546,6 +665,15 @@ export default function App() {
           </div>
         </div>
       );
+    } else if (waitingRoom) {
+      screen = (
+        <WaitingRoomScreen
+          waitingRoom={waitingRoom}
+          myPlayerId={playerId}
+          onStart={beginScheduledGame}
+          onLeave={() => { leaveWaitingRoom(); setAppScreen('menu'); }}
+        />
+      );
     } else if (appScreen === 'matchmaking') {
       screen = (
         <MatchmakingScreen
@@ -568,6 +696,14 @@ export default function App() {
           onInvite={async (toUserId) => inviteToLobby(toUserId)}
           onStart={async () => startLobby()}
           onBack={() => setAppScreen('menu')}
+        />
+      );
+    } else if (appScreen === 'scheduled') {
+      screen = (
+        <ScheduledGamesScreen
+          profile={profile!}
+          onBack={() => setAppScreen('menu')}
+          onLaunchGame={startScheduledGame}
         />
       );
     } else if (appScreen === 'profile') {
@@ -594,6 +730,7 @@ export default function App() {
           profile={profile!}
           onStartGame={() => setAppScreen('matchmaking')}
           onPlayWithFriends={() => setAppScreen('lobby')}
+          onScheduledGames={() => setAppScreen('scheduled')}
           onProfile={() => setAppScreen('profile')}
           onSettings={() => setAppScreen('settings')}
           onRules={() => setAppScreen('rules')}
@@ -624,6 +761,17 @@ export default function App() {
             onDecline={() => declineInvite(incomingInvite.lobbyId, incomingInvite.fromUserId)}
           />
         )}
+        {scheduledGameReady && (
+          <ScheduledGameToast
+            data={scheduledGameReady}
+            inGame={inGame}
+            onAccept={async (leaveFirst) => {
+              if (leaveFirst) leaveGame();
+              return acceptScheduledGame(scheduledGameReady.roomCode);
+            }}
+            onDecline={dismissScheduledGameReady}
+          />
+        )}
         {inviteDeclinedNotice && (
           <div
             className="fixed left-1/2 -translate-x-1/2 z-[350] flex items-center gap-2 px-4 py-2 rounded-full shadow-lg bg-red-50 border border-red-300 text-red-700 font-display text-[10px] tracking-widest uppercase"
@@ -650,8 +798,9 @@ export default function App() {
   const isBettingPhase  = phase === "firstBetting" || phase === "secondBetting";
   const isMemoryReveal  = phase === "memoryReveal";
   const isRevealPhase   = isMemoryReveal || isDrawReveal || isDiscardReveal;
-  const myTurnActive    = myTurnData !== null && !isShowdown && !isDrawReveal && !isDiscardReveal;
-  const showDraw      = isDrawPhase && !myPlayer?.folded && !hasDiscarded;
+  const amSittingOut    = !!myPlayer?.sittingOut;
+  const myTurnActive    = myTurnData !== null && !isShowdown && !isDrawReveal && !isDiscardReveal && !amSittingOut;
+  const showDraw      = isDrawPhase && !myPlayer?.folded && !hasDiscarded && !amSittingOut;
   const showBetting   = myTurnActive && isBettingPhase && !showBetSlider && !!myTurnData;
 
   const potChipVariant = gameState.pot >= 500 ? "gold" : gameState.pot >= 200 ? "blue" : "red";
@@ -659,6 +808,7 @@ export default function App() {
 
   const currentTurnPlayer = gameState.players.find(p => p.isCurrentTurn && !p.folded);
   const infoMsg = (() => {
+    if (amSittingOut)    return { text: "Sitting out — you’ll join next hand", urgent: false };
     if (isMemoryReveal)  return { text: "Memorise the Cards!",  urgent: false };
     if (isDrawReveal)    return { text: "Memorise Drawn Cards",  urgent: false };
     if (isDiscardReveal) return { text: "Showing Discards…",    urgent: false };
@@ -684,6 +834,18 @@ export default function App() {
           confirmLabel="Leave" cancelLabel="Stay"
           onCancel={() => setShowExitDialog(false)}
           onConfirm={() => { setShowExitDialog(false); setAppScreen('menu'); leaveGame(); }}
+        />
+      )}
+
+      {scheduledGameReady && (
+        <ScheduledGameToast
+          data={scheduledGameReady}
+          inGame={inGame}
+          onAccept={async (leaveFirst) => {
+            if (leaveFirst) leaveGame();
+            return acceptScheduledGame(scheduledGameReady.roomCode);
+          }}
+          onDecline={dismissScheduledGameReady}
         />
       )}
 
@@ -838,7 +1000,7 @@ export default function App() {
           const cardSize = "sm";
           const cardSpacing = opponents.length >= 3 ? "-space-x-3" : opponents.length >= 2 ? "-space-x-2" : "-space-x-1";
           return (
-            <div key={idx} className="flex flex-col items-center gap-0.5">
+            <div key={idx} className={cn("flex flex-col items-center gap-0.5", opp.sittingOut && "opacity-50")}>
               <button
                 type="button"
                 onClick={() => opp.userId && setViewingOpponent({ userId: opp.userId, name: opp.name })}
@@ -849,7 +1011,7 @@ export default function App() {
                 <PlayerSeat
                   name={opp.name} chips={opp.chips} bet={opp.currentBet}
                   avatar={opp.name.charAt(0).toUpperCase()}
-                  active={opp.isCurrentTurn && !isShowdown && !opp.disconnected}
+                  active={opp.isCurrentTurn && !isShowdown && !opp.disconnected && !opp.sittingOut}
                   folded={opp.folded}
                   disconnected={opp.disconnected}
                   turnTimeLeft={oppTurnTimeLeft}
@@ -857,6 +1019,11 @@ export default function App() {
                   flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
                 />
               </button>
+              {opp.sittingOut && (
+                <span className="font-display text-[7px] sm:text-[8px] tracking-widest uppercase text-white/60 bg-black/30 px-1.5 py-0.5 rounded-full">
+                  Sitting out
+                </span>
+              )}
               <div className={cn("flex", cardSpacing)}>
                 {opp.hand.map((c, ci) => (
                   <PlayingCard

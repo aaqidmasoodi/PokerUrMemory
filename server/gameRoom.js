@@ -94,9 +94,16 @@ class GameRoom {
         this.handNumber = 0;
         // Set by socketHandlers — invoked with hand snapshot after every showdown/bluff-win.
         this.onHandComplete = null;
+        // Scheduled game: timer that starts the game after the join window expires.
+        this.joinWindowTimer = null;
+        // When true the game waits for the host to press "Start" (or the join window
+        // to expire) instead of auto-starting once expectedPlayerCount join.
+        this.manualStart = false;
+        // Epoch ms when the join window closes (for the client countdown). null = no window.
+        this.joinDeadline = null;
     }
 
-    addPlayer(socketId, name, userId = null) {
+    addPlayer(socketId, name, userId = null, sittingOut = false) {
         if (this.players.size >= 4) return false;
         this.players.set(socketId, {
             id: socketId,
@@ -111,8 +118,40 @@ class GameRoom {
             isHost: this.players.size === 0,
             disconnected: false,
             disconnectTimeout: null,
+            // A player who joins mid-hand sits out (watches) until the next deal.
+            sittingOut: sittingOut,
         });
         return true;
+    }
+
+    // Pick a random seat index among players eligible to act this hand
+    // (dealt in and not folded). Falls back to 0 if somehow none qualify.
+    randomPlayingIndex() {
+        const arr = Array.from(this.players.values());
+        const eligible = arr
+            .map((p, i) => ({ p, i }))
+            .filter(x => !x.p.folded && !x.p.sittingOut);
+        if (eligible.length === 0) return 0;
+        return eligible[Math.floor(Math.random() * eligible.length)].i;
+    }
+
+    // Snapshot for the pre-game waiting room (scheduled games).
+    broadcastWaitingRoom() {
+        const players = Array.from(this.players.values()).map(p => ({
+            id: p.id,
+            userId: p.userId,
+            name: p.name,
+            isHost: p.isHost,
+            disconnected: p.disconnected,
+        }));
+        this.io.to(this.roomCode).emit('waitingRoom', {
+            roomCode: this.roomCode,
+            players,
+            count: players.length,
+            target: this.expectedPlayerCount,
+            canStart: players.length >= 2,
+            deadline: this.joinDeadline,
+        });
     }
 
     removePlayer(socketId) {
@@ -173,6 +212,8 @@ class GameRoom {
             player.committed = 0;
             player.folded = false;
             player.isAllIn = false;
+            // Everyone present at the deal is dealt in — sit-outs end here.
+            player.sittingOut = false;
         });
 
         // Charge antes — each player posts before cards are dealt
@@ -233,7 +274,7 @@ class GameRoom {
 
         const playerArray = Array.from(this.players.values());
         if (playerArray.length === 0) { this.clearAllTimers(); return; }
-        this.currentPlayerIndex = Math.floor(Math.random() * playerArray.length);
+        this.currentPlayerIndex = this.randomPlayingIndex();
 
         this.players.forEach(player => {
             player.hand.forEach(card => { card.faceUp = false; });
@@ -261,7 +302,9 @@ class GameRoom {
             isAllIn: player.isAllIn,
             isHost: player.isHost,
             disconnected: player.disconnected,
+            sittingOut: player.sittingOut,
             isCurrentTurn: this.getPlayerIndex(socketId) === this.currentPlayerIndex &&
+                !player.sittingOut &&
                 this.gamePhase !== 'memoryReveal' &&
                 this.gamePhase !== 'waiting',
             hand: player.hand.map((card) => {
@@ -314,7 +357,7 @@ class GameRoom {
     }
 
     getActivePlayers() {
-        return Array.from(this.players.values()).filter(p => !p.folded);
+        return Array.from(this.players.values()).filter(p => !p.folded && !p.sittingOut);
     }
 
     _applyBet(player, amount) {
@@ -429,7 +472,9 @@ class GameRoom {
         do {
             this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.size;
             attempts++;
-        } while (attempts < this.players.size && this.players.get(playerArray[this.currentPlayerIndex])?.folded);
+            const p = this.players.get(playerArray[this.currentPlayerIndex]);
+            if (p && !p.folded && !p.sittingOut) break;
+        } while (attempts < this.players.size);
 
         if (this.shouldEndBettingRound()) {
             this.endBettingRound();
@@ -714,7 +759,7 @@ class GameRoom {
 
     _startSecondBetting() {
         this.gamePhase = 'secondBetting';
-        this.currentPlayerIndex = Math.floor(Math.random() * this.players.size);
+        this.currentPlayerIndex = this.randomPlayingIndex();
         this.players.forEach(p => { p.currentBet = 0; });
         this.playersActedThisRound = 0;
         this.broadcastState();
@@ -740,6 +785,12 @@ class GameRoom {
         const playerArray = Array.from(this.players.values());
         const currentPlayer = playerArray[this.currentPlayerIndex];
         if (!currentPlayer) return;
+
+        // A sitting-out player can't act — skip past them.
+        if (currentPlayer.sittingOut) {
+            this.nextPlayer();
+            return;
+        }
 
         // Immediately fold a disconnected player rather than making everyone wait 30s
         if (currentPlayer.disconnected) {
@@ -822,6 +873,7 @@ class GameRoom {
         if (this.restartTimer) { clearTimeout(this.restartTimer); this.restartTimer = null; }
         if (this.endGameTimer) { clearTimeout(this.endGameTimer); this.endGameTimer = null; }
         if (this.nextHandInterval) { clearInterval(this.nextHandInterval); this.nextHandInterval = null; }
+        if (this.joinWindowTimer) { clearTimeout(this.joinWindowTimer); this.joinWindowTimer = null; }
     }
 
     startShowdown() {

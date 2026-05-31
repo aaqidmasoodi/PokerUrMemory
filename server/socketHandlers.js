@@ -434,6 +434,135 @@ function setupSocketHandlers(io, rooms) {
       cb({ success: true, roomCode });
     });
 
+    // ── Scheduled game: host launches the table ───────────────────────────────
+
+    socket.on('scheduled:start', async ({ gameId }, callback) => {
+      const cb = typeof callback === 'function' ? callback : () => {};
+      const me = socketUsers.get(socket.id);
+      if (!me) { cb({ success: false, error: 'Not registered' }); return; }
+
+      try {
+        const { data: game, error: gErr } = await supabase
+          .from('scheduled_games')
+          .select('*')
+          .eq('id', gameId)
+          .eq('status', 'open')
+          .single();
+
+        if (gErr || !game) { cb({ success: false, error: 'Game not found or already started' }); return; }
+        if (game.host_id !== me.userId) { cb({ success: false, error: 'Only the host can start' }); return; }
+
+        // Allow launching up to 5 min early to handle clock drift / eager hosts
+        const scheduledAt = new Date(game.scheduled_at).getTime();
+        if (scheduledAt > Date.now() + 5 * 60 * 1000) {
+          cb({ success: false, error: 'Too early — wait until the scheduled time' }); return;
+        }
+
+        const { data: reservations } = await supabase
+          .from('scheduled_game_reservations')
+          .select('user_id, username, avatar_url')
+          .eq('game_id', gameId);
+
+        // Only include players who are online right now
+        const connectedPlayers = [];
+        for (const r of (reservations || [])) {
+          const sid = userSockets.get(r.user_id);
+          if (sid && io.sockets.sockets.get(sid)) {
+            connectedPlayers.push({ userId: r.user_id, socketId: sid, username: r.username });
+          }
+        }
+
+        // Need at least host + 1 other online
+        if (connectedPlayers.length < 2) {
+          cb({ success: false, error: 'Need at least 2 players online to start' }); return;
+        }
+
+        const JOIN_WINDOW_SECS = 60;
+        const roomCode = generateRoomCode(rooms);
+        const room = new GameRoom(roomCode, null, io);
+        // expectedPlayerCount = all online reserved players (the waiting-room target).
+        // The host starts manually once ≥2 are in; the join window is the auto-start fallback.
+        room.expectedPlayerCount = connectedPlayers.length;
+        room.matchedUserIds = connectedPlayers.map(p => p.userId);
+        room.manualStart = true;
+        room.joinDeadline = Date.now() + JOIN_WINDOW_SECS * 1000;
+        rooms.set(roomCode, room);
+
+        // Persist session for stats (fire-and-forget)
+        supabase
+          .from('game_sessions')
+          .insert({ room_code: roomCode, player_count: connectedPlayers.length, status: 'forming' })
+          .select().single()
+          .then(({ data }) => { if (data) room.gameSessionId = data.id; });
+
+        // Mark the scheduled slot as live so it disappears from the lobby list
+        supabase
+          .from('scheduled_games')
+          .update({ status: 'live', room_code: roomCode })
+          .eq('id', gameId)
+          .then(() => {});
+
+        // After the join window, start with whoever showed up (≥2) or close the room
+        room.joinWindowTimer = setTimeout(() => {
+          room.joinWindowTimer = null;
+          if (room.gamePhase !== 'waiting') return; // already started via count-based path
+          if (room.players.size >= 2) {
+            console.log(`[scheduled] join window closed — starting ${roomCode} with ${room.players.size} players`);
+            room.startNewHand();
+          } else {
+            console.log(`[scheduled] join window closed — not enough players, closing ${roomCode}`);
+            io.to(roomCode).emit('roomClosed', 'Not enough players joined in time');
+            rooms.delete(roomCode);
+          }
+        }, JOIN_WINDOW_SECS * 1000);
+
+        // Host joins immediately — they initiated the launch
+        io.to(socket.id).emit('matchFound', { roomCode });
+
+        // All other online reserved players get an invite notification
+        for (const p of connectedPlayers) {
+          if (p.userId === me.userId) continue;
+          io.to(p.socketId).emit('scheduled:gameReady', {
+            roomCode,
+            hostName: me.username,
+            gameId,
+            joinWindowSecs: JOIN_WINDOW_SECS,
+          });
+        }
+
+        console.log(`[scheduled] ${me.username} launched ${gameId} → ${roomCode} (${connectedPlayers.length} online)`);
+        cb({ success: true, roomCode });
+      } catch (err) {
+        console.error('[scheduled:start] error', err);
+        cb({ success: false, error: 'Server error' });
+      }
+    });
+
+    // ── Scheduled game: reserved player accepts the join invite ──────────────
+
+    socket.on('scheduled:accept', ({ roomCode }, callback) => {
+      const cb = typeof callback === 'function' ? callback : () => {};
+      const me = socketUsers.get(socket.id);
+      if (!me) { cb({ success: false, error: 'Not registered' }); return; }
+
+      const rc = roomCode?.toUpperCase();
+      const room = rooms.get(rc);
+      if (!room) { cb({ success: false, error: 'This game has already closed' }); return; }
+      if (!room.matchedUserIds.includes(me.userId)) { cb({ success: false, error: 'You were not invited to this game' }); return; }
+      if (room.getPlayerCount() >= 4) { cb({ success: false, error: 'This table is full' }); return; }
+
+      // Reject if still mid-game in a *different* room (client should "Leave & Join" first).
+      const alreadyInGame = [...socket.rooms]
+        .filter(r => r !== socket.id && r !== rc)
+        .some(r => rooms.has(r) && rooms.get(r).gamePhase !== 'waiting');
+      if (alreadyInGame) { cb({ success: false, error: 'Finish your current game first' }); return; }
+
+      // Reuse the existing matchFound → joinMatchedGame pipeline. If the hand has
+      // already started, joinMatchedGame seats them as a sit-out until the next deal.
+      socket.emit('matchFound', { roomCode: rc });
+      cb({ success: true });
+    });
+
     // ── Matchmaking ───────────────────────────────────────────────────────────
 
     socket.on('findGame', ({ username }) => {
@@ -476,7 +605,9 @@ function setupSocketHandlers(io, rooms) {
         cb({ success: false, error: 'Not invited to this room' }); return;
       }
 
-      const added = room.addPlayer(socket.id, username, userId);
+      // A player joining while a hand is already running sits out until the next deal.
+      const joinsMidGame = room.gamePhase !== 'waiting';
+      const added = room.addPlayer(socket.id, username, userId, joinsMidGame);
       if (!added) { cb({ success: false, error: 'Room is full' }); return; }
       socket.join(roomCode.toUpperCase());
 
@@ -492,6 +623,13 @@ function setupSocketHandlers(io, rooms) {
         recordGameResult({ gameSessionId: room.gameSessionId, players }).catch(err => {
           console.error('[stats] recordGameResult failed:', err);
         });
+        // Free up the host's scheduling slot so they can book new games.
+        supabase
+          .from('scheduled_games')
+          .update({ status: 'completed' })
+          .eq('room_code', roomCode.toUpperCase())
+          .eq('status', 'live')
+          .then(() => {});
       };
 
       room.onHandComplete = (snapshot) => {
@@ -500,11 +638,42 @@ function setupSocketHandlers(io, rooms) {
         });
       };
 
-      if (room.players.size >= room.expectedPlayerCount) {
+      if (joinsMidGame) {
+        // Show the spectator the live table; they'll be dealt in next hand.
+        room.broadcastState();
+      } else if (room.manualStart) {
+        // Scheduled game — sit in the waiting room until the host starts.
+        room.broadcastWaitingRoom();
+      } else if (room.players.size >= room.expectedPlayerCount) {
+        // Matchmade / lobby game — auto-start once everyone expected has joined.
         setTimeout(() => {
           if (room.gamePhase === 'waiting') room.startNewHand();
         }, 1500);
       }
+    });
+
+    // ── Scheduled game: host starts the table manually ──────────────────────────
+
+    socket.on('scheduled:beginNow', (_, callback) => {
+      const cb = typeof callback === 'function' ? callback : () => {};
+      // Find the room this socket is sitting in (waiting phase, manual start).
+      let room = null, rc = null;
+      for (const r of socket.rooms) {
+        if (r === socket.id) continue;
+        const candidate = rooms.get(r);
+        if (candidate && candidate.manualStart) { room = candidate; rc = r; break; }
+      }
+      if (!room) { cb({ success: false, error: 'Waiting room not found' }); return; }
+      if (room.gamePhase !== 'waiting') { cb({ success: false, error: 'Game already started' }); return; }
+
+      const me = room.getPlayer(socket.id);
+      if (!me || !me.isHost) { cb({ success: false, error: 'Only the host can start' }); return; }
+      if (room.getPlayerCount() < 2) { cb({ success: false, error: 'Need at least 2 players' }); return; }
+
+      if (room.joinWindowTimer) { clearTimeout(room.joinWindowTimer); room.joinWindowTimer = null; }
+      console.log(`[scheduled] host started ${rc} with ${room.getPlayerCount()} players`);
+      room.startNewHand();
+      cb({ success: true });
     });
 
     // ── In-game actions ───────────────────────────────────────────────────────
@@ -596,6 +765,9 @@ function setupSocketHandlers(io, rooms) {
           rooms.delete(data.roomCode);
           io.to(data.roomCode).emit('roomClosed', `${leavingName} left. Game over!`);
         }, 3000);
+      } else if (!wasActiveGame && room.manualStart) {
+        // Still in the pre-game waiting room — refresh the seat list.
+        room.broadcastWaitingRoom();
       } else {
         // Game can continue with remaining players
         room.broadcastState();
@@ -654,7 +826,8 @@ function setupSocketHandlers(io, rooms) {
               playerName,
               playerCount: room.getPlayerCount(),
             });
-            room.broadcastState();
+            if (room.manualStart && room.gamePhase === 'waiting') room.broadcastWaitingRoom();
+            else room.broadcastState();
           }
         }, RECONNECT_GRACE_MS);
 
@@ -662,7 +835,8 @@ function setupSocketHandlers(io, rooms) {
           playerId: socket.id,
           playerName: player.name,
         });
-        room.broadcastState();
+        if (room.manualStart && room.gamePhase === 'waiting') room.broadcastWaitingRoom();
+        else room.broadcastState();
       });
     });
   });

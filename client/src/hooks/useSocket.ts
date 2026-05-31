@@ -24,7 +24,17 @@ export interface Player {
   isHost: boolean;
   isCurrentTurn: boolean;
   disconnected?: boolean;
+  sittingOut?: boolean;
   hand: CardData[];
+}
+
+export interface WaitingRoomState {
+  roomCode: string;
+  players: { id: string; userId: string | null; name: string; isHost: boolean; disconnected?: boolean }[];
+  count: number;
+  target: number;
+  canStart: boolean;
+  deadline: number | null;
 }
 
 export interface GameState {
@@ -129,6 +139,13 @@ export function useSocket() {
   const [incomingInvite, setIncomingInvite] = useState<IncomingInvite | null>(null);
   const [inviteDeclinedNotice, setInviteDeclinedNotice] = useState<{ byUsername: string } | null>(null);
   const inviteDeclinedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [scheduledGameReady, setScheduledGameReady] = useState<{
+    roomCode: string;
+    hostName: string;
+    gameId: string;
+    joinWindowSecs: number;
+  } | null>(null);
+  const [waitingRoom, setWaitingRoom] = useState<WaitingRoomState | null>(null);
 
   useEffect(() => {
     // The handshake auth is a function so socket.io re-reads the freshest token on
@@ -217,6 +234,7 @@ export function useSocket() {
       setRoomCode('');
       setGameState(null);
       setDisconnectNotice(null);
+      setWaitingRoom(null);
       roomCodeRef.current = '';
       // Do NOT null currentUserRef here — the user's identity persists beyond a
       // single game. Nulling it broke subsequent lobby games: matchFound would see
@@ -236,6 +254,7 @@ export function useSocket() {
         setInGame(true);
         setShowdownData(null);
         setNextHandCountdown(null);
+        setWaitingRoom(null);
       }
       if (state.phase !== 'draw') {
         setSelectedDrawCards([]);
@@ -341,6 +360,14 @@ export function useSocket() {
 
     newSocket.on('lobby:incomingInvite', (data: IncomingInvite) => {
       setIncomingInvite(data);
+    });
+
+    newSocket.on('scheduled:gameReady', (data: { roomCode: string; hostName: string; gameId: string; joinWindowSecs: number }) => {
+      setScheduledGameReady(data);
+    });
+
+    newSocket.on('waitingRoom', (data: WaitingRoomState) => {
+      setWaitingRoom(data);
     });
 
     newSocket.on('lobby:inviteDeclined', ({ byUsername }: { byUsername: string }) => {
@@ -483,6 +510,39 @@ export function useSocket() {
     });
   }, [socket]);
 
+  const startScheduledGame = useCallback((gameId: string): Promise<{ success: boolean; error?: string }> => {
+    return new Promise(resolve => {
+      if (!socket) return resolve({ success: false, error: 'Not connected' });
+      socket.emit('scheduled:start', { gameId }, (res: any) => resolve(res ?? { success: false }));
+    });
+  }, [socket]);
+
+  const acceptScheduledGame = useCallback((roomCode: string): Promise<{ success: boolean; error?: string }> => {
+    return new Promise(resolve => {
+      if (!socket) return resolve({ success: false, error: 'Not connected' });
+      setScheduledGameReady(null);
+      socket.emit('scheduled:accept', { roomCode }, (res: any) => resolve(res ?? { success: false }));
+    });
+  }, [socket]);
+
+  const dismissScheduledGameReady = useCallback(() => {
+    setScheduledGameReady(null);
+  }, []);
+
+  const beginScheduledGame = useCallback((): Promise<{ success: boolean; error?: string }> => {
+    return new Promise(resolve => {
+      if (!socket) return resolve({ success: false, error: 'Not connected' });
+      socket.emit('scheduled:beginNow', null, (res: any) => resolve(res ?? { success: false }));
+    });
+  }, [socket]);
+
+  const leaveWaitingRoom = useCallback(() => {
+    if (waitingRoom) socket?.emit('leaveRoom', { roomCode: waitingRoom.roomCode });
+    setWaitingRoom(null);
+    setRoomCode('');
+    roomCodeRef.current = '';
+  }, [socket, waitingRoom]);
+
   const dismissInvite = useCallback(() => setIncomingInvite(null), []);
 
   const leaveGame = useCallback(() => {
@@ -537,6 +597,13 @@ export function useSocket() {
     acceptInvite,
     declineInvite,
     startLobby,
+    startScheduledGame,
+    scheduledGameReady,
+    acceptScheduledGame,
+    dismissScheduledGameReady,
+    waitingRoom,
+    beginScheduledGame,
+    leaveWaitingRoom,
     dismissInvite,
   };
 }
