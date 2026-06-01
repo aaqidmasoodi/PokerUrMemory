@@ -87,7 +87,6 @@ export function LobbyScreen({
     <div
       className="h-dvh flex flex-col bg-transparent overflow-hidden select-none"
       style={{
-        paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         paddingLeft: 'env(safe-area-inset-left, 0px)',
         paddingRight: 'env(safe-area-inset-right, 0px)',
@@ -113,8 +112,7 @@ export function LobbyScreen({
 
       {/* Header */}
       <div
-        className="relative shrink-0 z-10 flex items-center px-4"
-        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))', paddingBottom: '0.75rem' }}
+        className="pum-header relative shrink-0 z-10 flex items-center px-4"
       >
         <button
           onClick={handleLeave}
@@ -445,7 +443,7 @@ function FriendsPanel({
         bg-white/97 border-l border-[color:var(--color-gold)]/30 shadow-2xl backdrop-blur-xl
         transform transition-transform duration-300 ease-out
         ${open ? 'translate-x-0' : 'translate-x-full'}`}
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.07]">
           <span className="font-display text-xs tracking-widest uppercase blue-text font-semibold">Friends</span>

@@ -137,7 +137,6 @@ export function ProfileScreen({
     <div
       className="h-dvh flex flex-col bg-transparent overflow-hidden select-none"
       style={{
-        paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
@@ -146,8 +145,7 @@ export function ProfileScreen({
 
       {/* Header */}
       <div
-        className="relative shrink-0 z-10 flex items-center px-4"
-        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))', paddingBottom: '0.75rem' }}
+        className="pum-header relative shrink-0 z-10 flex items-center px-4"
       >
         <button
           onClick={onBack}

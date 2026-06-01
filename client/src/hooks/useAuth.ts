@@ -73,22 +73,29 @@ export function useAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Native deep-link handler: Google sends the tokens back via the custom scheme
-  // (com.pokerurmemory.app://login-callback#access_token=…&refresh_token=…). Parse the
-  // hash, hand the tokens to Supabase, and close the in-app browser. No-op on web/PWA.
+  // Native deep-link handler: Google sends tokens back via the custom scheme.
+  // Supabase PKCE flow: com.pokerurmemory.app://login-callback?code=…
+  // Implicit fallback:  com.pokerurmemory.app://login-callback#access_token=…
   useEffect(() => {
     if (!isNative) return;
     const handle = App.addListener('appUrlOpen', async ({ url }) => {
       if (!url.startsWith(NATIVE_REDIRECT)) return;
-      Browser.close().catch(() => {}); // ignore if already closed
+      Browser.close().catch(() => {});
 
+      // PKCE: exchange the authorization code for a session
+      const code = new URL(url).searchParams.get('code');
+      if (code) {
+        await supabase.auth.exchangeCodeForSession(code);
+        return;
+      }
+
+      // Implicit fallback: tokens directly in the hash
       const hash = url.split('#')[1];
       if (!hash) return;
       const params = new URLSearchParams(hash);
       const access_token = params.get('access_token');
       const refresh_token = params.get('refresh_token');
       if (access_token && refresh_token) {
-        // Triggers onAuthStateChange → fetchProfile above.
         await supabase.auth.setSession({ access_token, refresh_token });
       }
     });

@@ -57,7 +57,6 @@ export function ScheduledGamesScreen({
     <div
       className="h-dvh flex flex-col bg-transparent overflow-hidden select-none"
       style={{
-        paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         paddingLeft: 'env(safe-area-inset-left, 0px)',
         paddingRight: 'env(safe-area-inset-right, 0px)',
@@ -68,8 +67,7 @@ export function ScheduledGamesScreen({
 
       {/* Header */}
       <div
-        className="relative shrink-0 z-10 flex items-center gap-2 px-4 landscape:px-8"
-        style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))', paddingBottom: '0.75rem' }}
+        className="pum-header relative shrink-0 z-10 flex items-center gap-2 px-4 landscape:px-8"
       >
         <button
           onClick={onBack}

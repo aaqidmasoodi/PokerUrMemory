@@ -25,11 +25,7 @@ export function MainMenuScreen({
 
   return (
     <div
-      className="relative h-full flex flex-col overflow-hidden select-none bg-transparent"
-      style={{
-        paddingTop: 'env(safe-area-inset-top, 0px)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      }}
+      className="pum-screen relative h-full flex flex-col overflow-hidden select-none bg-transparent"
     >
       <div className="absolute inset-0 felt-surface opacity-[0.12] pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/10 pointer-events-none" />

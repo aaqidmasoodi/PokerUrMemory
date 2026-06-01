@@ -775,7 +775,7 @@ export default function App() {
         {inviteDeclinedNotice && (
           <div
             className="fixed left-1/2 -translate-x-1/2 z-[350] flex items-center gap-2 px-4 py-2 rounded-full shadow-lg bg-red-50 border border-red-300 text-red-700 font-display text-[10px] tracking-widest uppercase"
-            style={{ top: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
+            style={{ top: 'calc(3.5rem + var(--safe-top))' }}
           >
             {inviteDeclinedNotice.byUsername} declined
           </div>
@@ -914,7 +914,7 @@ export default function App() {
               ? "bg-amber-50 border border-amber-300 text-amber-800"
               : "bg-red-50 border border-red-300 text-red-700",
           )}
-          style={{ top: 'calc(3.5rem + env(safe-area-inset-top, 0px))' }}
+          style={{ top: 'calc(3.5rem + var(--safe-top))' }}
         >
           <span className={cn(
             "w-1.5 h-1.5 rounded-full shrink-0",
@@ -930,7 +930,7 @@ export default function App() {
       <div
         className="fixed z-30 flex items-start justify-between pointer-events-none"
         style={{
-          top:   'calc(0.625rem + env(safe-area-inset-top, 0px))',
+          top:   'calc(0.625rem + var(--safe-top))',
           left:  'calc(0.625rem + env(safe-area-inset-left, 0px))',
           right: 'calc(0.625rem + env(safe-area-inset-right, 0px))',
         }}
@@ -992,7 +992,7 @@ export default function App() {
           opponents.length === 2 ? "gap-10 sm:gap-24" :
           "gap-2 sm:gap-6",
         )}
-        style={{ top: 'calc(7% + env(safe-area-inset-top, 0px))' }}
+        style={{ top: 'calc(7% + var(--safe-top))' }}
       >
         {opponents.map((opp, idx) => {
           const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
@@ -1165,7 +1165,7 @@ export default function App() {
           "transform transition-transform duration-300 ease-out",
           showLog ? "translate-x-0" : "translate-x-full",
         )}
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.07]">
           <span className="font-display text-xs tracking-widest uppercase gold-text font-semibold">Game Log</span>
@@ -1201,7 +1201,7 @@ export default function App() {
           "transform transition-transform duration-300 ease-out",
           showRules ? "translate-x-0" : "translate-x-full",
         )}
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-black/[0.07]">
           <span className="font-display text-xs tracking-widest uppercase gold-text font-semibold">How to Play</span>

@@ -6,15 +6,13 @@ function InfoScreenShell({ label, onBack, children }: { label: string; onBack: (
     <div
       className="h-dvh flex flex-col bg-transparent select-none"
       style={{
-        paddingTop: 'env(safe-area-inset-top, 0px)',
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
       {/* Back button — floating pill, no full-width bar */}
       <div
-        className="shrink-0"
+        className="pum-header shrink-0"
         style={{
-          paddingTop: 'calc(0.625rem + env(safe-area-inset-top, 0px))',
           paddingLeft: 'calc(0.75rem + env(safe-area-inset-left, 0px))',
           paddingBottom: '0.25rem',
         }}
