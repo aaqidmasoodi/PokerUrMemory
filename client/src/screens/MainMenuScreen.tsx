@@ -61,7 +61,7 @@ export function MainMenuScreen({
 
         {/* Discord join button */}
         <a
-          href="https://discord.gg/ZP9z5bp2Mm"
+          href="https://discord.gg/Jg2Ae4wAtj"
           target="_blank"
           rel="noopener noreferrer"
           className="shrink-0 flex items-center gap-2 sm:gap-2.5
