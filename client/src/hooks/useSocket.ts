@@ -31,6 +31,7 @@ export interface Player {
 export interface WaitingRoomState {
   roomCode: string;
   players: { id: string; userId: string | null; name: string; isHost: boolean; disconnected?: boolean }[];
+  pendingPlayers?: { name: string }[];
   count: number;
   target: number;
   canStart: boolean;

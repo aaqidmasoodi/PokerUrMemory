@@ -369,11 +369,17 @@ function CreateGameSheet({
             dateFormat="MMM d, yyyy · h:mm aa"
             timeCaption="Time"
             popperClassName="pum-dp-popper z-[400]"
-            popperPlacement="bottom-start"
+            popperPlacement="top"
             popperProps={{ strategy: 'fixed' }}
-            className="w-full bg-white border border-black/[0.12] rounded-xl px-3 py-2.5 text-sm
-              focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm cursor-pointer"
             wrapperClassName="w-full"
+            customInput={
+              <input
+                readOnly
+                inputMode="none"
+                className="w-full bg-white border border-black/[0.12] rounded-xl px-3 py-2.5 text-sm
+                  text-gray-800 focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm cursor-pointer"
+              />
+            }
           />
         </div>
         <p className="text-[10px] text-gray-400 mt-1.5">

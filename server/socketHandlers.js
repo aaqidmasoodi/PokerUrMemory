@@ -484,6 +484,7 @@ function setupSocketHandlers(io, rooms) {
         // The host starts manually once ≥2 are in; the join window is the auto-start fallback.
         room.expectedPlayerCount = connectedPlayers.length;
         room.matchedUserIds = connectedPlayers.map(p => p.userId);
+        room.invitedPlayers = connectedPlayers.map(p => ({ userId: p.userId, name: p.username }));
         room.manualStart = true;
         room.joinDeadline = Date.now() + JOIN_WINDOW_SECS * 1000;
         rooms.set(roomCode, room);

@@ -101,6 +101,8 @@ class GameRoom {
         this.manualStart = false;
         // Epoch ms when the join window closes (for the client countdown). null = no window.
         this.joinDeadline = null;
+        // Invited players for scheduled games: [{userId, name}] — used to show pending seats.
+        this.invitedPlayers = [];
     }
 
     addPlayer(socketId, name, userId = null, sittingOut = false) {
@@ -144,9 +146,14 @@ class GameRoom {
             isHost: p.isHost,
             disconnected: p.disconnected,
         }));
+        const joinedUserIds = new Set(players.map(p => p.userId).filter(Boolean));
+        const pendingPlayers = this.invitedPlayers
+            .filter(ip => !joinedUserIds.has(ip.userId))
+            .map(ip => ({ name: ip.name }));
         this.io.to(this.roomCode).emit('waitingRoom', {
             roomCode: this.roomCode,
             players,
+            pendingPlayers,
             count: players.length,
             target: this.expectedPlayerCount,
             canStart: players.length >= 2,

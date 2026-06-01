@@ -11,6 +11,12 @@
   width: 100%;
 }
 
+/* Keep popper full-width on small screens and centered */
+.pum-dp-popper {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
 /* Popper card */
 .pum-dp-popper .react-datepicker {
   font-family: inherit;
