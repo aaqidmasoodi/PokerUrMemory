@@ -176,7 +176,7 @@ function GameCard({
   const countdown = formatCountdown(game.scheduled_at, now);
   const startingNow = new Date(game.scheduled_at).getTime() - now <= 0;
 
-  const run = async (fn: () => Promise<{ error: string | null }>) => {
+  const run = async (fn: () => Promise<{ error?: string | null }>) => {
     setBusy(true);
     onError(null);
     const { error } = await fn();
@@ -359,7 +359,7 @@ function CreateGameSheet({
         <div className="pum-datepicker">
           <DatePicker
             selected={selectedDate}
-            onChange={(date) => date && setSelectedDate(date)}
+            onChange={(date: Date | null) => date && setSelectedDate(date)}
             showTimeSelect
             timeIntervals={1}
             minDate={roundUpTo15Min(new Date(Date.now() + 60 * 1000))}
