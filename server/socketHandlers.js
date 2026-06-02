@@ -1,5 +1,6 @@
 const { GameRoom } = require('./gameRoom');
 const { recordGameResult, recordHand, supabase } = require('./supabase');
+const { VALID_DIFFICULTIES } = require('./botPlayer');
 const crypto = require('crypto');
 
 // ── In-memory matchmaking queue ───────────────────────────────────────────────
@@ -592,6 +593,40 @@ function setupSocketHandlers(io, rooms) {
       }
     });
 
+    // ── Practice: start a game against computer players ───────────────────────
+
+    socket.on('practice:start', (payload, callback) => {
+      const cb = typeof callback === 'function' ? callback : () => {};
+      const userId = socket.data.userId;
+      if (!userId) { cb({ success: false, error: 'Not authenticated' }); return; }
+
+      // 1–3 bots → a 2–4 seat table (mirrors the human game's max of 4).
+      const requested = Number(payload && payload.bots);
+      const botCount = Math.max(1, Math.min(3, Number.isFinite(requested) ? requested : 1));
+
+      // Difficulty drives the bot heuristic; fall back to medium on anything unknown.
+      const reqDiff = payload && payload.difficulty;
+      const difficulty = VALID_DIFFICULTIES.includes(reqDiff) ? reqDiff : 'medium';
+
+      const roomCode = generateRoomCode(rooms);
+      const room = new GameRoom(roomCode, null, io);
+      room.isPractice = true;
+      room.expectedPlayerCount = botCount + 1; // bots + the human
+      room.matchedUserIds = [userId];          // only this user may join
+
+      const BOT_NAMES = ['Bluffy', 'Maverick', 'Royal', 'Joker', 'Lucky', 'Shark', 'Ace', 'Domino'];
+      const names = [...BOT_NAMES].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < botCount; i++) room.addBot(names[i], difficulty);
+
+      rooms.set(roomCode, room);
+
+      // Reuse the standard matchFound → joinMatchedGame pipeline. Once the human
+      // joins, players.size hits expectedPlayerCount and the hand auto-starts.
+      io.to(socket.id).emit('matchFound', { roomCode });
+      console.log(`[practice] ${userId} vs ${botCount} ${difficulty} bot(s) → room ${roomCode}`);
+      cb({ success: true, roomCode });
+    });
+
     // ── Join a matchmade room ─────────────────────────────────────────────────
 
     socket.on('joinMatchedGame', ({ roomCode, username }, callback) => {
@@ -620,24 +655,31 @@ function setupSocketHandlers(io, rooms) {
         })),
       });
 
-      room.onGameOver = (players) => {
-        recordGameResult({ gameSessionId: room.gameSessionId, players }).catch(err => {
-          console.error('[stats] recordGameResult failed:', err);
-        });
-        // Free up the host's scheduling slot so they can book new games.
-        supabase
-          .from('scheduled_games')
-          .update({ status: 'completed' })
-          .eq('room_code', roomCode.toUpperCase())
-          .eq('status', 'live')
-          .then(() => {});
-      };
+      // Practice games are solo training vs bots — never recorded to stats and
+      // never tied to a scheduled-game slot. On finish, just drop the room so it
+      // doesn't linger in the map (bots never disconnect to trigger cleanup).
+      if (room.isPractice) {
+        room.onGameOver = () => { rooms.delete(roomCode.toUpperCase()); };
+      } else {
+        room.onGameOver = (players) => {
+          recordGameResult({ gameSessionId: room.gameSessionId, players }).catch(err => {
+            console.error('[stats] recordGameResult failed:', err);
+          });
+          // Free up the host's scheduling slot so they can book new games.
+          supabase
+            .from('scheduled_games')
+            .update({ status: 'completed' })
+            .eq('room_code', roomCode.toUpperCase())
+            .eq('status', 'live')
+            .then(() => {});
+        };
 
-      room.onHandComplete = (snapshot) => {
-        recordHand({ gameSessionId: room.gameSessionId, ...snapshot }).catch(err => {
-          console.error('[stats] recordHand failed:', err);
-        });
-      };
+        room.onHandComplete = (snapshot) => {
+          recordHand({ gameSessionId: room.gameSessionId, ...snapshot }).catch(err => {
+            console.error('[stats] recordHand failed:', err);
+          });
+        };
+      }
 
       if (joinsMidGame) {
         // Show the spectator the live table; they'll be dealt in next hand.
@@ -746,6 +788,14 @@ function setupSocketHandlers(io, rooms) {
       const isEmpty = room.removePlayer(socket.id);
       socket.leave(data.roomCode);
 
+      // A practice table belongs to its single human. The moment they leave, tear
+      // the whole room down — the remaining seats are only bots.
+      if (room.isPractice) {
+        room.clearAllTimers();
+        rooms.delete(data.roomCode);
+        return;
+      }
+
       if (isEmpty) {
         room.clearAllTimers();
         rooms.delete(data.roomCode);
@@ -811,6 +861,14 @@ function setupSocketHandlers(io, rooms) {
           const playerName = room.getPlayer(socket.id)?.name ?? player.name;
           const wasActiveGame = room.gamePhase !== 'waiting';
           const isEmpty = room.removePlayer(socket.id);
+
+          // Practice room: the human didn't come back within the grace window, so
+          // close the whole table (bots must never outlive their human).
+          if (room.isPractice) {
+            room.clearAllTimers();
+            rooms.delete(roomCode);
+            return;
+          }
 
           if (isEmpty) {
             room.clearAllTimers();

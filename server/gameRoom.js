@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { evaluateHand, compareHands } = require('./handEvaluator');
+const { decideBotBetting, decideBotDiscards } = require('./botPlayer');
 
 const SUITS = ['♠', '♥', '♦', '♣'];
 const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -103,6 +104,47 @@ class GameRoom {
         this.joinDeadline = null;
         // Invited players for scheduled games: [{userId, name}] — used to show pending seats.
         this.invitedPlayers = [];
+        // Practice (vs-computer) mode: the table contains one human + bot players.
+        // Set by socketHandlers when the room is created.
+        this.isPractice = false;
+        // Deferred timers that drive bot turns — tracked so clearAllTimers() can
+        // cancel them and a torn-down room never fires a stray bot action.
+        this.botActionTimer = null;   // pending bot betting decision (one at a time)
+        this.botDrawTimers = [];      // pending bot discard decisions (one per bot)
+    }
+
+    // Seat a computer-controlled player. Bots have no socket and userId === null,
+    // so every per-bot io.to(botId).emit(...) is a harmless no-op. Never flagged
+    // host — the human owns the table.
+    addBot(name, difficulty = 'medium') {
+        if (this.players.size >= 4) return null;
+        const id = 'bot_' + crypto.randomBytes(4).toString('hex');
+        this.players.set(id, {
+            id,
+            name,
+            userId: null,
+            chips: 200,
+            hand: [],
+            currentBet: 0,
+            committed: 0,
+            folded: false,
+            isAllIn: false,
+            isHost: false,
+            disconnected: false,
+            disconnectTimeout: null,
+            sittingOut: false,
+            isBot: true,
+            difficulty,
+        });
+        return id;
+    }
+
+    // Count seated humans (non-bots). Used to tear a practice room down once its
+    // only human has gone — bots must never keep a room alive on their own.
+    humanCount() {
+        let n = 0;
+        this.players.forEach(p => { if (!p.isBot) n++; });
+        return n;
     }
 
     addPlayer(socketId, name, userId = null, sittingOut = false) {
@@ -635,6 +677,9 @@ class GameRoom {
                 this.endDrawPhaseNoDiscard();
             }
         }, 1000);
+
+        // Let any computer players choose and confirm their discards.
+        this.scheduleBotDiscards();
     }
 
     playerSelectCards(socketId, selectedIndices) {
@@ -814,6 +859,13 @@ class GameRoom {
             return;
         }
 
+        // A computer player acts on a short "thinking" delay instead of being
+        // prompted over a socket. No turn timer — the bot always answers.
+        if (currentPlayer.isBot) {
+            this.scheduleBotBettingAction(currentPlayer);
+            return;
+        }
+
         this.io.to(currentPlayer.id).emit('yourTurnNotification', {
             message: 'YOUR TURN!',
             phase: this.gamePhase,
@@ -836,6 +888,78 @@ class GameRoom {
         if (this.gamePhase === 'firstBetting' || this.gamePhase === 'secondBetting') {
             this.startTurnTimer();
         }
+    }
+
+    // Schedule a bot's betting move. The decision is computed immediately so the
+    // delay can reflect what the bot is about to do — folds are quick, raises take
+    // longer (just like a human deliberating). An occasional "long think" spike
+    // adds realism regardless of the action.
+    scheduleBotBettingAction(bot) {
+        if (this.botActionTimer) { clearTimeout(this.botActionTimer); this.botActionTimer = null; }
+        const botId = bot.id;
+
+        // Compute decision up-front so the delay reflects it.
+        const player = this.players.get(botId);
+        if (!player || player.folded) return;
+
+        let decision;
+        try {
+            decision = decideBotBetting(this, player, player.difficulty);
+        } catch (err) {
+            console.error('[bot] betting decision failed, folding:', err?.message ?? err);
+            decision = { action: 'fold', amount: 0 };
+        }
+
+        // Delay profile — folds are fast, raises take deliberation, occasional
+        // "long think" spikes (~12% of turns) simulate a human pausing.
+        let base, jitter;
+        if (decision.action === 'fold')        { base = 600;  jitter = 700; }
+        else if (decision.action === 'check')  { base = 800;  jitter = 900; }
+        else if (decision.action === 'call')   { base = 1000; jitter = 1200; }
+        else                                   { base = 1600; jitter = 1800; } // raise
+        const longThink = Math.random() < 0.12;
+        const delay = (longThink ? 3000 : base) + Math.floor(Math.random() * (longThink ? 2000 : jitter));
+
+        this.botActionTimer = setTimeout(() => {
+            this.botActionTimer = null;
+            if (this.players.size === 0) return;
+            if (this.gamePhase !== 'firstBetting' && this.gamePhase !== 'secondBetting') return;
+            const p = this.players.get(botId);
+            if (!p || p.folded) return;
+            if (this.getPlayerIndex(botId) !== this.currentPlayerIndex) return;
+            this.playerAction(botId, decision.action, decision.amount);
+        }, delay);
+    }
+
+    // During the draw phase, each active bot independently picks its discards and
+    // confirms. The final confirm (human or bot) triggers processAllDiscards; the
+    // 20s draw timer is the backstop if anyone stalls.
+    scheduleBotDiscards() {
+        this.botDrawTimers.forEach(t => clearTimeout(t));
+        this.botDrawTimers = [];
+        this.getActivePlayers().filter(p => p.isBot).forEach(bot => {
+            const botId = bot.id;
+            // Discarding: quick if standing pat, slower if swapping cards (deciding).
+            const discardCount = decideBotDiscards(this, bot).length;
+            const base = discardCount === 0 ? 800 : 1400;
+            const delay = base + Math.floor(Math.random() * 2000);
+            const t = setTimeout(() => {
+                if (this.gamePhase !== 'draw') return;
+                const player = this.players.get(botId);
+                if (!player || player.folded) return;
+
+                let indices = [];
+                try {
+                    indices = decideBotDiscards(this, player);
+                } catch (err) {
+                    console.error('[bot] discard decision failed, standing pat:', err?.message ?? err);
+                    indices = [];
+                }
+                this.playerSelectCards(botId, indices);
+                this.playerConfirmDiscard(botId);
+            }, delay);
+            this.botDrawTimers.push(t);
+        });
     }
 
     startTurnTimer() {
@@ -881,6 +1005,11 @@ class GameRoom {
         if (this.endGameTimer) { clearTimeout(this.endGameTimer); this.endGameTimer = null; }
         if (this.nextHandInterval) { clearInterval(this.nextHandInterval); this.nextHandInterval = null; }
         if (this.joinWindowTimer) { clearTimeout(this.joinWindowTimer); this.joinWindowTimer = null; }
+        if (this.botActionTimer) { clearTimeout(this.botActionTimer); this.botActionTimer = null; }
+        if (this.botDrawTimers && this.botDrawTimers.length) {
+            this.botDrawTimers.forEach(t => clearTimeout(t));
+            this.botDrawTimers = [];
+        }
     }
 
     startShowdown() {

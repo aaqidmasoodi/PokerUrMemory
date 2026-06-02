@@ -11,6 +11,7 @@ import { SettingsScreen } from "./screens/SettingsScreen";
 import { RulesScreen, RulesBody, AboutScreen } from "./screens/RulesScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { ScheduledGamesScreen } from "./screens/ScheduledGamesScreen";
+import { PracticeSetupScreen } from "./screens/PracticeSetupScreen";
 import { WaitingRoomScreen } from "./screens/WaitingRoomScreen";
 import { IncomingInviteModal } from "./components/IncomingInviteModal";
 import { PlayerStatsModal } from "./components/PlayerStatsModal";
@@ -23,7 +24,7 @@ import { cn } from "./lib/utils";
 import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X, WifiOff, BookOpen } from "lucide-react";
 
 
-type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules' | 'about' | 'lobby' | 'scheduled';
+type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'rules' | 'about' | 'lobby' | 'scheduled' | 'practice';
 
 let _globalMuted = false;
 function playSound(file: string, volume = 0.55) {
@@ -475,7 +476,7 @@ export default function App() {
     inGame, playerId, gameState,
     myTurnData, actionLog, timer, showdownData, nextHandCountdown, discardRevealData, selectedDrawCards, hasDiscarded,
     turnTimer, gameLogs, disconnectNotice, roomClosedMsg, dismissRoomClosed,
-    matchTimedOut, findGame, cancelSearch,
+    matchTimedOut, findGame, cancelSearch, startPractice,
     playAction, toggleDrawCard, confirmDiscard, leaveGame,
     lobby, lobbyTransitioning, incomingInvite, inviteDeclinedNotice,
     registerUser, createLobby, leaveLobby, inviteToLobby, acceptInvite, declineInvite, startLobby, startScheduledGame,
@@ -706,6 +707,13 @@ export default function App() {
           onLaunchGame={startScheduledGame}
         />
       );
+    } else if (appScreen === 'practice') {
+      screen = (
+        <PracticeSetupScreen
+          onBack={() => setAppScreen('menu')}
+          onStart={(bots, difficulty) => startPractice(bots, difficulty)}
+        />
+      );
     } else if (appScreen === 'profile') {
       screen = (
         <ProfileScreen profile={profile!} onSave={updateProfile} onBack={() => setAppScreen('menu')} />
@@ -729,6 +737,7 @@ export default function App() {
         <MainMenuScreen
           profile={profile!}
           onStartGame={() => setAppScreen('matchmaking')}
+          onPlayWithComputer={() => setAppScreen('practice')}
           onPlayWithFriends={() => setAppScreen('lobby')}
           onScheduledGames={() => setAppScreen('scheduled')}
           onProfile={() => setAppScreen('profile')}

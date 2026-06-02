@@ -409,6 +409,13 @@ export function useSocket() {
     socket.emit('cancelSearch');
   }, [socket]);
 
+  // Start a solo game against computer players. The server creates the table and
+  // emits matchFound, so the existing match-join pipeline takes it from there.
+  const startPractice = useCallback((bots = 1, difficulty: 'easy' | 'medium' | 'hard' = 'medium') => {
+    if (!socket) return;
+    socket.emit('practice:start', { bots, difficulty });
+  }, [socket]);
+
   const playAction = useCallback((action: string, amount = 0) => {
     if (!socket) return;
     socket.emit('playerAction', { roomCode, action, amount });
@@ -583,6 +590,7 @@ export function useSocket() {
     dismissRoomClosed,
     findGame,
     cancelSearch,
+    startPractice,
     playAction,
     toggleDrawCard,
     confirmDiscard,

@@ -1,11 +1,12 @@
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
-import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock } from 'lucide-react';
+import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Bot } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function MainMenuScreen({
   profile,
   onStartGame,
+  onPlayWithComputer,
   onPlayWithFriends,
   onScheduledGames,
   onProfile,
@@ -15,6 +16,7 @@ export function MainMenuScreen({
 }: {
   profile: Profile;
   onStartGame: () => void;
+  onPlayWithComputer: () => void;
   onPlayWithFriends: () => void;
   onScheduledGames: () => void;
   onProfile: () => void;
@@ -129,6 +131,22 @@ export function MainMenuScreen({
             >
               <Spade className="w-4 h-4 lg:w-5 lg:h-5 xl:w-6 xl:h-6 2xl:w-7 2xl:h-7" />
               Quick Play
+            </button>
+
+            {/* Play against computer opponents */}
+            <button
+              onClick={onPlayWithComputer}
+              className="w-full h-12 sm:h-12 lg:h-14 xl:h-18 2xl:h-20 rounded-2xl
+                font-display tracking-[0.12em] uppercase
+                text-[11px] sm:text-[11px] lg:text-[12px] xl:text-[14px] 2xl:text-[16px]
+                font-bold bg-white text-[color:var(--color-blue)]
+                border border-[color:var(--color-blue)]/30
+                shadow-md hover:bg-white/90 active:scale-[0.97] transition-all
+                flex items-center justify-center gap-1.5 lg:gap-2 xl:gap-3
+                landscape:h-9 landscape:text-[10px]"
+            >
+              <Bot className="w-3.5 h-3.5 lg:w-4 lg:h-4 xl:w-5 xl:h-5 2xl:w-6 2xl:h-6 shrink-0" />
+              Play vs Computer
             </button>
 
             {/* Secondary CTAs — Play with Friends + Schedule on the same row */}
