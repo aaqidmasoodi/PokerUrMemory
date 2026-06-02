@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
-import { ChevronLeft, CalendarPlus, Clock, Users, X, Crown, LogOut } from 'lucide-react';
+import { ChevronLeft, CalendarPlus, Clock, Users, X, Crown, LogOut, History } from 'lucide-react';
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
 import { Avatar } from '../components/Avatar';
@@ -10,10 +10,12 @@ import {
   cancelScheduledGame,
   reserveSpot,
   cancelReservation,
+  fetchMyGameHistory,
   maxScheduleDate,
   formatLocalDateTime,
   localTimeZoneLabel,
   formatCountdown,
+  type ScheduledGame,
   type ScheduledGameWithSeats,
 } from '../lib/scheduledGames';
 
@@ -42,6 +44,7 @@ export function ScheduledGamesScreen({
 }) {
   const { games, loading, refetch } = useScheduledGames(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [showExpired, setShowExpired] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Ticking clock for live countdowns.
@@ -79,15 +82,25 @@ export function ScheduledGamesScreen({
         <div className="flex-1 flex justify-center pointer-events-none">
           <p className="font-display text-[11px] tracking-[0.3em] uppercase text-white font-semibold">Scheduled Games</p>
         </div>
-        <button
-          onClick={() => { setError(null); setShowCreate(true); }}
-          className="flex items-center gap-1.5 h-9 pl-2.5 pr-3 rounded-full
-            bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]
-            border border-black/10 shadow-md active:scale-95 transition-transform shrink-0"
-        >
-          <CalendarPlus className="w-3.5 h-3.5 text-white" />
-          <span className="font-display text-[10px] font-bold text-white tracking-widest uppercase">Schedule</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setShowExpired(true)}
+            className="w-9 h-9 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm
+              flex items-center justify-center active:scale-95 transition-transform"
+            title="My expired games"
+          >
+            <History className="w-4 h-4 text-white/70" />
+          </button>
+          <button
+            onClick={() => { setError(null); setShowCreate(true); }}
+            className="flex items-center gap-1.5 h-9 pl-2.5 pr-3 rounded-full
+              bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]
+              border border-black/10 shadow-md active:scale-95 transition-transform"
+          >
+            <CalendarPlus className="w-3.5 h-3.5 text-white" />
+            <span className="font-display text-[10px] font-bold text-white tracking-widest uppercase">Schedule</span>
+          </button>
+        </div>
       </div>
 
       {/* Body */}
@@ -143,6 +156,13 @@ export function ScheduledGamesScreen({
         <CreateGameSheet
           profile={profile}
           onClose={() => setShowCreate(false)}
+        />
+      )}
+
+      {showExpired && (
+        <ExpiredGamesSheet
+          userId={profile.id}
+          onClose={() => setShowExpired(false)}
         />
       )}
     </div>
@@ -297,6 +317,80 @@ function GameCard({
         )}
       </div>
     </li>
+  );
+}
+
+// ─── Expired games sheet ─────────────────────────────────────────────────────
+
+function ExpiredGamesSheet({ userId, onClose }: { userId: string; onClose: () => void }) {
+  const [games, setGames] = useState<ScheduledGame[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMyGameHistory(userId).then(data => {
+      setGames(data);
+      setLoading(false);
+    });
+  }, [userId]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full sm:max-w-sm bg-white rounded-t-3xl sm:rounded-3xl border-t sm:border border-white/20 shadow-2xl p-5 max-h-[70dvh] flex flex-col"
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4 shrink-0">
+          <h3 className="font-display text-base font-bold text-gray-800 flex items-center gap-2">
+            <History className="w-4 h-4 text-gray-500" />
+            History
+          </h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 grid place-items-center rounded-full bg-black/[0.06] active:scale-90 transition-all"
+          >
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 min-h-0">
+          {loading ? (
+            <div className="flex items-center justify-center py-10 gap-2">
+              <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-500 rounded-full animate-spin" />
+              <p className="text-[11px] text-gray-400 font-display tracking-wider uppercase">Loading…</p>
+            </div>
+          ) : games.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+              <Clock className="w-8 h-8 text-gray-300" />
+              <p className="text-[12px] text-gray-400">No game history yet.</p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {games.map(g => (
+                <li key={g.id} className="flex items-center justify-between rounded-xl bg-gray-50 border border-gray-100 px-3.5 py-3">
+                  <div>
+                    <p className="text-[12px] font-semibold text-gray-700">{formatLocalDateTime(g.scheduled_at)}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{g.max_players} players</p>
+                  </div>
+                  <span className={`text-[9px] font-display tracking-widest uppercase rounded-full px-2 py-0.5 border ${
+                    g.status === 'completed'
+                      ? 'text-green-600 bg-green-50 border-green-100'
+                      : g.status === 'cancelled'
+                      ? 'text-gray-400 bg-gray-50 border-gray-100'
+                      : 'text-red-400 bg-red-50 border-red-100'
+                  }`}>
+                    {g.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

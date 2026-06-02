@@ -460,7 +460,7 @@ function FriendsPanel({
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Search username"
+              placeholder="Search friends"
               className="w-full bg-white border border-black/[0.10] rounded-full pl-9 pr-3 py-2 text-[12px] focus:border-[color:var(--color-blue)]/70 outline-none shadow-sm"
             />
           </div>

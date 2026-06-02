@@ -59,8 +59,10 @@ export async function createScheduledGame(
 }
 
 export async function cancelScheduledGame(gameId: string): Promise<{ error: string | null }> {
-  // Host-only delete (RLS). Cascades reservations.
-  const { error } = await supabase.from('scheduled_games').delete().eq('id', gameId);
+  const { error } = await supabase
+    .from('scheduled_games')
+    .update({ status: 'cancelled' })
+    .eq('id', gameId);
   return { error: error?.message ?? null };
 }
 
@@ -90,6 +92,17 @@ export async function kickPlayer(
 }
 
 // ─── Read ────────────────────────────────────────────────────────────────────
+
+export async function fetchMyGameHistory(userId: string): Promise<ScheduledGame[]> {
+  const { data, error } = await supabase
+    .from('scheduled_games')
+    .select('*')
+    .eq('host_id', userId)
+    .in('status', ['expired', 'cancelled', 'completed'])
+    .order('scheduled_at', { ascending: false });
+  if (error) console.error('[scheduled] fetch game history failed', error);
+  return (data as ScheduledGame[]) ?? [];
+}
 
 export async function fetchOpenGames(): Promise<ScheduledGameWithSeats[]> {
   const { data: games, error } = await supabase
