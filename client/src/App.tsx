@@ -154,20 +154,20 @@ const SEAT_CFG = {
 } as const;
 
 function PlayerSeat({
-  name, chips, bet, active, avatar, folded, turnTimeLeft, size = "normal",
+  name, chips, bet, active, avatar, folded, turnTimeLeft, turnTimeMax = 30, size = "normal",
   flashLabel, disconnected,
 }: {
   name: string; chips: number; bet?: number; active?: boolean;
-  avatar: string; folded?: boolean; turnTimeLeft?: number | null;
+  avatar: string; folded?: boolean; turnTimeLeft?: number | null; turnTimeMax?: number;
   size?: "normal" | "compact" | "mini";
   flashLabel?: string; disconnected?: boolean;
 }) {
   const cfg = SEAT_CFG[size];
   const showRing = active && !folded && turnTimeLeft != null;
-  const pct  = showRing ? (turnTimeLeft! / 30) * 100 : 100;
+  const pct  = showRing ? (turnTimeLeft! / turnTimeMax) * 100 : 100;
   const timerColor = showRing
-    ? turnTimeLeft! > 18 ? "#22c55e"
-    : turnTimeLeft! > 10 ? "#f59e0b"
+    ? pct > 60 ? "#22c55e"
+    : pct > 33 ? "#f59e0b"
     : "#ef4444"
     : "#e2e8f0";
 
@@ -181,7 +181,7 @@ function PlayerSeat({
         padding: `${cfg.ringPad}px`,
         borderRadius: '9999px',
         background: `conic-gradient(${timerColor} ${pct.toFixed(1)}%, #e2e8f0 ${pct.toFixed(1)}%)`,
-        boxShadow: turnTimeLeft! <= 10 ? `0 0 18px 3px ${timerColor}99` : undefined,
+        boxShadow: pct <= 33 ? `0 0 18px 3px ${timerColor}99` : undefined,
       }
     : showAction
     ? { padding: '3px', borderRadius: '9999px', background: actionBgColor, boxShadow: '0 0 20px rgba(0,0,0,0.5)' }
@@ -925,8 +925,8 @@ export default function App() {
       {isShowdown && showdownData && (
         <div className="fixed inset-0 z-[150] pointer-events-none flex items-center justify-center">
           <div className="bg-white/95 border-y border-[color:var(--color-gold)]/40 backdrop-blur-md py-4 w-full text-center shadow-lg">
-            <h2 className="font-display text-base sm:text-3xl font-bold gold-text mb-2">
-              {showdownData.winner.playerName} Wins!
+            <h2 className="font-display text-base sm:text-3xl font-bold gold-text mb-2 flex items-center justify-center gap-1.5 flex-wrap">
+              <PlayerNameDisplay name={showdownData.winner.playerName} nameCls="text-base sm:text-3xl" /> Wins!
             </h2>
             {showdownData.isBluff ? (
               <p className="text-gray-500 italic text-xs">Opponent folded</p>
@@ -937,7 +937,7 @@ export default function App() {
                   return (
                     <div key={i} className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] sm:text-xs",
                       isWinner ? "bg-[color:var(--color-gold)]/15 border border-[color:var(--color-gold)]/40" : "bg-black/5")}>
-                      <span className="font-bold text-foreground">{h.playerName}:</span>
+                      <span className="font-bold text-foreground flex items-center gap-0.5"><PlayerNameDisplay name={h.playerName} nameCls="text-[10px] sm:text-xs" />:</span>
                       <span className="text-[color:var(--color-chip-teal)] font-bold">{h.description ?? h.rankName}</span>
                     </div>
                   );
@@ -1058,6 +1058,7 @@ export default function App() {
       >
         {opponents.map((opp, idx) => {
           const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
+          const oppTurnTimeMax  = turnTimer?.playerId === opp.id ? (turnTimer.maxTime ?? 30) : 30;
           const seatSize = opponents.length >= 3 ? "mini" : opponents.length >= 2 ? "compact" : "normal";
           const cardSize = "sm";
           const cardSpacing = opponents.length >= 3 ? "-space-x-3" : opponents.length >= 2 ? "-space-x-2" : "-space-x-1";
@@ -1077,6 +1078,7 @@ export default function App() {
                   folded={opp.folded}
                   disconnected={opp.disconnected}
                   turnTimeLeft={oppTurnTimeLeft}
+                  turnTimeMax={oppTurnTimeMax}
                   size={seatSize}
                   flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
                 />

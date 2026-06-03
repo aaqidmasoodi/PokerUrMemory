@@ -110,6 +110,7 @@ class GameRoom {
         // Deferred timers that drive bot turns — tracked so clearAllTimers() can
         // cancel them and a torn-down room never fires a stray bot action.
         this.botActionTimer = null;   // pending bot betting decision (one at a time)
+        this.botTimerInterval = null; // countdown ticker that drives the bot's turn-timer ring
         this.botDrawTimers = [];      // pending bot discard decisions (one per bot)
     }
 
@@ -895,10 +896,11 @@ class GameRoom {
     // longer (just like a human deliberating). An occasional "long think" spike
     // adds realism regardless of the action.
     scheduleBotBettingAction(bot) {
+        // Clear any in-flight action + countdown ticker.
         if (this.botActionTimer) { clearTimeout(this.botActionTimer); this.botActionTimer = null; }
-        const botId = bot.id;
+        if (this.botTimerInterval) { clearInterval(this.botTimerInterval); this.botTimerInterval = null; }
 
-        // Compute decision up-front so the delay reflects it.
+        const botId = bot.id;
         const player = this.players.get(botId);
         if (!player || player.folded) return;
 
@@ -916,12 +918,31 @@ class GameRoom {
         if (decision.action === 'fold')        { base = 600;  jitter = 700; }
         else if (decision.action === 'check')  { base = 800;  jitter = 900; }
         else if (decision.action === 'call')   { base = 1000; jitter = 1200; }
-        else                                   { base = 1600; jitter = 1800; } // raise
+        else                                   { base = 1600; jitter = 1800; }
         const longThink = Math.random() < 0.12;
         const delay = (longThink ? 3000 : base) + Math.floor(Math.random() * (longThink ? 2000 : jitter));
 
+        // Drive the turn-timer ring on every client. maxTime lets the client
+        // scale the ring arc correctly rather than always assuming /30.
+        const maxTime = Math.ceil(delay / 1000);
+        let timeLeft = maxTime;
+        this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, timeLeft, maxTime });
+
+        this.botTimerInterval = setInterval(() => {
+            timeLeft--;
+            if (timeLeft > 0) {
+                this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, timeLeft, maxTime });
+            } else {
+                clearInterval(this.botTimerInterval);
+                this.botTimerInterval = null;
+            }
+        }, 1000);
+
         this.botActionTimer = setTimeout(() => {
             this.botActionTimer = null;
+            if (this.botTimerInterval) { clearInterval(this.botTimerInterval); this.botTimerInterval = null; }
+            this.io.to(this.roomCode).emit('turnTimer', null);
+
             if (this.players.size === 0) return;
             if (this.gamePhase !== 'firstBetting' && this.gamePhase !== 'secondBetting') return;
             const p = this.players.get(botId);
@@ -992,6 +1013,10 @@ class GameRoom {
             clearInterval(this.turnTimer);
             this.turnTimer = null;
         }
+        if (this.botTimerInterval) {
+            clearInterval(this.botTimerInterval);
+            this.botTimerInterval = null;
+        }
         this.io.to(this.roomCode).emit('turnTimer', null);
     }
 
@@ -1006,6 +1031,7 @@ class GameRoom {
         if (this.nextHandInterval) { clearInterval(this.nextHandInterval); this.nextHandInterval = null; }
         if (this.joinWindowTimer) { clearTimeout(this.joinWindowTimer); this.joinWindowTimer = null; }
         if (this.botActionTimer) { clearTimeout(this.botActionTimer); this.botActionTimer = null; }
+        if (this.botTimerInterval) { clearInterval(this.botTimerInterval); this.botTimerInterval = null; }
         if (this.botDrawTimers && this.botDrawTimers.length) {
             this.botDrawTimers.forEach(t => clearTimeout(t));
             this.botDrawTimers = [];

@@ -124,9 +124,11 @@ export function RulesBody() {
         steps={[
           'After the first betting round, you may discard up to 4 cards and draw new ones.',
           'All discarded cards are shown face up to every player: another memory moment.',
-          'If you draw 2+ cards, the middle replacement card is shown to opponents.',
-          'A single drawn card stays hidden: mystery kept!',
+          'If you draw 2+ cards, one replacement card is shown face-up to opponents.',
+          'A single drawn card stays hidden — mystery kept!',
           'Stand pat (keep all 5) if you\'re happy with your hand.',
+          'Discarding your hidden card leaves all four face-up cards in your hand — cards opponents already memorised. They end up knowing more about your final hand than if you had swapped a face-up card instead.',
+          'Discarding all four face-up cards is the most secretive play: opponents see only the one shown replacement and remember nothing else about your new hand.',
         ]}
       />
 

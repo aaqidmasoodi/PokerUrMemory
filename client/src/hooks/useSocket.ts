@@ -131,7 +131,7 @@ export function useSocket() {
   const [discardRevealData, setDiscardRevealData] = useState<DiscardRevealData | null>(null);
   const [selectedDrawCards, setSelectedDrawCards] = useState<number[]>([]);
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
-  const [turnTimer, setTurnTimer] = useState<{ playerId: string; timeLeft: number } | null>(null);
+  const [turnTimer, setTurnTimer] = useState<{ playerId: string; timeLeft: number; maxTime?: number } | null>(null);
   const [gameLogs, setGameLogs] = useState<string[]>([]);
   const [disconnectNotice, setDisconnectNotice] = useState<{ playerName: string; reconnecting: boolean } | null>(null);
   const [roomClosedMsg, setRoomClosedMsg] = useState<string | null>(null);
@@ -272,7 +272,7 @@ export function useSocket() {
     newSocket.on('roomClosed', onRoomClosed);
     newSocket.on('gameState', onGameState);
 
-    newSocket.on('turnTimer', (data: { playerId: string; timeLeft: number } | null) => {
+    newSocket.on('turnTimer', (data: { playerId: string; timeLeft: number; maxTime?: number } | null) => {
       setTurnTimer(data);
     });
 
