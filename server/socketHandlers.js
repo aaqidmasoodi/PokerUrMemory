@@ -614,7 +614,9 @@ function setupSocketHandlers(io, rooms) {
       room.expectedPlayerCount = botCount + 1; // bots + the human
       room.matchedUserIds = [userId];          // only this user may join
 
-      const BOT_NAMES = ['Bluffy', 'Maverick', 'Royal', 'Joker', 'Lucky', 'Shark', 'Ace', 'Domino'];
+      // Exactly three bot identities — shuffled so seat order is random,
+      // then sliced to botCount. All assigned names are always unique.
+      const BOT_NAMES = ['PokerSolitaire', 'PokerPatience', 'PokerAA88'];
       const names = [...BOT_NAMES].sort(() => Math.random() - 0.5);
       for (let i = 0; i < botCount; i++) room.addBot(names[i], difficulty);
 

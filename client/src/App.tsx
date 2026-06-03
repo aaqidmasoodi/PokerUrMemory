@@ -90,6 +90,61 @@ function TimerBadge({ phase, timer }: { phase: Phase; timer?: number | null }) {
   );
 }
 
+// ─── Bot name display ─────────────────────────────────────────────────────────
+// "PokerAA88" is rendered as "Poker" + four inline mini card chips (A♥ A♦ 8♥ 8♦).
+// Long names (PokerSolitaire / PokerPatience) get a smaller font so they fit the
+// seat pill without truncation.
+
+const DEAD_MAN_BOT = 'PokerAA88';
+const DEAD_MAN_CARDS: { rank: string; suit: string; red: boolean }[] = [
+  { rank: 'A', suit: '♥', red: true  },
+  { rank: 'A', suit: '♦', red: true  },
+  { rank: '8', suit: '♥', red: true  },
+  { rank: '8', suit: '♦', red: true  },
+];
+
+function PlayerNameDisplay({ name, nameCls }: { name: string; nameCls: string }) {
+  if (name === DEAD_MAN_BOT) {
+    return (
+      <span className="flex flex-col leading-none gap-px">
+        <span className={cn('font-display font-semibold uppercase text-gray-900', nameCls.replace(/max-w-\S+/g, '').replace(/text-\S+/g, ''), 'text-[7px] sm:text-[10px] lg:text-[13px]')}>
+          Poker
+        </span>
+        <span className="flex gap-[1px] items-center">
+          {DEAD_MAN_CARDS.map((c, i) => (
+            <span
+              key={i}
+              className={cn(
+                'inline-flex flex-col items-center leading-none font-bold bg-white border border-gray-300 rounded-[2px]',
+                'shadow-[0_1px_2px_rgba(0,0,0,0.18)]',
+                'text-[4px] sm:text-[6px] lg:text-[7px] px-px py-px',
+                c.red ? 'text-red-600' : 'text-gray-900',
+              )}
+            >
+              <span>{c.rank}</span>
+              <span>{c.suit}</span>
+            </span>
+          ))}
+        </span>
+      </span>
+    );
+  }
+
+  // Long bot names — reduce font so they don't overflow the pill.
+  const isLong = name.length > 9;
+  const fontOverride = isLong
+    ? nameCls.replace(/text-\[8px\]/g, 'text-[6px]').replace(/sm:text-\[11px\]/g, 'sm:text-[9px]').replace(/lg:text-\[14px\]/g, 'lg:text-[13px]')
+             .replace(/text-\[7px\]/g, 'text-[5px]').replace(/lg:text-\[10px\]/g, 'lg:text-[9px]')
+             .replace(/text-\[6px\]/g, 'text-[5px]').replace(/lg:text-\[9px\]/g, 'lg:text-[8px]')
+    : nameCls;
+
+  return (
+    <span className={cn('font-display font-semibold uppercase text-gray-900 leading-tight', fontOverride, isLong && 'break-all')}>
+      {name}
+    </span>
+  );
+}
+
 // ─── Player seat ─────────────────────────────────────────────────────────────
 
 const SEAT_CFG = {
@@ -180,9 +235,7 @@ function PlayerSeat({
                 {showRing ? <span className="font-black tabular-nums">{turnTimeLeft}</span> : disconnected ? <WifiOff className="w-3 h-3" /> : avatar}
               </div>
               <div className="flex flex-col leading-none">
-                <span className={cn("font-display font-semibold uppercase truncate text-gray-900", cfg.name)}>
-                  {name}
-                </span>
+                <PlayerNameDisplay name={name} nameCls={cfg.name} />
                 <span className={cn("font-bold text-gray-700", cfg.chips)}>
                   {chips.toLocaleString()}pts
                 </span>
@@ -1019,7 +1072,7 @@ export default function App() {
               >
                 <PlayerSeat
                   name={opp.name} chips={opp.chips} bet={opp.currentBet}
-                  avatar={opp.name.charAt(0).toUpperCase()}
+                  avatar={!opp.userId ? '🤖' : opp.name.charAt(0).toUpperCase()}
                   active={opp.isCurrentTurn && !isShowdown && !opp.disconnected && !opp.sittingOut}
                   folded={opp.folded}
                   disconnected={opp.disconnected}
