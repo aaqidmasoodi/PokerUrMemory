@@ -447,4 +447,12 @@
   }
 
   .pulse-gold { animation: glow-pulse 2s ease-in-out infinite; }
+
+  @keyframes phone-rotate {
+    0%, 20%   { transform: rotate(0deg) scale(1); }
+    45%, 65%  { transform: rotate(90deg) scale(1.08); }
+    85%, 100% { transform: rotate(0deg) scale(1); }
+  }
+
+  .pum-phone-rotate { animation: phone-rotate 2.8s ease-in-out infinite; }
 }
