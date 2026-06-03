@@ -148,12 +148,13 @@ class GameRoom {
         return n;
     }
 
-    addPlayer(socketId, name, userId = null, sittingOut = false) {
+    addPlayer(socketId, name, userId = null, sittingOut = false, avatarUrl = null) {
         if (this.players.size >= 4) return false;
         this.players.set(socketId, {
             id: socketId,
             name: name,
             userId: userId,
+            avatarUrl: avatarUrl,
             chips: 200,
             hand: [],
             currentBet: 0,
@@ -345,6 +346,7 @@ class GameRoom {
         return {
             id: player.id,
             userId: player.userId,
+            avatarUrl: player.avatarUrl ?? null,
             name: player.name,
             chips: player.chips,
             currentBet: player.currentBet,

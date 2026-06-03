@@ -70,6 +70,7 @@ export interface PlayerSeatProps {
   bet?: number;
   active?: boolean;
   avatar: string;
+  avatarUrl?: string | null;
   folded?: boolean;
   turnTimeLeft?: number | null;
   turnTimeMax?: number;
@@ -79,7 +80,7 @@ export interface PlayerSeatProps {
 }
 
 export function PlayerSeat({
-  name, chips, bet, active, avatar, folded, turnTimeLeft, turnTimeMax = 30, size = "normal",
+  name, chips, bet, active, avatar, avatarUrl, folded, turnTimeLeft, turnTimeMax = 30, size = "normal",
   flashLabel, disconnected,
 }: PlayerSeatProps) {
   const cfg = SEAT_CFG[size];
@@ -146,13 +147,20 @@ export function PlayerSeat({
             <>
               <div
                 className={cn(
-                  "shrink-0 rounded-full grid place-items-center font-display font-bold text-white",
+                  "shrink-0 rounded-full grid place-items-center font-display font-bold text-white overflow-hidden",
                   cfg.avatar,
-                  !showRing && "bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)]",
+                  // Gold gradient only when no real image and not in timer-ring mode
+                  !showRing && !(avatarUrl && !disconnected) && "bg-gradient-to-br from-[color:var(--color-gold)] to-[color:var(--color-gold-soft)]",
                 )}
                 style={showRing ? { backgroundColor: timerColor } : undefined}
               >
-                {showRing ? <span className="font-black tabular-nums">{turnTimeLeft}</span> : disconnected ? <WifiOff className="w-3 h-3" /> : avatar}
+                {showRing
+                  ? <span className="font-black tabular-nums">{turnTimeLeft}</span>
+                  : disconnected
+                    ? <WifiOff className="w-3 h-3" />
+                    : avatarUrl
+                      ? <img src={avatarUrl} alt={name} className="w-full h-full object-cover" referrerPolicy="no-referrer" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                      : avatar}
               </div>
               <div className="flex flex-col leading-none">
                 <PlayerNameDisplay name={name} nameCls={cfg.name} />

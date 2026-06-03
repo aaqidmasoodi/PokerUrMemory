@@ -928,6 +928,7 @@ export default function App() {
                   <PlayerSeat
                     name={opp.name} chips={opp.chips} bet={opp.currentBet}
                     avatar={!opp.userId ? '🤖' : opp.name.charAt(0).toUpperCase()}
+                    avatarUrl={opp.avatarUrl}
                     active={opp.isCurrentTurn && !isShowdown && !opp.disconnected && !opp.sittingOut}
                     folded={opp.folded}
                     disconnected={opp.disconnected}
@@ -1002,6 +1003,7 @@ export default function App() {
             <PlayerSeat
               name={myPlayer.name} chips={myPlayer.chips} bet={myPlayer.currentBet}
               avatar={myPlayer.name.charAt(0).toUpperCase()}
+              avatarUrl={profile?.avatar_url}
               active={myTurnActive} folded={myPlayer.folded}
               turnTimeLeft={heroTurnTimeLeft}
               flashLabel={flashAction?.playerId === myPlayer.id ? flashAction.label : undefined}

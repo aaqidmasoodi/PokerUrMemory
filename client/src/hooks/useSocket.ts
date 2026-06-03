@@ -16,6 +16,7 @@ export interface CardData {
 export interface Player {
   id: string;
   userId?: string | null;
+  avatarUrl?: string | null;
   name: string;
   chips: number;
   currentBet: number;

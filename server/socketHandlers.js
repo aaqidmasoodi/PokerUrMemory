@@ -645,7 +645,8 @@ function setupSocketHandlers(io, rooms) {
 
       // A player joining while a hand is already running sits out until the next deal.
       const joinsMidGame = room.gamePhase !== 'waiting';
-      const added = room.addPlayer(socket.id, username, userId, joinsMidGame);
+      const me = socketUsers.get(socket.id);
+      const added = room.addPlayer(socket.id, username, userId, joinsMidGame, me?.avatarUrl ?? null);
       if (!added) { cb({ success: false, error: 'Room is full' }); return; }
       socket.join(roomCode.toUpperCase());
 
