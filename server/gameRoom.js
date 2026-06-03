@@ -912,26 +912,26 @@ class GameRoom {
             decision = { action: 'fold', amount: 0 };
         }
 
-        // Delay profile — folds are fast, raises take deliberation, occasional
-        // "long think" spikes (~12% of turns) simulate a human pausing.
+        // Minimum 3 seconds so the turn-timer ring visibly counts down before
+        // the bot acts — folds are slightly quicker, raises take longer.
         let base, jitter;
-        if (decision.action === 'fold')        { base = 600;  jitter = 700; }
-        else if (decision.action === 'check')  { base = 800;  jitter = 900; }
-        else if (decision.action === 'call')   { base = 1000; jitter = 1200; }
-        else                                   { base = 1600; jitter = 1800; }
-        const longThink = Math.random() < 0.12;
-        const delay = (longThink ? 3000 : base) + Math.floor(Math.random() * (longThink ? 2000 : jitter));
+        if (decision.action === 'fold')        { base = 2000; jitter = 2000; }
+        else if (decision.action === 'check')  { base = 2500; jitter = 2500; }
+        else if (decision.action === 'call')   { base = 3000; jitter = 3000; }
+        else                                   { base = 3500; jitter = 3500; }
+        const longThink = Math.random() < 0.15;
+        const delay = (longThink ? 6000 : base) + Math.floor(Math.random() * (longThink ? 4000 : jitter));
 
-        // Drive the turn-timer ring on every client. maxTime lets the client
-        // scale the ring arc correctly rather than always assuming /30.
-        const maxTime = Math.ceil(delay / 1000);
-        let timeLeft = maxTime;
-        this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, timeLeft, maxTime });
+        // Show a normal 30-second countdown ring (same as a human turn).
+        // The bot acts at a random delay within that window — the timer just
+        // gets cleared early when the action fires.
+        let timeLeft = 30;
+        this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, timeLeft });
 
         this.botTimerInterval = setInterval(() => {
             timeLeft--;
             if (timeLeft > 0) {
-                this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, timeLeft, maxTime });
+                this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, timeLeft });
             } else {
                 clearInterval(this.botTimerInterval);
                 this.botTimerInterval = null;

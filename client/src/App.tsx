@@ -1058,7 +1058,6 @@ export default function App() {
       >
         {opponents.map((opp, idx) => {
           const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
-          const oppTurnTimeMax  = turnTimer?.playerId === opp.id ? (turnTimer.maxTime ?? 30) : 30;
           const seatSize = opponents.length >= 3 ? "mini" : opponents.length >= 2 ? "compact" : "normal";
           const cardSize = "sm";
           const cardSpacing = opponents.length >= 3 ? "-space-x-3" : opponents.length >= 2 ? "-space-x-2" : "-space-x-1";
@@ -1078,7 +1077,6 @@ export default function App() {
                   folded={opp.folded}
                   disconnected={opp.disconnected}
                   turnTimeLeft={oppTurnTimeLeft}
-                  turnTimeMax={oppTurnTimeMax}
                   size={seatSize}
                   flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
                 />
