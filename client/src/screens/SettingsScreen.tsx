@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, Volume2, VolumeX, LogOut, MessageCircle, ChevronRight, Shield } from 'lucide-react';
+import { ChevronLeft, Volume2, VolumeX, LogOut, MessageCircle, ChevronRight, Shield, LayoutGrid } from 'lucide-react';
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
 import { Avatar } from '../components/Avatar';
@@ -9,12 +9,14 @@ export function SettingsScreen({
   profile,
   muted,
   onToggleMute,
+  onOpenLayout,
   onBack,
   onSignOut,
 }: {
   profile: Profile;
   muted: boolean;
   onToggleMute: () => void;
+  onOpenLayout: () => void;
   onBack: () => void;
   onSignOut: () => void;
 }) {
@@ -112,6 +114,24 @@ export function SettingsScreen({
               <div className={`w-11 h-6 rounded-full transition-colors relative ${muted ? 'bg-white/20' : 'bg-[color:var(--color-gold)]'}`}>
                 <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all duration-200 ${muted ? 'left-0.5' : 'left-[calc(100%-1.375rem)]'}`} />
               </div>
+            </button>
+
+            <div className="mt-1 lg:mt-2">
+              <p className="font-display text-[9px] tracking-[0.3em] uppercase text-white/60 font-semibold">Table</p>
+            </div>
+
+            <button
+              onClick={onOpenLayout}
+              className="flex items-center justify-between bg-white/[0.07] border border-white/10 rounded-2xl px-4 py-3.5 lg:px-5 lg:py-4 backdrop-blur-sm hover:bg-white/[0.10] active:bg-white/[0.10] transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <LayoutGrid className="w-4 h-4 lg:w-5 lg:h-5 text-white/50" />
+                <div>
+                  <p className="text-sm lg:text-base font-medium text-white">Table Layout</p>
+                  <p className="text-[10px] text-white/40 mt-0.5">Position &amp; resize opponents per table size</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 text-white/25 shrink-0" />
             </button>
 
             <div className="mt-1 lg:mt-2">
