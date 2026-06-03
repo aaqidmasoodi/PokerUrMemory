@@ -107,7 +107,7 @@ export function RulesBody() {
         color="blue"
         title="Antes & Betting"
         steps={[
-          'Before cards are dealt, everyone antes 5 points into the pot — your compulsory first contribution to the round.',
+          'Before cards are dealt, everyone antes 5 points into the pot: your compulsory first contribution to the round.',
           'The pot is the shared prize pool: every ante, bet, and call flows into it and it keeps growing throughout the round.',
           'You can check, bet, call, raise, or fold during each betting round.',
           'The maximum any player can bet per round is 20 points total.',
@@ -125,9 +125,9 @@ export function RulesBody() {
           'After the first betting round, you may discard up to 4 cards and draw new ones.',
           'All discarded cards are shown face up to every player: another memory moment.',
           'If you draw 2+ cards, one replacement card is shown face-up to opponents.',
-          'A single drawn card stays hidden — mystery kept!',
+          'A single drawn card stays hidden: mystery kept!',
           'Stand pat (keep all 5) if you\'re happy with your hand.',
-          'Discarding your hidden card leaves all four face-up cards in your hand — cards opponents already memorised. They end up knowing more about your final hand than if you had swapped a face-up card instead.',
+          'Discarding the hidden card alone leaves all four face-up cards in your hand: cards opponents already memorised. They end up knowing more about your final hand than if you had swapped a face-up card instead.',
           'Discarding all four face-up cards is the most secretive play: opponents see only the one shown replacement and remember nothing else about your new hand.',
         ]}
       />

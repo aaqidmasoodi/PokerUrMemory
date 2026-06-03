@@ -898,64 +898,72 @@ export default function App() {
       <div className="felt-surface absolute inset-x-[4%] top-[7%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.5)]" />
 
       {/* ── OPPONENTS ── */}
-      {/* Full-screen layer so each seat's saved %-position maps to the whole
-          screen, identical to the layout editor. The layer ignores pointer
-          events; only the seats themselves capture them. */}
-      <div className="absolute inset-0 z-10 pointer-events-none">
-        {(() => {
-          const oppCount = clampCount(opponents.length);
-          const seats = tableLayout[oppCount];
-          const baseSize = baseSizeForCount(opponents.length);
-          const cardSpacing = cardSpacingForCount(opponents.length);
-          return opponents.map((opp, idx) => {
-            const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
-            const seat = seats[idx] ?? seats[seats.length - 1] ?? DEFAULT_TABLE_LAYOUT[oppCount][0];
-            return (
-              <Fragment key={idx}>
-                {/* Name tag (independently positioned) */}
-                <LayoutBox el={seat.nameTag} className={cn("pointer-events-auto", opp.sittingOut && "opacity-50")}>
-                  <button
-                    type="button"
-                    onClick={() => opp.userId && setViewingOpponent({ userId: opp.userId, name: opp.name })}
-                    disabled={!opp.userId}
-                    className="active:scale-[0.95] transition-transform disabled:cursor-default flex flex-col items-center"
-                    title={opp.userId ? "View stats" : undefined}
-                  >
-                    <PlayerSeat
-                      name={opp.name} chips={opp.chips} bet={opp.currentBet}
-                      avatar={!opp.userId ? '🤖' : opp.name.charAt(0).toUpperCase()}
-                      active={opp.isCurrentTurn && !isShowdown && !opp.disconnected && !opp.sittingOut}
-                      folded={opp.folded}
-                      disconnected={opp.disconnected}
-                      turnTimeLeft={oppTurnTimeLeft}
-                      size={baseSize}
-                      flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
-                    />
-                    {opp.sittingOut && (
-                      <span className="mt-0.5 font-display text-[7px] sm:text-[8px] tracking-widest uppercase text-white/60 bg-black/30 px-1.5 py-0.5 rounded-full">
-                        Sitting out
-                      </span>
-                    )}
-                  </button>
-                </LayoutBox>
+      {/* Each element is a direct child of <main> (no pointer-events-none wrapper)
+          to avoid a WebKit bug where touch events don't reach pointer-events:auto
+          children of a pointer-events:none parent on iOS Safari. */}
+      {(() => {
+        const oppCount = clampCount(opponents.length);
+        const seats = tableLayout[oppCount];
+        const baseSize = baseSizeForCount(opponents.length);
+        const cardSpacing = cardSpacingForCount(opponents.length);
+        return opponents.map((opp, idx) => {
+          const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
+          const seat = seats[idx] ?? seats[seats.length - 1] ?? DEFAULT_TABLE_LAYOUT[oppCount][0];
+          return (
+            <Fragment key={idx}>
+              {/* Name tag — interactive (tap to view stats). touch-action:manipulation
+                  kills the 300 ms iOS tap delay without disabling scrolling. */}
+              <LayoutBox
+                el={seat.nameTag}
+                className={cn("z-10", opp.sittingOut && "opacity-50")}
+              >
+                <button
+                  type="button"
+                  onClick={() => opp.userId && setViewingOpponent({ userId: opp.userId, name: opp.name })}
+                  disabled={!opp.userId}
+                  className="active:scale-[0.95] transition-transform disabled:cursor-default flex flex-col items-center"
+                  style={{ touchAction: 'manipulation' }}
+                  title={opp.userId ? "View stats" : undefined}
+                >
+                  <PlayerSeat
+                    name={opp.name} chips={opp.chips} bet={opp.currentBet}
+                    avatar={!opp.userId ? '🤖' : opp.name.charAt(0).toUpperCase()}
+                    active={opp.isCurrentTurn && !isShowdown && !opp.disconnected && !opp.sittingOut}
+                    folded={opp.folded}
+                    disconnected={opp.disconnected}
+                    turnTimeLeft={oppTurnTimeLeft}
+                    size={baseSize}
+                    flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
+                  />
+                  {opp.sittingOut && (
+                    <span className="mt-0.5 font-display text-[7px] sm:text-[8px] tracking-widest uppercase text-white/60 bg-black/30 px-1.5 py-0.5 rounded-full">
+                      Sitting out
+                    </span>
+                  )}
+                </button>
+              </LayoutBox>
 
-                {/* Cards (independently positioned) */}
-                <LayoutBox el={seat.cards} className={cn("pointer-events-auto", opp.sittingOut && "opacity-50")}>
-                  <div className={cn("flex", cardSpacing)}>
-                    {opp.hand.map((c, ci) => (
-                      <PlayingCard
-                        key={ci} card={c as any} size="sm" faceUp={c.faceUp}
-                        highlight={isDrawReveal && c.faceUp}
-                        className={opp.folded ? "opacity-30 grayscale" : undefined}
-                      />
-                    ))}
-                  </div>
-                </LayoutBox>
-              </Fragment>
-            );
-          });
-        })()}
-      </div>
+              {/* Cards — display only, never interactive. pointer-events:none
+                  prevents the card <button> elements from eating taps that
+                  should reach the name tag above. */}
+              <LayoutBox
+                el={seat.cards}
+                className={cn("z-10 pointer-events-none", opp.sittingOut && "opacity-50")}
+              >
+                <div className={cn("flex", cardSpacing)}>
+                  {opp.hand.map((c, ci) => (
+                    <PlayingCard
+                      key={ci} card={c as any} size="sm" faceUp={c.faceUp}
+                      highlight={isDrawReveal && c.faceUp}
+                      className={opp.folded ? "opacity-30 grayscale" : undefined}
+                    />
+                  ))}
+                </div>
+              </LayoutBox>
+            </Fragment>
+          );
+        });
+      })()}
 
       {/* ── CENTER — pot + action log ── */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1.5 lg:gap-2.5">

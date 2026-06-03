@@ -136,6 +136,10 @@
 }
 
 /* Header bar — portrait gets extra breathing room, landscape just clears the safe area */
+.settings-row {
+  @apply flex items-center justify-between px-4 py-3.5 hover:bg-white/[0.05] active:bg-white/[0.08] transition-colors w-full text-left;
+}
+
 .pum-header {
   padding-top: calc(0.75rem + var(--safe-top));
   padding-bottom: 0.75rem;
