@@ -9,6 +9,7 @@ import { MatchmakingScreen } from "./screens/MatchmakingScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import { RulesScreen, RulesBody, AboutScreen } from "./screens/RulesScreen";
+import { QuickIntroScreen } from "./screens/QuickIntroScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
 import { ScheduledGamesScreen } from "./screens/ScheduledGamesScreen";
 import { PracticeSetupScreen } from "./screens/PracticeSetupScreen";
@@ -30,7 +31,7 @@ import { cn } from "./lib/utils";
 import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X, BookOpen } from "lucide-react";
 
 
-type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'tableLayout' | 'rules' | 'about' | 'lobby' | 'scheduled' | 'practice';
+type AppScreen = 'menu' | 'matchmaking' | 'profile' | 'settings' | 'tableLayout' | 'rules' | 'about' | 'intro' | 'lobby' | 'scheduled' | 'practice';
 
 let _globalMuted = false;
 function playSound(file: string, volume = 0.55) {
@@ -638,6 +639,14 @@ export default function App() {
       screen = <RulesScreen onBack={() => setAppScreen('menu')} />;
     } else if (appScreen === 'about') {
       screen = <AboutScreen onBack={() => setAppScreen('menu')} />;
+    } else if (appScreen === 'intro') {
+      screen = (
+        <QuickIntroScreen
+          onBack={() => setAppScreen('menu')}
+          onPlayWithHumans={() => setAppScreen('matchmaking')}
+          onPracticeWithBot={() => setAppScreen('practice')}
+        />
+      );
     } else {
       screen = (
         <MainMenuScreen
@@ -651,6 +660,7 @@ export default function App() {
           onSettings={() => setAppScreen('settings')}
           onRules={() => setAppScreen('rules')}
           onAbout={() => setAppScreen('about')}
+          onQuickIntro={() => setAppScreen('intro')}
         />
       );
     }

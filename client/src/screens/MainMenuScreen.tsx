@@ -1,6 +1,6 @@
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
-import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Bot, Layers } from 'lucide-react';
+import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Bot, Layers, Lightbulb } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function MainMenuScreen({
@@ -14,6 +14,7 @@ export function MainMenuScreen({
   onSettings,
   onRules,
   onAbout,
+  onQuickIntro,
 }: {
   profile: Profile;
   onStartGame: () => void;
@@ -25,6 +26,7 @@ export function MainMenuScreen({
   onSettings: () => void;
   onRules: () => void;
   onAbout: () => void;
+  onQuickIntro: () => void;
 }) {
 
   return (
@@ -57,6 +59,21 @@ export function MainMenuScreen({
           </div>
         </div>
 
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={onQuickIntro}
+            className="flex items-center gap-2 h-9 sm:h-10
+              pl-2.5 pr-3.5 sm:pl-3 sm:pr-4
+              rounded-full font-display tracking-wider uppercase
+              text-[10px] sm:text-[11px] font-bold
+              bg-white/90 text-[color:var(--color-blue)]
+              border border-black/[0.08] shadow-md
+              active:scale-95 transition-all"
+          >
+            <Lightbulb className="w-4 h-4 shrink-0" />
+            Quick Intro
+          </button>
+
         <a
           href="https://discord.gg/Jg2Ae4wAtj"
           target="_blank"
@@ -74,6 +91,7 @@ export function MainMenuScreen({
           </svg>
           Join Discord
         </a>
+        </div>
       </div>
 
       {/* ── Center: title + button grid ── */}
