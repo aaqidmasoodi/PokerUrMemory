@@ -101,7 +101,7 @@ export function SettingsScreen({
               <div className="flex items-center gap-3">
                 <LayoutGrid className="w-4 h-4 text-white/50" />
                 <div>
-                  <p className="text-sm font-medium text-white">Table Layout</p>
+                  <p className="text-sm font-medium text-white">Customize Table Layout</p>
                   <p className="text-[10px] text-white/40 mt-0.5">Position &amp; resize opponents per table size</p>
                 </div>
               </div>

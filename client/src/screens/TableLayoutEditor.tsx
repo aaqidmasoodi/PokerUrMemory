@@ -117,8 +117,8 @@ export function TableLayoutEditor({
   const areaRef = useRef<HTMLDivElement>(null);
 
   const drag = useRef<
-    | { mode: 'move'; sel: Sel; offX: number; offY: number }
-    | { mode: 'resize'; sel: Sel; startScale: number; startDist: number; cx: number; cy: number }
+    | { mode: 'move'; sel: Sel; offX: number; offY: number; pointerId: number }
+    | { mode: 'resize'; sel: Sel; startScale: number; startDist: number; cx: number; cy: number; pointerId: number }
     | null
   >(null);
 
@@ -171,11 +171,13 @@ export function TableLayoutEditor({
 
   function onBodyDown(e: React.PointerEvent, sel: Sel) {
     e.preventDefault();
+    e.stopPropagation();
     setSelected(sel);
     const el = getEl(sel);
     const p = pointerToPct(e.clientX, e.clientY);
-    drag.current = { mode: 'move', sel, offX: el.x - p.x, offY: el.y - p.y };
-    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    drag.current = { mode: 'move', sel, offX: el.x - p.x, offY: el.y - p.y, pointerId: e.pointerId };
+    // Capture on the stable area node so React re-renders of children don't lose capture
+    areaRef.current?.setPointerCapture(e.pointerId);
   }
 
   function onHandleDown(e: React.PointerEvent, sel: Sel) {
@@ -186,14 +188,15 @@ export function TableLayoutEditor({
     const r = areaRef.current!.getBoundingClientRect();
     const cx = r.left + (el.x / 100) * r.width;
     const cy = r.top + (el.y / 100) * r.height;
-    const startDist = Math.max(12, Math.hypot(e.clientX - cx, e.clientY - cy));
-    drag.current = { mode: 'resize', sel, startScale: el.scale, startDist, cx, cy };
-    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    const startDist = Math.max(20, Math.hypot(e.clientX - cx, e.clientY - cy));
+    drag.current = { mode: 'resize', sel, startScale: el.scale, startDist, cx, cy, pointerId: e.pointerId };
+    areaRef.current?.setPointerCapture(e.pointerId);
   }
 
   function onAreaMove(e: React.PointerEvent) {
     const d = drag.current;
-    if (!d) return;
+    if (!d || e.pointerId !== d.pointerId) return;
+    e.preventDefault();
     if (d.mode === 'move') {
       const p = pointerToPct(e.clientX, e.clientY);
       setEl(d.sel, { x: p.x + d.offX, y: p.y + d.offY });
@@ -203,7 +206,10 @@ export function TableLayoutEditor({
     }
   }
 
-  function onAreaUp() { drag.current = null; }
+  function onAreaUp(e: React.PointerEvent) {
+    if (drag.current && e.pointerId !== drag.current.pointerId) return;
+    drag.current = null;
+  }
 
   const tabs: { id: EditorTab; label: string }[] = [
     { id: 'hero', label: 'You' },
@@ -219,6 +225,7 @@ export function TableLayoutEditor({
       onPointerUp={onAreaUp}
       onPointerCancel={onAreaUp}
       className="h-dvh w-full relative overflow-hidden select-none bg-[radial-gradient(ellipse_at_top,oklch(0.24_0.09_142)_0%,oklch(0.11_0.05_148)_100%)]"
+      style={{ touchAction: 'none' }}
     >
       {/* Felt oval — same dimensions as the live table */}
       <div className="felt-surface absolute inset-x-[4%] top-[7%] bottom-[4%] rounded-[50%] -z-10 shadow-[inset_0_0_60px_rgba(0,0,0,0.5)]" />
@@ -267,14 +274,16 @@ export function TableLayoutEditor({
                 {elementContent(sel, baseSize, cardSpacing)}
               </div>
 
-              {/* Resize handle — counter-scaled so it stays a constant size */}
+              {/* Resize handle — counter-scaled so it stays a constant size on screen */}
               {isSel && (
                 <div
                   onPointerDown={(e) => onHandleDown(e, sel)}
-                  className="absolute -bottom-3 -right-3 w-6 h-6 rounded-full bg-[color:var(--color-gold)] border-2 border-black/30 shadow-lg grid place-items-center cursor-se-resize"
+                  className="absolute -bottom-5 -right-5 w-11 h-11 rounded-full grid place-items-center cursor-se-resize"
                   style={{ transform: `scale(${1 / el.scale})`, transformOrigin: 'bottom right', touchAction: 'none' }}
                 >
-                  <ResizeGlyph />
+                  <div className="w-7 h-7 rounded-full bg-[color:var(--color-gold)] border-2 border-black/30 shadow-lg grid place-items-center">
+                    <ResizeGlyph />
+                  </div>
                 </div>
               )}
             </div>
