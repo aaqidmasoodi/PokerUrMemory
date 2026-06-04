@@ -10,31 +10,18 @@ export function QuickIntroScreen({
   onPracticeWithBot: () => void;
 }) {
   return (
-    <div
-      className="h-dvh flex flex-col bg-transparent select-none"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-    >
-      {/* Back button */}
+    <div className="relative h-dvh bg-transparent select-none">
+
+      {/* Scroll area — fills full height, scrolls behind the header */}
       <div
-        className="pum-header shrink-0"
+        className="absolute inset-0 overflow-y-auto overscroll-contain"
         style={{
-          paddingLeft: 'calc(0.75rem + env(safe-area-inset-left, 0px))',
-          paddingBottom: '0.25rem',
+          paddingTop: 'calc(4.5rem + var(--safe-top))',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black calc(3.5rem + var(--safe-top)))',
+          maskImage: 'linear-gradient(to bottom, transparent 0%, black calc(3.5rem + var(--safe-top)))',
         }}
       >
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 h-10 pl-2 pr-4 rounded-full bg-white/90 backdrop-blur-sm border border-black/[0.08] shadow-md active:scale-95 transition-transform"
-        >
-          <ChevronLeft className="w-5 h-5 text-[color:var(--color-blue)]" />
-          <span className="font-display text-[12px] font-bold blue-text tracking-wider uppercase">
-            Back
-          </span>
-        </button>
-      </div>
-
-      {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto overscroll-contain">
         <div className="max-w-lg mx-auto px-6 sm:px-8 pt-4 pb-8 flex flex-col gap-6">
 
           {/* Title */}
@@ -98,6 +85,27 @@ export function QuickIntroScreen({
 
         </div>
       </div>
+
+
+      {/* Floating back button */}
+      <div
+        className="absolute top-0 left-0 right-0 z-20 pum-header"
+        style={{
+          paddingLeft: 'calc(0.75rem + env(safe-area-inset-left, 0px))',
+          paddingBottom: '0.25rem',
+        }}
+      >
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 h-10 pl-2 pr-4 rounded-full bg-white/90 backdrop-blur-sm border border-black/[0.08] shadow-md active:scale-95 transition-transform"
+        >
+          <ChevronLeft className="w-5 h-5 text-[color:var(--color-blue)]" />
+          <span className="font-display text-[12px] font-bold blue-text tracking-wider uppercase">
+            Back
+          </span>
+        </button>
+      </div>
+
     </div>
   );
 }

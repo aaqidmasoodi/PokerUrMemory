@@ -23,29 +23,20 @@ export function SettingsScreen({
   const [showFeedback, setShowFeedback] = useState(false);
 
   return (
-    <div
-      className="h-dvh flex flex-col bg-transparent overflow-hidden select-none"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-    >
+    <div className="relative h-dvh bg-transparent overflow-hidden select-none">
       <div className="absolute inset-0 felt-surface opacity-[0.22] pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/30 pointer-events-none" />
 
-      {/* Header */}
-      <div className="pum-header relative shrink-0 z-10 flex items-center px-4">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 h-10 pl-2 pr-4 rounded-full bg-white/90 backdrop-blur-sm border border-black/[0.08] shadow-md active:scale-95 transition-transform"
-        >
-          <ChevronLeft className="w-5 h-5 text-[color:var(--color-blue)]" />
-          <span className="font-display text-[12px] font-bold text-[color:var(--color-blue)] tracking-wider uppercase">Back</span>
-        </button>
-        <div className="absolute inset-x-0 flex flex-col items-center pointer-events-none">
-          <p className="font-display text-[9px] tracking-[0.3em] uppercase text-white/60 font-semibold">Settings</p>
-        </div>
-      </div>
-
-      {/* Single-column scrollable body */}
-      <div className="relative flex-1 overflow-y-auto">
+      {/* Single-column scrollable body — fills full height */}
+      <div
+        className="absolute inset-0 overflow-y-auto"
+        style={{
+          paddingTop: 'calc(4.5rem + var(--safe-top))',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black calc(3.5rem + var(--safe-top)))',
+          maskImage: 'linear-gradient(to bottom, transparent 0%, black calc(3.5rem + var(--safe-top)))',
+        }}
+      >
         <div className="max-w-lg mx-auto px-4 py-6 flex flex-col gap-6"
           style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left, 0px))', paddingRight: 'max(1rem, env(safe-area-inset-right, 0px))' }}
         >
@@ -153,6 +144,22 @@ export function SettingsScreen({
           onClose={() => setShowFeedback(false)}
         />
       )}
+
+
+      {/* Floating header */}
+      <div className="absolute top-0 left-0 right-0 z-20 pum-header flex items-center px-4">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 h-10 pl-2 pr-4 rounded-full bg-white/90 backdrop-blur-sm border border-black/[0.08] shadow-md active:scale-95 transition-transform"
+        >
+          <ChevronLeft className="w-5 h-5 text-[color:var(--color-blue)]" />
+          <span className="font-display text-[12px] font-bold text-[color:var(--color-blue)] tracking-wider uppercase">Back</span>
+        </button>
+        <div className="absolute inset-x-0 flex flex-col items-center pointer-events-none">
+          <p className="font-display text-[9px] tracking-[0.3em] uppercase text-white/60 font-semibold">Settings</p>
+        </div>
+      </div>
+
     </div>
   );
 }

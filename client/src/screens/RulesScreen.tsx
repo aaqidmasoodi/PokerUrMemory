@@ -3,15 +3,24 @@ import { ChevronLeft, Eye, Coins, Shuffle, Trophy, Users } from 'lucide-react';
 // Shared screen shell — floating back pill + scrollable body.
 function InfoScreenShell({ label, onBack, children }: { label: string; onBack: () => void; children: React.ReactNode }) {
   return (
-    <div
-      className="h-dvh flex flex-col bg-transparent select-none"
-      style={{
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      }}
-    >
-      {/* Back button — floating pill, no full-width bar */}
+    <div className="relative h-dvh bg-transparent select-none">
+
+      {/* Scroll area — fills full height, fades softly under the header via mask */}
       <div
-        className="pum-header shrink-0"
+        className="absolute inset-0 overflow-y-auto overscroll-contain"
+        style={{
+          paddingTop: 'calc(4.5rem + var(--safe-top))',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black calc(3.5rem + var(--safe-top)))',
+          maskImage: 'linear-gradient(to bottom, transparent 0%, black calc(3.5rem + var(--safe-top)))',
+        }}
+      >
+        {children}
+      </div>
+
+      {/* Floating header — sits above the fade */}
+      <div
+        className="absolute top-0 left-0 right-0 z-20 pum-header"
         style={{
           paddingLeft: 'calc(0.75rem + env(safe-area-inset-left, 0px))',
           paddingBottom: '0.25rem',
@@ -28,10 +37,6 @@ function InfoScreenShell({ label, onBack, children }: { label: string; onBack: (
         </button>
       </div>
 
-      {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto overscroll-contain">
-        {children}
-      </div>
     </div>
   );
 }
