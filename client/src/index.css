@@ -455,4 +455,14 @@
   }
 
   .pum-phone-rotate { animation: phone-rotate 2.8s ease-in-out infinite; }
+
+  @keyframes brief-intro-wobble {
+    0%, 8%, 100% { transform: rotate(0deg) scale(1); }
+    1%  { transform: rotate(-4deg) scale(1.06); }
+    3%  { transform: rotate(4deg)  scale(1.06); }
+    5%  { transform: rotate(-3deg) scale(1.03); }
+    7%  { transform: rotate(2deg)  scale(1.01); }
+  }
+
+  .brief-intro-wobble { animation: brief-intro-wobble 8s ease-in-out infinite; }
 }

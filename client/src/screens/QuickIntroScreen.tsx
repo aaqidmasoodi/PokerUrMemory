@@ -51,7 +51,7 @@ export function QuickIntroScreen({
           <div className="flex flex-col gap-4 text-white/80 text-sm sm:text-base leading-relaxed">
             <p>
               The key difference between <span className="text-white font-semibold">PokerUrMemory</span> and
-              other poker games is that many cards dealt face up flip over after a brief moment — you
+              other poker games is that many cards dealt face up flip over after a brief moment: you
               must memorise them. Otherwise, the rules are based on <span className="text-white font-semibold">Five Card Draw</span> poker.
             </p>
             <p>

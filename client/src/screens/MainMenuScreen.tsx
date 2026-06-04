@@ -60,19 +60,20 @@ export function MainMenuScreen({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={onQuickIntro}
-            className="flex items-center gap-2 h-9 sm:h-10
-              pl-2.5 pr-3.5 sm:pl-3 sm:pr-4
-              rounded-full font-display tracking-wider uppercase
-              text-[10px] sm:text-[11px] font-bold
-              bg-white/90 text-[color:var(--color-blue)]
-              border border-black/[0.08] shadow-md
-              active:scale-95 transition-all"
-          >
-            <Lightbulb className="w-4 h-4 shrink-0" />
-            Quick Intro
-          </button>
+          <div className="brief-intro-wobble shrink-0">
+            <button
+              onClick={onQuickIntro}
+              className="flex items-center gap-2 h-9 sm:h-10
+                pl-2.5 pr-3.5 sm:pl-3 sm:pr-4
+                rounded-full font-display tracking-wider uppercase
+                text-[10px] sm:text-[11px] font-bold text-white
+                bg-white/15 backdrop-blur-sm border border-white/30
+                active:scale-95 transition-all"
+            >
+              <Lightbulb className="w-4 h-4 shrink-0" />
+              Brief Intro
+            </button>
+          </div>
 
         <a
           href="https://discord.gg/Jg2Ae4wAtj"
@@ -120,9 +121,8 @@ export function MainMenuScreen({
               onClick={onSolitaire}
               className="flex-1 flex flex-row items-center justify-center gap-2
                 px-2 rounded-2xl font-display tracking-wider uppercase
-                bg-white text-[color:var(--color-blue)]
-                border border-[color:var(--color-blue)]/25
-                shadow-md hover:bg-white/90 active:scale-[0.97] transition-all"
+                bg-white/15 backdrop-blur-sm border border-white/30 text-white
+                hover:bg-white/25 active:scale-[0.97] transition-all"
             >
               <Bot className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 shrink-0" />
               <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold leading-tight text-center">
@@ -133,9 +133,8 @@ export function MainMenuScreen({
               onClick={onPatience}
               className="flex-1 flex flex-row items-center justify-center gap-2
                 px-2 rounded-2xl font-display tracking-wider uppercase
-                bg-white text-[color:var(--color-blue)]
-                border border-[color:var(--color-blue)]/25
-                shadow-md hover:bg-white/90 active:scale-[0.97] transition-all"
+                bg-white/15 backdrop-blur-sm border border-white/30 text-white
+                hover:bg-white/25 active:scale-[0.97] transition-all"
             >
               <Layers className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 shrink-0" />
               <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold leading-tight text-center">
@@ -149,9 +148,8 @@ export function MainMenuScreen({
             onClick={onPlayWithFriends}
             className="flex-[1.25] flex flex-col items-center justify-center gap-2 sm:gap-2.5
               rounded-2xl font-display tracking-wider uppercase
-              bg-white text-[color:var(--color-blue)]
-              border border-[color:var(--color-blue)]/25
-              shadow-md hover:bg-white/90 active:scale-[0.97] transition-all"
+              bg-white/15 backdrop-blur-sm border border-white/30 text-white
+              hover:bg-white/25 active:scale-[0.97] transition-all"
           >
             <Users className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
             <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
@@ -180,9 +178,8 @@ export function MainMenuScreen({
             onClick={onScheduledGames}
             className="flex-[1.25] flex flex-col items-center justify-center gap-2 sm:gap-2.5
               rounded-2xl font-display tracking-wider uppercase
-              bg-white text-[color:var(--color-blue)]
-              border border-[color:var(--color-blue)]/25
-              shadow-md hover:bg-white/90 active:scale-[0.97] transition-all"
+              bg-white/15 backdrop-blur-sm border border-white/30 text-white
+              hover:bg-white/25 active:scale-[0.97] transition-all"
           >
             <CalendarClock className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
             <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
@@ -203,11 +200,11 @@ export function MainMenuScreen({
             className="h-10 sm:h-11 px-4 sm:px-5 lg:px-6
               rounded-2xl font-display tracking-wider uppercase
               text-[11px] sm:text-[11px] lg:text-[12px]
-              font-bold bg-white text-foreground border border-black/[0.10]
-              shadow-md hover:bg-white/90 active:scale-[0.97] transition-all
+              font-bold bg-white/15 backdrop-blur-sm text-white border border-white/30
+              hover:bg-white/25 active:scale-[0.97] transition-all
               flex items-center justify-center gap-1.5"
           >
-            <User className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[color:var(--color-blue)]" />
+            <User className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-white" />
             Profile
           </button>
           <button
@@ -215,11 +212,11 @@ export function MainMenuScreen({
             className="h-10 sm:h-11 px-4 sm:px-5 lg:px-6
               rounded-2xl font-display tracking-wider uppercase
               text-[11px] sm:text-[11px] lg:text-[12px]
-              font-bold bg-white text-foreground border border-black/[0.10]
-              shadow-md hover:bg-white/90 active:scale-[0.97] transition-all
+              font-bold bg-white/15 backdrop-blur-sm text-white border border-white/30
+              hover:bg-white/25 active:scale-[0.97] transition-all
               flex items-center justify-center gap-1.5"
           >
-            <Settings className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[color:var(--color-blue)]" />
+            <Settings className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-white" />
             Settings
           </button>
         </div>
@@ -230,11 +227,11 @@ export function MainMenuScreen({
             className="h-10 sm:h-11 px-4 sm:px-5 lg:px-6
               rounded-2xl font-display tracking-wider uppercase
               text-[11px] sm:text-[11px] lg:text-[12px]
-              font-bold bg-white text-foreground border border-black/[0.10]
-              shadow-md hover:bg-white/90 active:scale-[0.97] transition-all
+              font-bold bg-white/15 backdrop-blur-sm text-white border border-white/30
+              hover:bg-white/25 active:scale-[0.97] transition-all
               flex items-center justify-center gap-1.5"
           >
-            <BookOpen className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[color:var(--color-blue)]" />
+            <BookOpen className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-white" />
             How to Play
           </button>
           <button
@@ -242,11 +239,11 @@ export function MainMenuScreen({
             className="h-10 sm:h-11 px-4 sm:px-5 lg:px-6
               rounded-2xl font-display tracking-wider uppercase
               text-[11px] sm:text-[11px] lg:text-[12px]
-              font-bold bg-white text-foreground border border-black/[0.10]
-              shadow-md hover:bg-white/90 active:scale-[0.97] transition-all
+              font-bold bg-white/15 backdrop-blur-sm text-white border border-white/30
+              hover:bg-white/25 active:scale-[0.97] transition-all
               flex items-center justify-center gap-1.5"
           >
-            <Info className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[color:var(--color-blue)]" />
+            <Info className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-white" />
             About
           </button>
         </div>
