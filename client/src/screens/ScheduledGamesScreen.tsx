@@ -74,10 +74,10 @@ export function ScheduledGamesScreen({
       >
         <button
           onClick={onBack}
-          className="flex items-center gap-1 h-9 pl-2 pr-3 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm active:scale-95 transition-transform shrink-0"
+          className="flex items-center gap-1 h-10 pl-2 pr-4 rounded-full bg-white/90 backdrop-blur-sm border border-black/[0.08] shadow-md active:scale-95 transition-transform shrink-0"
         >
-          <ChevronLeft className="w-4 h-4 text-white/70" />
-          <span className="font-display text-[10px] font-bold text-white/70 tracking-widest uppercase">Back</span>
+          <ChevronLeft className="w-5 h-5 text-[color:var(--color-blue)]" />
+          <span className="font-display text-[12px] font-bold text-[color:var(--color-blue)] tracking-wider uppercase">Back</span>
         </button>
         <div className="flex-1 flex justify-center pointer-events-none">
           <p className="font-display text-[11px] tracking-[0.3em] uppercase text-white font-semibold">Scheduled Games</p>
