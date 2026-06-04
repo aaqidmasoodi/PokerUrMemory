@@ -94,7 +94,7 @@ export function MainMenuScreen({
         </div>
 
         {/* Primary button row — 5 square-ish tiles filling the horizontal space */}
-        <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl mx-auto flex gap-2 sm:gap-3 lg:gap-4 xl:gap-5">
+        <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto flex gap-2 sm:gap-3 lg:gap-4 xl:gap-5">
 
           {/* Solitaire + Patience stacked in one tile slot */}
           <div className="flex-1 flex flex-col gap-1.5 sm:gap-2">
@@ -129,7 +129,7 @@ export function MainMenuScreen({
           {/* With Friends */}
           <button
             onClick={onPlayWithFriends}
-            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
+            className="flex-[1.25] flex flex-col items-center justify-center gap-2 sm:gap-2.5
               py-4 sm:py-5 lg:py-6
               rounded-2xl font-display tracking-wider uppercase
               bg-white text-[color:var(--color-blue)]
@@ -145,7 +145,7 @@ export function MainMenuScreen({
           {/* Quick Play — blue primary */}
           <button
             onClick={onStartGame}
-            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
+            className="flex-[1.25] flex flex-col items-center justify-center gap-2 sm:gap-2.5
               py-4 sm:py-5 lg:py-6
               rounded-2xl font-display tracking-wider uppercase
               bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]
@@ -162,7 +162,7 @@ export function MainMenuScreen({
           {/* Schedule */}
           <button
             onClick={onScheduledGames}
-            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
+            className="flex-[1.25] flex flex-col items-center justify-center gap-2 sm:gap-2.5
               py-4 sm:py-5 lg:py-6
               rounded-2xl font-display tracking-wider uppercase
               bg-white text-[color:var(--color-blue)]
