@@ -1,12 +1,13 @@
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
-import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Bot } from 'lucide-react';
+import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Bot, Layers } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function MainMenuScreen({
   profile,
   onStartGame,
-  onPlayWithComputer,
+  onSolitaire,
+  onPatience,
   onPlayWithFriends,
   onScheduledGames,
   onProfile,
@@ -16,7 +17,8 @@ export function MainMenuScreen({
 }: {
   profile: Profile;
   onStartGame: () => void;
-  onPlayWithComputer: () => void;
+  onSolitaire: () => void;
+  onPatience: () => void;
   onPlayWithFriends: () => void;
   onScheduledGames: () => void;
   onProfile: () => void;
@@ -91,37 +93,51 @@ export function MainMenuScreen({
           </p>
         </div>
 
-        {/* Primary button row — 4 square-ish tiles filling the horizontal space */}
-        <div className="w-full flex gap-3 sm:gap-4 lg:gap-5 xl:gap-6">
+        {/* Primary button row — 5 square-ish tiles filling the horizontal space */}
+        <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl mx-auto flex gap-2 sm:gap-3 lg:gap-4 xl:gap-5">
 
-          {/* vs Computer */}
-          <button
-            onClick={onPlayWithComputer}
-            className="flex-1 flex flex-col items-center justify-center gap-2.5 sm:gap-3
-              py-4 sm:py-5 lg:py-6
-              rounded-2xl font-display tracking-wider uppercase
-              bg-white text-[color:var(--color-blue)]
-              border border-[color:var(--color-blue)]/25
-              shadow-md hover:bg-white/90 active:scale-[0.97] transition-all"
-          >
-            <Bot className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10" />
-            <span className="text-xs sm:text-[13px] lg:text-sm xl:text-base font-bold leading-tight text-center">
-              vs<br />Computer
-            </span>
-          </button>
+          {/* Solitaire + Patience stacked in one tile slot */}
+          <div className="flex-1 flex flex-col gap-1.5 sm:gap-2">
+            <button
+              onClick={onSolitaire}
+              className="flex-1 flex flex-row items-center justify-center gap-2
+                px-2 rounded-2xl font-display tracking-wider uppercase
+                bg-white text-[color:var(--color-blue)]
+                border border-[color:var(--color-blue)]/25
+                shadow-md hover:bg-white/90 active:scale-[0.97] transition-all"
+            >
+              <Bot className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 shrink-0" />
+              <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold leading-tight text-center">
+                PokerUrMemory<br />Solitaire
+              </span>
+            </button>
+            <button
+              onClick={onPatience}
+              className="flex-1 flex flex-row items-center justify-center gap-2
+                px-2 rounded-2xl font-display tracking-wider uppercase
+                bg-white text-[color:var(--color-blue)]
+                border border-[color:var(--color-blue)]/25
+                shadow-md hover:bg-white/90 active:scale-[0.97] transition-all"
+            >
+              <Layers className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 shrink-0" />
+              <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold leading-tight text-center">
+                PokerUrMemory<br />Patience
+              </span>
+            </button>
+          </div>
 
           {/* With Friends */}
           <button
             onClick={onPlayWithFriends}
-            className="flex-1 flex flex-col items-center justify-center gap-2.5 sm:gap-3
+            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
               py-4 sm:py-5 lg:py-6
               rounded-2xl font-display tracking-wider uppercase
               bg-white text-[color:var(--color-blue)]
               border border-[color:var(--color-blue)]/25
               shadow-md hover:bg-white/90 active:scale-[0.97] transition-all"
           >
-            <Users className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10" />
-            <span className="text-xs sm:text-[13px] lg:text-sm xl:text-base font-bold leading-tight text-center">
+            <Users className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
+            <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
               With<br />Friends
             </span>
           </button>
@@ -129,7 +145,7 @@ export function MainMenuScreen({
           {/* Quick Play — blue primary */}
           <button
             onClick={onStartGame}
-            className="flex-1 flex flex-col items-center justify-center gap-2.5 sm:gap-3
+            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
               py-4 sm:py-5 lg:py-6
               rounded-2xl font-display tracking-wider uppercase
               bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]
@@ -137,8 +153,8 @@ export function MainMenuScreen({
               shadow-[0_6px_24px_rgba(0,0,0,0.25)]
               hover:brightness-110 active:scale-[0.97] transition-all"
           >
-            <Spade className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10" />
-            <span className="text-xs sm:text-[13px] lg:text-sm xl:text-base font-bold leading-tight text-center">
+            <Spade className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
+            <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
               Quick<br />Play
             </span>
           </button>
@@ -146,15 +162,15 @@ export function MainMenuScreen({
           {/* Schedule */}
           <button
             onClick={onScheduledGames}
-            className="flex-1 flex flex-col items-center justify-center gap-2.5 sm:gap-3
+            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
               py-4 sm:py-5 lg:py-6
               rounded-2xl font-display tracking-wider uppercase
               bg-white text-[color:var(--color-blue)]
               border border-[color:var(--color-blue)]/25
               shadow-md hover:bg-white/90 active:scale-[0.97] transition-all"
           >
-            <CalendarClock className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10" />
-            <span className="text-xs sm:text-[13px] lg:text-sm xl:text-base font-bold leading-tight text-center">
+            <CalendarClock className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
+            <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
               Schedule
             </span>
           </button>

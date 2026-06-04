@@ -643,7 +643,8 @@ export default function App() {
         <MainMenuScreen
           profile={profile!}
           onStartGame={() => setAppScreen('matchmaking')}
-          onPlayWithComputer={() => setAppScreen('practice')}
+          onSolitaire={() => setAppScreen('practice')}
+          onPatience={() => setAppScreen('practice')}
           onPlayWithFriends={() => setAppScreen('lobby')}
           onScheduledGames={() => setAppScreen('scheduled')}
           onProfile={() => setAppScreen('profile')}
