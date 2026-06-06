@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from "react";
+import { Capacitor } from "@capacitor/core";
+import { TextToSpeech } from "@capacitor-community/text-to-speech";
 import { useSocket, type DiscardEntry, type Phase } from "./hooks/useSocket";
 import { useAuth } from "./hooks/useAuth";
 import { usePresence } from "./hooks/usePresence";
@@ -39,11 +41,17 @@ function playSound(file: string, volume = 0.55) {
 }
 
 function speak(text: string) {
-  if (_globalMuted || !window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.9;
-  window.speechSynthesis.speak(utterance);
+  if (_globalMuted) return;
+  if (Capacitor.isNativePlatform()) {
+    TextToSpeech.stop().catch(() => {});
+    TextToSpeech.speak({ text, rate: 0.9, lang: "en-US" }).catch(() => {});
+  } else {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    window.speechSynthesis.speak(utterance);
+  }
 }
 
 // ─── Phase badge ─────────────────────────────────────────────────────────────
