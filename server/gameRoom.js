@@ -924,10 +924,10 @@ class GameRoom {
         const longThink = Math.random() < 0.15;
         const delay = (longThink ? 6000 : base) + Math.floor(Math.random() * (longThink ? 4000 : jitter));
 
-        // Show a normal 30-second countdown ring (same as a human turn).
+        // Show a normal 15-second countdown ring (same as a human turn).
         // The bot acts at a random delay within that window — the timer just
         // gets cleared early when the action fires.
-        let timeLeft = 30;
+        let timeLeft = 15;
         this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, timeLeft });
 
         this.botTimerInterval = setInterval(() => {
@@ -991,9 +991,9 @@ class GameRoom {
         const currentPlayer = playerArray[this.currentPlayerIndex];
         if (!currentPlayer || currentPlayer.folded) return;
 
-        this.turnTimeLeft = 30;
+        this.turnTimeLeft = 15;
         const playerId = currentPlayer.id;
-        this.io.to(this.roomCode).emit('turnTimer', { playerId, timeLeft: 30 });
+        this.io.to(this.roomCode).emit('turnTimer', { playerId, timeLeft: 15 });
 
         this.turnTimer = setInterval(() => {
             this.turnTimeLeft--;

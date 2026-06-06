@@ -80,7 +80,7 @@ export interface PlayerSeatProps {
 }
 
 export function PlayerSeat({
-  name, chips, bet, active, avatar, avatarUrl, folded, turnTimeLeft, turnTimeMax = 30, size = "normal",
+  name, chips, bet, active, avatar, avatarUrl, folded, turnTimeLeft, turnTimeMax = 15, size = "normal",
   flashLabel, disconnected,
 }: PlayerSeatProps) {
   const cfg = SEAT_CFG[size];
