@@ -159,6 +159,31 @@ export function LobbyScreen({
               const isMeSlot = member?.userId === profile.id;
               const isHostSlot = member?.userId === lobby?.hostUserId;
 
+              // Slot 0 with no lobby yet — show my profile greyed out while connecting
+              if (!member && idx === 0 && !lobby) {
+                return (
+                  <div
+                    key="me-pending"
+                    className="relative flex flex-col items-center justify-center gap-3 rounded-3xl backdrop-blur-sm border min-h-[120px] lg:min-h-[180px] xl:min-h-[220px] 2xl:min-h-[260px] bg-[color:var(--color-blue)]/08 border-[color:var(--color-blue)]/20 opacity-40 grayscale"
+                  >
+                    <div className="p-[2px] rounded-full bg-gradient-to-br from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]">
+                      <div className="p-0.5 rounded-full bg-[oklch(0.22_0.06_148)]">
+                        <Avatar
+                          url={profile.avatar_url}
+                          name={profile.username}
+                          size="sm"
+                          className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 2xl:w-28 2xl:h-28 text-2xl sm:text-3xl lg:text-4xl xl:text-5xl"
+                        />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[11px] sm:text-xs font-display font-bold tracking-wide text-white">You</p>
+                      <p className="text-[8px] text-white/35 tracking-widest uppercase mt-0.5">Connecting…</p>
+                    </div>
+                  </div>
+                );
+              }
+
               if (!member) {
                 return (
                   <button
