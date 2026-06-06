@@ -20,13 +20,11 @@ import { PlayerStatsModal } from "./components/PlayerStatsModal";
 import { PokerBackground } from "./components/PokerBackground";
 import { PlayingCard } from "./components/poker/PlayingCard";
 import { PlayerSeat, PlayerNameDisplay, LayoutBox } from "./components/poker/PlayerSeat";
-import { ChipStack } from "./components/poker/ChipStack";
 import {
   type TableLayout,
   loadTableLayout, saveTableLayout, baseSizeForCount, cardSpacingForCount, clampCount, DEFAULT_TABLE_LAYOUT,
 } from "./lib/tableLayout";
 import { Button } from "./components/ui/button";
-import { Slider } from "./components/ui/slider";
 import { cn } from "./lib/utils";
 import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X, BookOpen } from "lucide-react";
 
@@ -1171,23 +1169,32 @@ export default function App() {
         <p className="font-display text-[9px] tracking-widest uppercase text-gray-500 mb-1">
           {myTurnData?.currentBet === 0 ? "Bet Amount" : "Raise To"}
         </p>
-        <div className="pt-2 mb-3 flex items-center justify-center gap-3">
-          <ChipStack amount={raiseAmount[0]} variant="red" size="sm" showLabel={false} />
-          <div className="flex items-baseline gap-1">
-            <span className="font-display font-black gold-text tabular-nums text-5xl sm:text-6xl leading-none">
-              {raiseAmount[0]}
-            </span>
-            <span className="font-display text-[10px] tracking-widest uppercase text-gray-400">pts</span>
-          </div>
-        </div>
-        <div className="mb-3 px-1">
-          <Slider
-            value={raiseAmount} onValueChange={setRaiseAmount}
-            min={myTurnData ? (myTurnData.currentBet === 0 ? myTurnData.minBet : myTurnData.minRaise) : 0}
-            max={myTurnData ? myTurnData.maxBet : 100}
-            step={1} className="py-2"
-          />
-        </div>
+        {(() => {
+          const min = myTurnData ? (myTurnData.currentBet === 0 ? myTurnData.minBet : myTurnData.minRaise) : 0;
+          const max = myTurnData ? myTurnData.maxBet : 100;
+          return (
+            <div className="flex items-center justify-between gap-2 mb-3 pt-1">
+              <button
+                onClick={() => setRaiseAmount([Math.max(min, raiseAmount[0] - 1)])}
+                disabled={raiseAmount[0] <= min}
+                className="w-14 h-14 rounded-2xl bg-gray-100 hover:bg-gray-200 active:scale-95 border border-gray-200 text-3xl font-bold text-gray-700 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+              >−</button>
+              <div className="flex flex-col items-center gap-0.5 flex-1">
+                <div className="flex items-baseline justify-center gap-1 w-full">
+                  <span className="font-display font-black gold-text tabular-nums text-5xl sm:text-6xl leading-none w-[3ch] text-center">
+                    {raiseAmount[0]}
+                  </span>
+                  <span className="font-display text-[10px] tracking-widest uppercase text-gray-400">pts</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setRaiseAmount([Math.min(max, raiseAmount[0] + 1)])}
+                disabled={raiseAmount[0] >= max}
+                className="w-14 h-14 rounded-2xl bg-gray-100 hover:bg-gray-200 active:scale-95 border border-gray-200 text-3xl font-bold text-gray-700 transition-all disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center"
+              >+</button>
+            </div>
+          );
+        })()}
         <div className="grid grid-cols-2 gap-1 mb-3">
           {(["Min", "½ Pot", "Pot", "Max"] as const).map((label, idx) => {
             const pot = gameState.pot;

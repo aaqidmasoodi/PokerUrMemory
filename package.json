@@ -1,6 +1,6 @@
 {
   "name": "pokerurmemory",
-  "version": "1.0.28",
+  "version": "1.0.29",
   "scripts": {
     "build": "cd server && npm install && cd ../client && npm install && npm run build",
     "start": "node server/index.js"
