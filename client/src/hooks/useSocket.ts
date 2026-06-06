@@ -46,7 +46,12 @@ export interface GameState {
   phase: Phase;
   currentPlayerIndex: number;
   players: Player[];
-  timeLeft: number;
+  // Remaining ms on the active reveal/draw/discard countdown (null if none), plus the
+  // original duration for progress bars. Lets a reconnecting client recover the countdown.
+  phaseMsLeft: number | null;
+  phaseTotalMs: number | null;
+  // Active betting turn so the seat ring is restored on reconnect.
+  turnTimer: { playerId: string; msLeft: number } | null;
 }
 
 export interface YourTurnData {
@@ -67,7 +72,6 @@ export interface DiscardEntry {
 }
 
 export interface DiscardRevealData {
-  timer: number;
   discards: DiscardEntry[];
 }
 
@@ -126,13 +130,15 @@ export function useSocket() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [myTurnData, setMyTurnData] = useState<YourTurnData | null>(null);
   const [actionLog, setActionLog] = useState<string>('');
-  const [timer, setTimer] = useState<number | null>(null);
+  // Client-domain deadlines (epoch ms = Date.now() + msLeft at receipt). Components count
+  // down locally via useCountdown — robust to dropped packets / reconnects / backgrounding.
+  const [phaseTimer, setPhaseTimer] = useState<{ deadline: number; totalMs: number } | null>(null);
   const [showdownData, setShowdownData] = useState<ShowdownData | null>(null);
-  const [nextHandCountdown, setNextHandCountdown] = useState<number | null>(null);
+  const [nextHandDeadline, setNextHandDeadline] = useState<number | null>(null);
   const [discardRevealData, setDiscardRevealData] = useState<DiscardRevealData | null>(null);
   const [selectedDrawCards, setSelectedDrawCards] = useState<number[]>([]);
   const [hasDiscarded, setHasDiscarded] = useState<boolean>(false);
-  const [turnTimer, setTurnTimer] = useState<{ playerId: string; timeLeft: number } | null>(null);
+  const [turnTimer, setTurnTimer] = useState<{ playerId: string; deadline: number } | null>(null);
   const [gameLogs, setGameLogs] = useState<string[]>([]);
   const [disconnectNotice, setDisconnectNotice] = useState<{ playerName: string; reconnecting: boolean } | null>(null);
   const [roomClosedMsg, setRoomClosedMsg] = useState<string | null>(null);
@@ -247,7 +253,20 @@ export function useSocket() {
 
     function onGameState(state: GameState) {
       setGameState(state);
-      setTimer(state.timeLeft > 0 ? state.timeLeft : null);
+
+      // Anchor server-reported remaining ms to our own clock. Re-anchoring on every
+      // state broadcast self-corrects after any missed packet or reconnect.
+      const now = Date.now();
+      setPhaseTimer(
+        state.phaseMsLeft != null && state.phaseMsLeft > 0
+          ? { deadline: now + state.phaseMsLeft, totalMs: state.phaseTotalMs ?? state.phaseMsLeft }
+          : null,
+      );
+      setTurnTimer(
+        state.turnTimer
+          ? { playerId: state.turnTimer.playerId, deadline: now + state.turnTimer.msLeft }
+          : null,
+      );
 
       const me = state.players.find(p => p.id === playerIdRef.current);
       if (me) setIsHost(me.isHost);
@@ -255,15 +274,12 @@ export function useSocket() {
       if (state.phase !== 'waiting' && state.phase !== 'showdown') {
         setInGame(true);
         setShowdownData(null);
-        setNextHandCountdown(null);
+        setNextHandDeadline(null);
         setWaitingRoom(null);
       }
       if (state.phase !== 'draw') {
         setSelectedDrawCards([]);
         setHasDiscarded(false);
-      }
-      if (state.phase !== 'firstBetting' && state.phase !== 'secondBetting') {
-        setTurnTimer(null);
       }
     }
 
@@ -273,8 +289,8 @@ export function useSocket() {
     newSocket.on('roomClosed', onRoomClosed);
     newSocket.on('gameState', onGameState);
 
-    newSocket.on('turnTimer', (data: { playerId: string; timeLeft: number } | null) => {
-      setTurnTimer(data);
+    newSocket.on('turnTimer', (data: { playerId: string; msLeft: number } | null) => {
+      setTurnTimer(data ? { playerId: data.playerId, deadline: Date.now() + data.msLeft } : null);
     });
 
     newSocket.on('yourTurn', (data: YourTurnData) => {
@@ -292,24 +308,25 @@ export function useSocket() {
       setActionLog(msg);
     });
 
-    newSocket.on('timerUpdate', (time: number) => {
-      setTimer(time > 0 ? time : null);
-    });
-
-    newSocket.on('drawPhaseStart', () => {
+    // Phase-start events carry the countdown duration (msLeft + totalMs). We anchor the
+    // deadline to our own clock here; gameState re-confirms it on the same transition.
+    newSocket.on('drawPhaseStart', (data: { msLeft: number; totalMs: number }) => {
+      setPhaseTimer({ deadline: Date.now() + data.msLeft, totalMs: data.totalMs });
       setHasDiscarded(false);
       setSelectedDrawCards([]);
       setMyTurnData(null);
       setDiscardRevealData(null);
     });
 
-    newSocket.on('discardRevealStart', (data: DiscardRevealData) => {
-      setDiscardRevealData(data);
+    newSocket.on('discardRevealStart', (data: { msLeft: number; totalMs: number; discards: DiscardEntry[] }) => {
+      setPhaseTimer({ deadline: Date.now() + data.msLeft, totalMs: data.totalMs });
+      setDiscardRevealData({ discards: data.discards });
       setHasDiscarded(true);
       setMyTurnData(null);
     });
 
-    newSocket.on('drawRevealStart', () => {
+    newSocket.on('drawRevealStart', (data: { msLeft: number; totalMs: number }) => {
+      setPhaseTimer({ deadline: Date.now() + data.msLeft, totalMs: data.totalMs });
       setDiscardRevealData(null);
       setHasDiscarded(true);
       setMyTurnData(null);
@@ -323,8 +340,8 @@ export function useSocket() {
       setGameLogs(prev => [`${data.winner.playerName} wins ${data.pot}pts with ${data.winner.description ?? data.winner.rankName}${handStr ? ': ' + handStr : ''}`, ...prev].slice(0, 60));
     });
 
-    newSocket.on('nextHandCountdown', (seconds: number) => {
-      setNextHandCountdown(seconds);
+    newSocket.on('nextHandCountdown', (data: { msLeft: number }) => {
+      setNextHandDeadline(data.msLeft > 0 ? Date.now() + data.msLeft : null);
     });
 
     newSocket.on('bluffWin', (data: { winner: string; amount: number }) => {
@@ -577,9 +594,9 @@ export function useSocket() {
     gameState,
     myTurnData,
     actionLog,
-    timer,
+    phaseTimer,
     showdownData,
-    nextHandCountdown,
+    nextHandDeadline,
     discardRevealData,
     selectedDrawCards,
     hasDiscarded,

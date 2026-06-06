@@ -26,6 +26,7 @@ import {
 } from "./lib/tableLayout";
 import { Button } from "./components/ui/button";
 import { cn } from "./lib/utils";
+import { useCountdown } from "./hooks/useCountdown";
 import { Clock, Eye, LogOut, Volume2, VolumeX, ScrollText, X, BookOpen } from "lucide-react";
 
 
@@ -52,13 +53,6 @@ const PHASE_LABELS: Record<Phase, string> = {
   draw: "Draw", discardReveal: "Discards", drawReveal: "Reveal", secondBetting: "Betting", showdown: "Showdown",
 };
 
-function phaseTimer(phase: Phase, timer?: number | null): number | null {
-  // Betting phases use the per-turn ring on the seat, not the global timer badge.
-  const isBetting = phase === "firstBetting" || phase === "secondBetting";
-  if (isBetting) return null;
-  const t = typeof timer === "number" ? timer : null;
-  return t != null && t > 0 ? t : null;
-}
 
 function PhaseBadge({ phase }: { phase: Phase }) {
   const isEye = phase === "memoryReveal" || phase === "drawReveal";
@@ -79,8 +73,11 @@ function PhaseBadge({ phase }: { phase: Phase }) {
 
 // Big countdown — rendered on its own row *below* the rules/log buttons so it
 // never stacks on top of an opponent's cards.
-function TimerBadge({ phase, timer }: { phase: Phase; timer?: number | null }) {
-  const displayTimer = phaseTimer(phase, timer);
+function TimerBadge({ phase, phaseTimer }: { phase: Phase; phaseTimer: { deadline: number; totalMs: number } | null }) {
+  const msLeft = useCountdown(phaseTimer?.deadline ?? null);
+  // Betting phases use the per-turn ring on the seat, not the global timer badge.
+  const isBetting = phase === "firstBetting" || phase === "secondBetting";
+  const displayTimer = !isBetting && phaseTimer != null && msLeft > 0 ? Math.ceil(msLeft / 1000) : null;
   if (displayTimer == null) return null;
   const timerColor = "var(--color-gold)";
   return (
@@ -92,6 +89,32 @@ function TimerBadge({ phase, timer }: { phase: Phase; timer?: number | null }) {
         {displayTimer}
       </span>
     </div>
+  );
+}
+
+// Between-hands countdown — ticks locally from the deadline so it stays correct after a
+// reconnect or backgrounded tab.
+function NextHandCountdown({ deadline }: { deadline: number | null }) {
+  const msLeft = useCountdown(deadline);
+  if (deadline != null && msLeft > 0) {
+    return (
+      <div className="mt-2.5 flex items-center justify-center gap-2">
+        <span className="font-display tracking-widest text-[9px] sm:text-[11px] uppercase text-gray-500">
+          Next round in
+        </span>
+        <span
+          className="font-display font-black tabular-nums text-[color:var(--color-gold)] text-xl sm:text-3xl leading-none"
+          style={{ textShadow: '0 0 16px rgba(212,168,67,0.5)' }}
+        >
+          {Math.ceil(msLeft / 1000)}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <p className="text-[color:var(--color-gold)] animate-pulse mt-2 font-display tracking-widest text-[8px] uppercase opacity-80">
+      Next round starting…
+    </p>
   );
 }
 
@@ -182,12 +205,15 @@ function DiscardGroup({ entry, myPlayerId }: { entry: DiscardEntry; myPlayerId: 
 }
 
 function DiscardRevealOverlay({
-  discards, timer, myPlayerId,
+  discards, phaseTimer, myPlayerId,
 }: {
   discards: DiscardEntry[];
-  timer: number | null;
+  phaseTimer: { deadline: number; totalMs: number } | null;
   myPlayerId: string;
 }) {
+  const msLeft = useCountdown(phaseTimer?.deadline ?? null);
+  const totalMs = phaseTimer?.totalMs ?? 1;
+  const pct = Math.max(0, Math.min(100, (msLeft / totalMs) * 100));
   const count = discards.length;
   const gridClass = count <= 2
     ? "flex flex-row flex-wrap gap-6 sm:gap-10 justify-center items-start"
@@ -207,12 +233,12 @@ function DiscardRevealOverlay({
 
       <div className="mt-6 w-40 sm:w-52 h-[3px] rounded-full bg-black/10 overflow-hidden">
         <div
-          className="h-full rounded-full bg-[color:var(--color-gold)] transition-all duration-1000 ease-linear"
-          style={{ width: `${((timer ?? 0) / 10) * 100}%` }}
+          className="h-full rounded-full bg-[color:var(--color-gold)] transition-all duration-200 ease-linear"
+          style={{ width: `${pct}%` }}
         />
       </div>
       <p className="text-[8px] text-gray-500 mt-1.5 uppercase tracking-widest">
-        {timer ?? 0}s
+        {Math.ceil(msLeft / 1000)}s
       </p>
     </div>
   );
@@ -366,7 +392,7 @@ export default function App() {
   const {
     socket,
     inGame, playerId, gameState,
-    myTurnData, actionLog, timer, showdownData, nextHandCountdown, discardRevealData, selectedDrawCards, hasDiscarded,
+    myTurnData, actionLog, phaseTimer, showdownData, nextHandDeadline, discardRevealData, selectedDrawCards, hasDiscarded,
     turnTimer, gameLogs, disconnectNotice, roomClosedMsg, dismissRoomClosed,
     matchTimedOut, findGame, cancelSearch, startPractice,
     playAction, toggleDrawCard, confirmDiscard, leaveGame,
@@ -728,7 +754,7 @@ export default function App() {
   const showBetting   = myTurnActive && isBettingPhase && !showBetSlider && !!myTurnData;
 
   const potChipVariant = gameState.pot >= 500 ? "gold" : gameState.pot >= 200 ? "blue" : "red";
-  const heroTurnTimeLeft = turnTimer?.playerId === playerId ? turnTimer.timeLeft : null;
+  const heroTurnEndsAt = turnTimer?.playerId === playerId ? turnTimer.deadline : null;
 
   const currentTurnPlayer = gameState.players.find(p => p.isCurrentTurn && !p.folded);
   const infoMsg = (() => {
@@ -780,7 +806,7 @@ export default function App() {
 
       {/* ── DISCARD REVEAL OVERLAY ── */}
       {isDiscardReveal && discardRevealData && (
-        <DiscardRevealOverlay discards={discardRevealData.discards} timer={timer} myPlayerId={playerId} />
+        <DiscardRevealOverlay discards={discardRevealData.discards} phaseTimer={phaseTimer} myPlayerId={playerId} />
       )}
 
       {/* ── SHOWDOWN BANNER ── */}
@@ -806,23 +832,7 @@ export default function App() {
                 })}
               </div>
             ) : null}
-            {nextHandCountdown != null && nextHandCountdown > 0 ? (
-              <div className="mt-2.5 flex items-center justify-center gap-2">
-                <span className="font-display tracking-widest text-[9px] sm:text-[11px] uppercase text-gray-500">
-                  Next round in
-                </span>
-                <span
-                  className="font-display font-black tabular-nums text-[color:var(--color-gold)] text-xl sm:text-3xl leading-none"
-                  style={{ textShadow: '0 0 16px rgba(212,168,67,0.5)' }}
-                >
-                  {nextHandCountdown}
-                </span>
-              </div>
-            ) : (
-              <p className="text-[color:var(--color-gold)] animate-pulse mt-2 font-display tracking-widest text-[8px] uppercase opacity-80">
-                Next round starting…
-              </p>
-            )}
+            <NextHandCountdown deadline={nextHandDeadline} />
           </div>
         </div>
       )}
@@ -899,7 +909,7 @@ export default function App() {
               <ScrollText className="w-3.5 h-3.5 text-[color:var(--color-gold)]" />
             </button>
           </div>
-          <TimerBadge phase={phase} timer={timer} />
+          <TimerBadge phase={phase} phaseTimer={phaseTimer} />
         </div>
       </div>
 
@@ -916,7 +926,7 @@ export default function App() {
         const baseSize = baseSizeForCount(opponents.length);
         const cardSpacing = cardSpacingForCount(opponents.length);
         return opponents.map((opp, idx) => {
-          const oppTurnTimeLeft = turnTimer?.playerId === opp.id ? turnTimer.timeLeft : null;
+          const oppTurnEndsAt = turnTimer?.playerId === opp.id ? turnTimer.deadline : null;
           const seat = seats[idx] ?? seats[seats.length - 1] ?? DEFAULT_TABLE_LAYOUT[oppCount][0];
           return (
             <Fragment key={idx}>
@@ -941,7 +951,7 @@ export default function App() {
                     active={opp.isCurrentTurn && !isShowdown && !opp.disconnected && !opp.sittingOut}
                     folded={opp.folded}
                     disconnected={opp.disconnected}
-                    turnTimeLeft={oppTurnTimeLeft}
+                    turnEndsAt={oppTurnEndsAt}
                     size={baseSize}
                     flashLabel={flashAction?.playerId === opp.id ? flashAction.label : undefined}
                   />
@@ -1014,7 +1024,7 @@ export default function App() {
               avatar={myPlayer.name.charAt(0).toUpperCase()}
               avatarUrl={profile?.avatar_url}
               active={myTurnActive} folded={myPlayer.folded}
-              turnTimeLeft={heroTurnTimeLeft}
+              turnEndsAt={heroTurnEndsAt}
               flashLabel={flashAction?.playerId === myPlayer.id ? flashAction.label : undefined}
             />
           </LayoutBox>

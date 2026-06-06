@@ -664,6 +664,9 @@ function setupSocketHandlers(io, rooms) {
       if (room.isPractice) {
         room.onGameOver = () => { rooms.delete(roomCode.toUpperCase()); };
       } else {
+        // Explicit teardown so a finished game's room doesn't linger in the map when
+        // players sit on the game-over screen instead of disconnecting.
+        room.onDestroy = () => { rooms.delete(roomCode.toUpperCase()); };
         room.onGameOver = (players) => {
           recordGameResult({ gameSessionId: room.gameSessionId, players }).catch(err => {
             console.error('[stats] recordGameResult failed:', err);

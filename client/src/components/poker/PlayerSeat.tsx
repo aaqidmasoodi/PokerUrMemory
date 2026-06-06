@@ -1,6 +1,7 @@
 import React from "react";
 import { WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCountdown } from "@/hooks/useCountdown";
 import type { ElementLayout, SeatSize } from "@/lib/tableLayout";
 
 // Long names (PokerSolitaire / PokerPatience) get a smaller font so they fit the
@@ -72,7 +73,9 @@ export interface PlayerSeatProps {
   avatar: string;
   avatarUrl?: string | null;
   folded?: boolean;
-  turnTimeLeft?: number | null;
+  // Client-domain deadline (epoch ms) for this seat's betting turn, or null for no ring.
+  // The seat counts down locally from this, so it stays correct across reconnects.
+  turnEndsAt?: number | null;
   turnTimeMax?: number;
   size?: SeatSize;
   flashLabel?: string;
@@ -80,12 +83,14 @@ export interface PlayerSeatProps {
 }
 
 export function PlayerSeat({
-  name, chips, bet, active, avatar, avatarUrl, folded, turnTimeLeft, turnTimeMax = 15, size = "normal",
+  name, chips, bet, active, avatar, avatarUrl, folded, turnEndsAt, turnTimeMax = 15, size = "normal",
   flashLabel, disconnected,
 }: PlayerSeatProps) {
   const cfg = SEAT_CFG[size];
-  const showRing = active && !folded && turnTimeLeft != null;
-  const pct  = showRing ? (turnTimeLeft! / turnTimeMax) * 100 : 100;
+  const msLeft = useCountdown(turnEndsAt ?? null);
+  const showRing = active && !folded && turnEndsAt != null && msLeft > 0;
+  const turnTimeLeft = Math.ceil(msLeft / 1000);
+  const pct  = showRing ? Math.max(0, Math.min(100, (msLeft / (turnTimeMax * 1000)) * 100)) : 100;
   const timerColor = showRing
     ? pct > 60 ? "#22c55e"
     : pct > 33 ? "#f59e0b"

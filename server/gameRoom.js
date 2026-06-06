@@ -67,29 +67,40 @@ class GameRoom {
         this.gamePhase = 'waiting';
         this.isDrawPhase = false;
         this.playersActedThisRound = 0;
-        this.memoryRevealInterval = null;
-        this.revealTimeLeft = 0;
         this.selectedCards = new Map();
-        this.turnTimer = null;
-        this.turnTimeLeft = 0;
-        this.drawTimer = 0;
-        this.drawTimerInterval = null;
-        this.revealTimerInterval = null;
         this.drawSelections = new Map();
         this.playersConfirmed = new Set();
         this.discardPool = new Map();
-        this.discardRevealInterval = null;
+        // ── Deadline-based timers ────────────────────────────────────────────────
+        // Each timed phase stores an epoch deadline and a SINGLE setTimeout that fires
+        // the real transition. We no longer tick per-second — clients are told how many
+        // ms remain (once, plus on every broadcastState) and count down locally. This
+        // survives dropped packets / reconnects and collapses ~15 msgs/turn to 1.
+        //
+        // phaseDeadline/phaseDurationMs drive the reveal/draw/discard countdowns;
+        // turnDeadline drives the active betting turn (human or bot ring).
+        this.phaseDeadline = null;     // epoch ms, or null when no reveal-style timer active
+        this.phaseDurationMs = 0;      // original duration of the active phase (for progress bars)
+        this.turnDeadline = null;      // epoch ms for the current betting turn
+        this.memoryRevealTimeout = null;
+        this.drawTimeout = null;
+        this.discardRevealTimeout = null;
+        this.drawRevealTimeout = null;
+        this.turnTimeout = null;
         // Deferred one-shot timers (next-hand restart, end-of-game room close).
         // Tracked so clearAllTimers() can cancel them — otherwise a stray restart
         // fires on a room that's already being torn down.
         this.restartTimer = null;
         this.endGameTimer = null;
-        this.nextHandInterval = null;
+        this.nextHandTimeout = null;
         // Matchmaking fields
         this.gameSessionId = null;
         this.expectedPlayerCount = 0;
         this.matchedUserIds = [];
         this.onGameOver = null;
+        // Invoked after the game ends so socketHandlers can delete the room from its
+        // map — otherwise a normally-finished room lingers until everyone disconnects.
+        this.onDestroy = null;
         // Monotonic per-game hand counter. Incremented at the START of each hand so
         // recordHand always sees a stable value when the hand resolves.
         this.handNumber = 0;
@@ -110,7 +121,6 @@ class GameRoom {
         // Deferred timers that drive bot turns — tracked so clearAllTimers() can
         // cancel them and a torn-down room never fires a stray bot action.
         this.botActionTimer = null;   // pending bot betting decision (one at a time)
-        this.botTimerInterval = null; // countdown ticker that drives the bot's turn-timer ring
         this.botDrawTimers = [];      // pending bot discard decisions (one per bot)
     }
 
@@ -298,25 +308,35 @@ class GameRoom {
         this.startMemoryRevealTimer();
     }
 
+    // Record the active reveal/draw/discard countdown: store the deadline + original
+    // duration so broadcastState can report remaining ms to (re)joining clients.
+    _setPhaseDeadline(durationMs) {
+        this.phaseDeadline = Date.now() + durationMs;
+        this.phaseDurationMs = durationMs;
+    }
+
+    _clearPhaseDeadline() {
+        this.phaseDeadline = null;
+        this.phaseDurationMs = 0;
+    }
+
     startMemoryRevealTimer() {
         const playerCount = this.players.size;
         const baseTime = 20;
         const extraTimePerPlayer = 8;
-        this.revealTimeLeft = baseTime + (playerCount - 2) * extraTimePerPlayer;
-        if (this.revealTimeLeft < 20) this.revealTimeLeft = 20;
-        if (this.revealTimeLeft > 45) this.revealTimeLeft = 45;
-        this.io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
+        let seconds = baseTime + (playerCount - 2) * extraTimePerPlayer;
+        if (seconds < 20) seconds = 20;
+        if (seconds > 45) seconds = 45;
 
-        this.memoryRevealInterval = setInterval(() => {
-            this.revealTimeLeft--;
-            this.io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
+        const durationMs = seconds * 1000;
+        this._setPhaseDeadline(durationMs);
+        this.broadcastState(); // carries phaseMsLeft/phaseTotalMs so clients start the countdown
 
-            if (this.revealTimeLeft <= 0) {
-                clearInterval(this.memoryRevealInterval);
-                this.memoryRevealInterval = null;
-                this.endMemoryRevealPhase();
-            }
-        }, 1000);
+        this.memoryRevealTimeout = setTimeout(() => {
+            this.memoryRevealTimeout = null;
+            this._clearPhaseDeadline();
+            this.endMemoryRevealPhase();
+        }, durationMs);
     }
 
     endMemoryRevealPhase() {
@@ -391,6 +411,23 @@ class GameRoom {
     }
 
     broadcastState() {
+        const now = Date.now();
+        // Remaining ms on the active reveal/draw/discard countdown (null if none). The
+        // client anchors this to its own clock, so a reconnecting/mid-joining player
+        // recovers the correct countdown from any state broadcast.
+        const phaseMsLeft = this.phaseDeadline ? Math.max(0, this.phaseDeadline - now) : null;
+        const phaseTotalMs = this.phaseDurationMs || null;
+
+        // Active betting turn (so the seat ring is restored on reconnect — the old
+        // per-tick model never sent this in state).
+        let turnTimer = null;
+        if (this.turnDeadline) {
+            const currentPlayer = Array.from(this.players.values())[this.currentPlayerIndex];
+            if (currentPlayer) {
+                turnTimer = { playerId: currentPlayer.id, msLeft: Math.max(0, this.turnDeadline - now) };
+            }
+        }
+
         this.players.forEach((player, id) => {
             const playersData = Array.from(this.players.keys()).map(socketId =>
                 this.getPlayerPublicState(socketId, id)
@@ -403,7 +440,9 @@ class GameRoom {
                 phase: this.gamePhase,
                 currentPlayerIndex: this.getPlayerIndex(player.id),
                 players: playersData,
-                timeLeft: this.revealTimeLeft,
+                phaseMsLeft,
+                phaseTotalMs,
+                turnTimer,
             });
         });
     }
@@ -590,25 +629,24 @@ class GameRoom {
             this.onGameOver(players);
         }
         this.endGameTimer = setTimeout(() => this.io.to(this.roomCode).emit('roomClosed', msg), 4000);
+        // Explicit teardown: drop the finished room from the server's map even if the
+        // players just sit on the game-over screen instead of disconnecting. Fires
+        // shortly after the roomClosed message so clients have already been notified.
+        setTimeout(() => this.onDestroy?.(), 6000);
     }
 
-    // Countdown between hands: emit the remaining seconds every tick so clients can
-    // show "Next round in N", then eliminate broke players and deal the next hand.
+    // Countdown between hands: tell clients how many ms remain (once) so they can show
+    // "Next round in N", then eliminate broke players and deal the next hand.
     scheduleNextHand(seconds = 15) {
-        if (this.nextHandInterval) { clearInterval(this.nextHandInterval); this.nextHandInterval = null; }
-        let timeLeft = seconds;
-        this.io.to(this.roomCode).emit('nextHandCountdown', timeLeft);
-        this.nextHandInterval = setInterval(() => {
-            timeLeft--;
-            this.io.to(this.roomCode).emit('nextHandCountdown', timeLeft);
-            if (timeLeft <= 0) {
-                clearInterval(this.nextHandInterval);
-                this.nextHandInterval = null;
-                this.eliminateBrokePlayers();
-                if (this.players.size <= 1) { this.endGame(); return; }
-                this.startNewHand();
-            }
-        }, 1000);
+        if (this.nextHandTimeout) { clearTimeout(this.nextHandTimeout); this.nextHandTimeout = null; }
+        const durationMs = seconds * 1000;
+        this.io.to(this.roomCode).emit('nextHandCountdown', { msLeft: durationMs });
+        this.nextHandTimeout = setTimeout(() => {
+            this.nextHandTimeout = null;
+            this.eliminateBrokePlayers();
+            if (this.players.size <= 1) { this.endGame(); return; }
+            this.startNewHand();
+        }, durationMs);
     }
 
     showBluffWin(winner) {
@@ -663,23 +701,19 @@ class GameRoom {
         });
 
         this.gamePhase = 'draw';
-        this.drawTimer = 20;
         this.drawSelections = new Map();
         this.playersConfirmed = new Set();
 
-        this.io.to(this.roomCode).emit('drawPhaseStart', { timer: this.drawTimer });
+        const durationMs = 20 * 1000;
+        this._setPhaseDeadline(durationMs);
+        this.io.to(this.roomCode).emit('drawPhaseStart', { msLeft: durationMs, totalMs: durationMs });
         this.broadcastState();
 
-        this.drawTimerInterval = setInterval(() => {
-            this.drawTimer--;
-            this.io.to(this.roomCode).emit('timerUpdate', this.drawTimer);
-
-            if (this.drawTimer <= 0) {
-                clearInterval(this.drawTimerInterval);
-                this.drawTimerInterval = null;
-                this.endDrawPhaseNoDiscard();
-            }
-        }, 1000);
+        this.drawTimeout = setTimeout(() => {
+            this.drawTimeout = null;
+            this._clearPhaseDeadline();
+            this.endDrawPhaseNoDiscard();
+        }, durationMs);
 
         // Let any computer players choose and confirm their discards.
         this.scheduleBotDiscards();
@@ -708,8 +742,8 @@ class GameRoom {
 
         const activePlayers = this.getActivePlayers();
         if (this.playersConfirmed.size === activePlayers.length) {
-            clearInterval(this.drawTimerInterval);
-            this.drawTimerInterval = null;
+            if (this.drawTimeout) { clearTimeout(this.drawTimeout); this.drawTimeout = null; }
+            this._clearPhaseDeadline();
             this.processAllDiscards();
         }
     }
@@ -752,7 +786,8 @@ class GameRoom {
 
     showDiscardReveal() {
         this.gamePhase = 'discardReveal';
-        this.revealTimeLeft = 10;
+        const durationMs = 10 * 1000;
+        this._setPhaseDeadline(durationMs);
 
         // Build payload — include ALL active players so stand-pat is visible too
         const discards = this.getActivePlayers().map(player => ({
@@ -764,24 +799,20 @@ class GameRoom {
             })),
         }));
 
-        this.io.to(this.roomCode).emit('discardRevealStart', { timer: 10, discards });
+        this.io.to(this.roomCode).emit('discardRevealStart', { msLeft: durationMs, totalMs: durationMs, discards });
         this.broadcastState();
 
-        this.discardRevealInterval = setInterval(() => {
-            this.revealTimeLeft--;
-            this.io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
-
-            if (this.revealTimeLeft <= 0) {
-                clearInterval(this.discardRevealInterval);
-                this.discardRevealInterval = null;
-                this.showReplacementCards();
-            }
-        }, 1000);
+        this.discardRevealTimeout = setTimeout(() => {
+            this.discardRevealTimeout = null;
+            this._clearPhaseDeadline();
+            this.showReplacementCards();
+        }, durationMs);
     }
 
     showReplacementCards() {
         this.gamePhase = 'drawReveal';
-        this.revealTimeLeft = 10;
+        const durationMs = 10 * 1000;
+        this._setPhaseDeadline(durationMs);
 
         this.drawSelections.forEach((data) => {
             if (data.faceUpCard) {
@@ -790,7 +821,8 @@ class GameRoom {
         });
 
         this.io.to(this.roomCode).emit('drawRevealStart', {
-            timer: this.revealTimeLeft,
+            msLeft: durationMs,
+            totalMs: durationMs,
             replacements: Array.from(this.drawSelections.entries()).map(([id, data]) => ({
                 playerId: id,
                 playerName: data.playerName,
@@ -800,16 +832,11 @@ class GameRoom {
 
         this.broadcastState();
 
-        this.revealTimerInterval = setInterval(() => {
-            this.revealTimeLeft--;
-            this.io.to(this.roomCode).emit('timerUpdate', this.revealTimeLeft);
-
-            if (this.revealTimeLeft <= 0) {
-                clearInterval(this.revealTimerInterval);
-                this.revealTimerInterval = null;
-                this.endDrawPhase();
-            }
-        }, 1000);
+        this.drawRevealTimeout = setTimeout(() => {
+            this.drawRevealTimeout = null;
+            this._clearPhaseDeadline();
+            this.endDrawPhase();
+        }, durationMs);
     }
 
     _startSecondBetting() {
@@ -898,9 +925,8 @@ class GameRoom {
     // longer (just like a human deliberating). An occasional "long think" spike
     // adds realism regardless of the action.
     scheduleBotBettingAction(bot) {
-        // Clear any in-flight action + countdown ticker.
+        // Clear any in-flight action timer.
         if (this.botActionTimer) { clearTimeout(this.botActionTimer); this.botActionTimer = null; }
-        if (this.botTimerInterval) { clearInterval(this.botTimerInterval); this.botTimerInterval = null; }
 
         const botId = bot.id;
         const player = this.players.get(botId);
@@ -924,25 +950,16 @@ class GameRoom {
         const longThink = Math.random() < 0.15;
         const delay = (longThink ? 6000 : base) + Math.floor(Math.random() * (longThink ? 4000 : jitter));
 
-        // Show a normal 15-second countdown ring (same as a human turn).
-        // The bot acts at a random delay within that window — the timer just
-        // gets cleared early when the action fires.
-        let timeLeft = 15;
-        this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, timeLeft });
-
-        this.botTimerInterval = setInterval(() => {
-            timeLeft--;
-            if (timeLeft > 0) {
-                this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, timeLeft });
-            } else {
-                clearInterval(this.botTimerInterval);
-                this.botTimerInterval = null;
-            }
-        }, 1000);
+        // Show a normal 15-second countdown ring (same as a human turn). The deadline
+        // is emitted once; the client counts down locally. The bot acts at a random
+        // delay within that window — the ring just gets cleared early when it fires.
+        const ringMs = 15 * 1000;
+        this.turnDeadline = Date.now() + ringMs;
+        this.io.to(this.roomCode).emit('turnTimer', { playerId: botId, msLeft: ringMs });
 
         this.botActionTimer = setTimeout(() => {
             this.botActionTimer = null;
-            if (this.botTimerInterval) { clearInterval(this.botTimerInterval); this.botTimerInterval = null; }
+            this.turnDeadline = null;
             this.io.to(this.roomCode).emit('turnTimer', null);
 
             if (this.players.size === 0) return;
@@ -991,49 +1008,46 @@ class GameRoom {
         const currentPlayer = playerArray[this.currentPlayerIndex];
         if (!currentPlayer || currentPlayer.folded) return;
 
-        this.turnTimeLeft = 15;
+        const durationMs = 15 * 1000;
         const playerId = currentPlayer.id;
-        this.io.to(this.roomCode).emit('turnTimer', { playerId, timeLeft: 15 });
+        this.turnDeadline = Date.now() + durationMs;
+        this.io.to(this.roomCode).emit('turnTimer', { playerId, msLeft: durationMs });
 
-        this.turnTimer = setInterval(() => {
-            this.turnTimeLeft--;
-            this.io.to(this.roomCode).emit('turnTimer', { playerId, timeLeft: this.turnTimeLeft });
-
-            if (this.turnTimeLeft <= 0) {
-                this.clearTurnTimer();
-                this.io.to(this.roomCode).emit('actionLog', `${currentPlayer.name} timed out and folded.`);
-                currentPlayer.folded = true;
-                this.playersActedThisRound++;
-                this.broadcastState();
-                this.nextPlayer();
-            }
-        }, 1000);
+        // Single authoritative timeout: fold the player when the deadline passes. The
+        // client renders the countdown locally from the deadline above.
+        this.turnTimeout = setTimeout(() => {
+            this.turnTimeout = null;
+            this.turnDeadline = null;
+            this.io.to(this.roomCode).emit('turnTimer', null);
+            this.io.to(this.roomCode).emit('actionLog', `${currentPlayer.name} timed out and folded.`);
+            currentPlayer.folded = true;
+            this.playersActedThisRound++;
+            this.broadcastState();
+            this.nextPlayer();
+        }, durationMs);
     }
 
     clearTurnTimer() {
-        if (this.turnTimer) {
-            clearInterval(this.turnTimer);
-            this.turnTimer = null;
+        if (this.turnTimeout) {
+            clearTimeout(this.turnTimeout);
+            this.turnTimeout = null;
         }
-        if (this.botTimerInterval) {
-            clearInterval(this.botTimerInterval);
-            this.botTimerInterval = null;
-        }
+        this.turnDeadline = null;
         this.io.to(this.roomCode).emit('turnTimer', null);
     }
 
     clearAllTimers() {
         this.clearTurnTimer();
-        if (this.memoryRevealInterval) { clearInterval(this.memoryRevealInterval); this.memoryRevealInterval = null; }
-        if (this.drawTimerInterval) { clearInterval(this.drawTimerInterval); this.drawTimerInterval = null; }
-        if (this.revealTimerInterval) { clearInterval(this.revealTimerInterval); this.revealTimerInterval = null; }
-        if (this.discardRevealInterval) { clearInterval(this.discardRevealInterval); this.discardRevealInterval = null; }
+        this._clearPhaseDeadline();
+        if (this.memoryRevealTimeout) { clearTimeout(this.memoryRevealTimeout); this.memoryRevealTimeout = null; }
+        if (this.drawTimeout) { clearTimeout(this.drawTimeout); this.drawTimeout = null; }
+        if (this.drawRevealTimeout) { clearTimeout(this.drawRevealTimeout); this.drawRevealTimeout = null; }
+        if (this.discardRevealTimeout) { clearTimeout(this.discardRevealTimeout); this.discardRevealTimeout = null; }
         if (this.restartTimer) { clearTimeout(this.restartTimer); this.restartTimer = null; }
         if (this.endGameTimer) { clearTimeout(this.endGameTimer); this.endGameTimer = null; }
-        if (this.nextHandInterval) { clearInterval(this.nextHandInterval); this.nextHandInterval = null; }
+        if (this.nextHandTimeout) { clearTimeout(this.nextHandTimeout); this.nextHandTimeout = null; }
         if (this.joinWindowTimer) { clearTimeout(this.joinWindowTimer); this.joinWindowTimer = null; }
         if (this.botActionTimer) { clearTimeout(this.botActionTimer); this.botActionTimer = null; }
-        if (this.botTimerInterval) { clearInterval(this.botTimerInterval); this.botTimerInterval = null; }
         if (this.botDrawTimers && this.botDrawTimers.length) {
             this.botDrawTimers.forEach(t => clearTimeout(t));
             this.botDrawTimers = [];
