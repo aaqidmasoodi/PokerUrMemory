@@ -100,100 +100,114 @@ export function MainMenuScreen({
         </div>
       </div>
 
-      {/* ── Center: title + button grid ── */}
-      <div className="relative z-10 flex-1 min-h-0 flex flex-col items-center justify-center
-        gap-5 sm:gap-6 lg:gap-8
-        px-4 sm:px-6 md:px-8 lg:px-14 xl:px-20">
+      {/* ── Center: [Solitaire] [title + buttons] [Patience] ── */}
+      <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center
+        gap-3 sm:gap-4 lg:gap-5
+        px-4 sm:px-6 md:px-8 lg:px-14 xl:px-20
+        py-6 sm:py-8 lg:py-10">
 
-        {/* Title */}
-        <div className="text-center">
-          <h1 className="font-display
-            text-2xl min-[380px]:text-3xl sm:text-4xl lg:text-5xl xl:text-6xl
-            font-bold leading-tight tracking-wide text-white drop-shadow-md whitespace-nowrap">
-            ♠ PokerUrMemory ♠
-          </h1>
-          <p className="text-[10px] sm:text-xs lg:text-sm text-gray-300 mt-1.5 tracking-[0.2em] uppercase">
-            5-Card Draw · Memory Twist
-          </p>
+        {/* Solitaire — left square panel */}
+        <button
+          onClick={onSolitaire}
+          className="w-[6rem] h-[6rem] sm:w-[7.5rem] sm:h-[7.5rem] lg:w-[9rem] lg:h-[9rem] xl:w-[11rem] xl:h-[11rem]
+            shrink-0 relative rounded-2xl overflow-hidden
+            hover:brightness-110 active:scale-[0.97] transition-all"
+        >
+          <img
+            src="/images/PUM_Solitaire.webp"
+            alt="Solitaire"
+            className="w-full h-full object-cover object-center"
+            draggable={false}
+          />
+          <div className="absolute inset-0 rounded-2xl" style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(10,50,20,1) 100%)' }} />
+        </button>
+
+        {/* Center: title + 3 game mode buttons */}
+        <div className="flex flex-col items-center gap-5 sm:gap-6 lg:gap-8">
+
+          {/* Title */}
+          <div className="text-center">
+            <h1 className="font-display
+              text-2xl min-[380px]:text-3xl sm:text-4xl lg:text-5xl xl:text-6xl
+              font-bold leading-tight tracking-wide text-white drop-shadow-md whitespace-nowrap">
+              ♠ PokerUrMemory ♠
+            </h1>
+            <p className="text-[10px] sm:text-xs lg:text-sm text-gray-300 mt-1.5 tracking-[0.2em] uppercase">
+              5-Card Draw · Memory Twist
+            </p>
+          </div>
+
+          {/* 3 game mode buttons — fixed square-ish size */}
+          <div className="flex items-stretch gap-2 sm:gap-3 lg:gap-4 xl:gap-5">
+
+            {/* With Friends */}
+            <button
+              onClick={onPlayWithFriends}
+              className="w-[5rem] sm:w-[6rem] lg:w-[7.5rem] xl:w-[9rem]
+                min-h-[5rem] sm:min-h-[6rem] lg:min-h-[7.5rem] xl:min-h-[9rem]
+                flex flex-col items-center justify-center gap-2 sm:gap-2.5
+                rounded-2xl font-display tracking-wider uppercase
+                bg-white/15 backdrop-blur-sm border border-white/30 text-white
+                hover:bg-white/25 active:scale-[0.97] transition-all"
+            >
+              <Users className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
+              <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
+                With<br />Friends
+              </span>
+            </button>
+
+            {/* Quick Play — blue primary */}
+            <button
+              onClick={onStartGame}
+              className="w-[5rem] sm:w-[6rem] lg:w-[7.5rem] xl:w-[9rem]
+                min-h-[5rem] sm:min-h-[6rem] lg:min-h-[7.5rem] xl:min-h-[9rem]
+                flex flex-col items-center justify-center gap-2 sm:gap-2.5
+                rounded-2xl font-display tracking-wider uppercase
+                bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]
+                text-white border border-black/10
+                shadow-[0_6px_24px_rgba(0,0,0,0.25)]
+                hover:brightness-110 active:scale-[0.97] transition-all"
+            >
+              <Spade className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
+              <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
+                Quick<br />Play
+              </span>
+            </button>
+
+            {/* Schedule */}
+            <button
+              onClick={onScheduledGames}
+              className="w-[5rem] sm:w-[6rem] lg:w-[7.5rem] xl:w-[9rem]
+                min-h-[5rem] sm:min-h-[6rem] lg:min-h-[7.5rem] xl:min-h-[9rem]
+                flex flex-col items-center justify-center gap-2 sm:gap-2.5
+                rounded-2xl font-display tracking-wider uppercase
+                bg-white/15 backdrop-blur-sm border border-white/30 text-white
+                hover:bg-white/25 active:scale-[0.97] transition-all"
+            >
+              <CalendarClock className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
+              <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
+                Schedule
+              </span>
+            </button>
+
+          </div>
         </div>
 
-        {/* Primary button row — 5 square-ish tiles filling the horizontal space */}
-        <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto flex items-stretch gap-2 sm:gap-3 lg:gap-4 xl:gap-5 min-h-[5rem] sm:min-h-[5.5rem] lg:min-h-[6.5rem] xl:min-h-[7.5rem]">
-
-          {/* Solitaire — leftmost, image only */}
-          <button
-            onClick={onSolitaire}
-            className="flex-1 relative rounded-2xl overflow-hidden border border-white/30
-              hover:brightness-110 active:scale-[0.97] transition-all"
-          >
-            <img
-              src="/images/PUM_Solitaire.webp"
-              alt="Solitaire"
-              className="w-full h-full object-cover scale-[1.15] object-center"
-              draggable={false}
-            />
-            <div className="absolute inset-0 shadow-[inset_0_0_24px_6px_rgba(0,0,0,0.45)]" />
-          </button>
-
-          {/* With Friends */}
-          <button
-            onClick={onPlayWithFriends}
-            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
-              rounded-2xl font-display tracking-wider uppercase
-              bg-white/15 backdrop-blur-sm border border-white/30 text-white
-              hover:bg-white/25 active:scale-[0.97] transition-all"
-          >
-            <Users className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
-            <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
-              With<br />Friends
-            </span>
-          </button>
-
-          {/* Quick Play — blue primary */}
-          <button
-            onClick={onStartGame}
-            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
-              rounded-2xl font-display tracking-wider uppercase
-              bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]
-              text-white border border-black/10
-              shadow-[0_6px_24px_rgba(0,0,0,0.25)]
-              hover:brightness-110 active:scale-[0.97] transition-all"
-          >
-            <Spade className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
-            <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
-              Quick<br />Play
-            </span>
-          </button>
-
-          {/* Schedule */}
-          <button
-            onClick={onScheduledGames}
-            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
-              rounded-2xl font-display tracking-wider uppercase
-              bg-white/15 backdrop-blur-sm border border-white/30 text-white
-              hover:bg-white/25 active:scale-[0.97] transition-all"
-          >
-            <CalendarClock className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 xl:w-9 xl:h-9" />
-            <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
-              Schedule
-            </span>
-          </button>
-
-          {/* Patience — rightmost, image only */}
-          <button
-            onClick={onPatience}
-            className="flex-1 relative rounded-2xl overflow-hidden border border-white/30
-              hover:brightness-110 active:scale-[0.97] transition-all"
-          >
-            <img
-              src="/images/PUM_Patience.webp"
-              alt="Patience"
-              className="w-full h-full object-cover scale-[1.15] object-center"
-              draggable={false}
-            />
-            <div className="absolute inset-0 shadow-[inset_0_0_24px_6px_rgba(0,0,0,0.45)]" />
-          </button>
-        </div>
+        {/* Patience — right square panel */}
+        <button
+          onClick={onPatience}
+          className="w-[6rem] h-[6rem] sm:w-[7.5rem] sm:h-[7.5rem] lg:w-[9rem] lg:h-[9rem] xl:w-[11rem] xl:h-[11rem]
+            shrink-0 relative rounded-2xl overflow-hidden
+            hover:brightness-110 active:scale-[0.97] transition-all"
+        >
+          <img
+            src="/images/PUM_Patience.webp"
+            alt="Patience"
+            className="w-full h-full object-cover object-center"
+            draggable={false}
+          />
+          <div className="absolute inset-0 rounded-2xl" style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(10,50,20,1) 100%)' }} />
+        </button>
 
       </div>
 
