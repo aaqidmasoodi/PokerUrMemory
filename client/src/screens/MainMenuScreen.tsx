@@ -1,6 +1,6 @@
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
-import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Lightbulb } from 'lucide-react';
+import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Lightbulb, Bot, Cpu } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function MainMenuScreen({
@@ -107,20 +107,28 @@ export function MainMenuScreen({
         py-6 sm:py-8 lg:py-10">
 
         {/* Solitaire — left square panel */}
-        <button
-          onClick={onSolitaire}
-          className="w-[6rem] h-[6rem] sm:w-[7.5rem] sm:h-[7.5rem] lg:w-[9rem] lg:h-[9rem] xl:w-[11rem] xl:h-[11rem]
-            shrink-0 relative rounded-2xl overflow-hidden
-            hover:brightness-110 active:scale-[0.97] transition-all"
-        >
-          <img
-            src="/images/PUM_Solitaire.webp"
-            alt="Solitaire"
-            className="w-full h-full object-cover object-center"
-            draggable={false}
-          />
-          <div className="absolute inset-0 rounded-2xl" style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(10,50,20,1) 100%)' }} />
-        </button>
+        <div className="relative shrink-0">
+          <button
+            onClick={onSolitaire}
+            className="w-[6rem] h-[6rem] sm:w-[7.5rem] sm:h-[7.5rem] lg:w-[9rem] lg:h-[9rem] xl:w-[11rem] xl:h-[11rem]
+              block relative rounded-2xl overflow-hidden
+              border border-white/30
+              hover:brightness-110 active:scale-[0.97] transition-all"
+          >
+            <img
+              src="/images/PUM_Solitaire.webp"
+              alt="Solitaire"
+              className="w-full h-full object-cover object-center"
+              draggable={false}
+            />
+          </button>
+          <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 z-10
+            w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8
+            rounded-full bg-black/70 backdrop-blur-sm border border-white/30
+            flex items-center justify-center pointer-events-none">
+            <Bot className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-white" />
+          </div>
+        </div>
 
         {/* Center: title + 3 game mode buttons */}
         <div className="flex flex-col items-center gap-5 sm:gap-6 lg:gap-8">
@@ -194,20 +202,28 @@ export function MainMenuScreen({
         </div>
 
         {/* Patience — right square panel */}
-        <button
-          onClick={onPatience}
-          className="w-[6rem] h-[6rem] sm:w-[7.5rem] sm:h-[7.5rem] lg:w-[9rem] lg:h-[9rem] xl:w-[11rem] xl:h-[11rem]
-            shrink-0 relative rounded-2xl overflow-hidden
-            hover:brightness-110 active:scale-[0.97] transition-all"
-        >
-          <img
-            src="/images/PUM_Patience.webp"
-            alt="Patience"
-            className="w-full h-full object-cover object-center"
-            draggable={false}
-          />
-          <div className="absolute inset-0 rounded-2xl" style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(10,50,20,1) 100%)' }} />
-        </button>
+        <div className="relative shrink-0">
+          <button
+            onClick={onPatience}
+            className="w-[6rem] h-[6rem] sm:w-[7.5rem] sm:h-[7.5rem] lg:w-[9rem] lg:h-[9rem] xl:w-[11rem] xl:h-[11rem]
+              block relative rounded-2xl overflow-hidden
+              border border-white/30
+              hover:brightness-110 active:scale-[0.97] transition-all"
+          >
+            <img
+              src="/images/PUM_Patience.webp"
+              alt="Patience"
+              className="w-full h-full object-cover object-center"
+              draggable={false}
+            />
+          </button>
+          <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 z-10
+            w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8
+            rounded-full bg-black/70 backdrop-blur-sm border border-white/30
+            flex items-center justify-center pointer-events-none">
+            <Cpu className="w-3 h-3 sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-white" />
+          </div>
+        </div>
 
       </div>
 
