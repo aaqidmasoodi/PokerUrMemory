@@ -19,6 +19,11 @@ const io = new Server(server, {
   },
 });
 
+// Images never change (filenames are versioned manually) — cache for 1 year
+app.use('/images', express.static(path.join(__dirname, '../client/dist/images'), {
+  maxAge: '1y',
+  immutable: true,
+}));
 app.use(express.static(path.join(__dirname, '../client/dist')));
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
