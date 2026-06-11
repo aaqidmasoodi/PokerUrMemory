@@ -127,7 +127,7 @@ export function MainMenuScreen({
               hover:brightness-110 active:scale-[0.97] transition-all"
           >
             <img
-              src="/images/PUM_Solitaire.png"
+              src="/images/PUM_Solitaire.webp"
               alt="Solitaire"
               className="w-full h-full object-cover scale-[1.15] object-center"
               draggable={false}
@@ -186,7 +186,7 @@ export function MainMenuScreen({
               hover:brightness-110 active:scale-[0.97] transition-all"
           >
             <img
-              src="/images/PUM_Patience.png"
+              src="/images/PUM_Patience.webp"
               alt="Patience"
               className="w-full h-full object-cover scale-[1.15] object-center"
               draggable={false}
