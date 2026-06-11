@@ -103,11 +103,12 @@ export function MainMenuScreen({
       {/* ── Center: [Solitaire] [title + buttons] [Patience] ── */}
       <div className="relative z-10 flex-1 min-h-0 flex items-center justify-center
         gap-3 sm:gap-4 lg:gap-5
+        portrait:flex-wrap portrait:content-center portrait:gap-y-4
         px-4 sm:px-6 md:px-8 lg:px-14 xl:px-20
         py-6 sm:py-8 lg:py-10">
 
-        {/* Solitaire — left square panel */}
-        <div className="relative shrink-0">
+        {/* Solitaire — left in landscape, bottom-left in portrait */}
+        <div className="relative shrink-0 portrait:order-3">
           <button
             onClick={onSolitaire}
             className="w-[6rem] h-[6rem] sm:w-[7.5rem] sm:h-[7.5rem] lg:w-[9rem] lg:h-[9rem] xl:w-[11rem] xl:h-[11rem]
@@ -131,7 +132,7 @@ export function MainMenuScreen({
         </div>
 
         {/* Center: title + 3 game mode buttons */}
-        <div className="flex flex-col items-center gap-5 sm:gap-6 lg:gap-8">
+        <div className="flex flex-col items-center gap-5 sm:gap-6 lg:gap-8 portrait:w-full portrait:order-1">
 
           {/* Title */}
           <div className="text-center">
@@ -201,8 +202,8 @@ export function MainMenuScreen({
           </div>
         </div>
 
-        {/* Patience — right square panel */}
-        <div className="relative shrink-0">
+        {/* Patience — right in landscape, bottom-right in portrait */}
+        <div className="relative shrink-0 portrait:order-3">
           <button
             onClick={onPatience}
             className="w-[6rem] h-[6rem] sm:w-[7.5rem] sm:h-[7.5rem] lg:w-[9rem] lg:h-[9rem] xl:w-[11rem] xl:h-[11rem]
