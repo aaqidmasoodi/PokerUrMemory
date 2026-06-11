@@ -6,6 +6,31 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+// Called when the first hand deals — increments total_games for all seated human
+// players and marks the session as active. Bots (userId=null) are filtered out.
+async function recordGameStart({ gameSessionId, players }) {
+  const userIds = players.map(p => p.userId).filter(Boolean);
+  if (userIds.length === 0) return;
+
+  const today = new Date().toISOString().split('T')[0]; // 'YYYY-MM-DD' UTC
+
+  const [startRes, ...streakResults] = await Promise.all([
+    supabase.rpc('record_game_start', {
+      p_user_ids: userIds,
+      p_game_id: gameSessionId ?? null,
+    }),
+    ...userIds.map(id =>
+      supabase.rpc('touch_streak', { p_user_id: id, p_today: today })
+    ),
+  ]);
+
+  if (startRes.error) console.error('[stats] record_game_start error:', startRes.error);
+  streakResults.forEach((r, i) => {
+    if (r.error) console.error(`[stats] touch_streak error for ${userIds[i]}:`, r.error);
+    else console.log(`[stats] streak for ${userIds[i]} → ${r.data}`);
+  });
+}
+
 async function recordGameResult({ gameSessionId, players }) {
   if (!gameSessionId) return;
 
@@ -30,13 +55,15 @@ async function recordGameResult({ gameSessionId, players }) {
     .update({ status: 'completed', completed_at: new Date().toISOString() })
     .eq('id', gameSessionId);
 
-  // Increment total_games for all players, wins for the winner — run concurrently.
-  await Promise.all(rows.map(row =>
-    supabase.rpc('increment_stats', {
+  // Increment wins for the winner only.
+  // total_games and streaks are already handled at game start via recordGameStart.
+  await Promise.all(rows
+    .filter(row => row.placement === 1)
+    .map(row => supabase.rpc('increment_stats', {
       p_user_id: row.user_id,
-      p_add_wins: row.placement === 1 ? 1 : 0,
-    })
-  ));
+      p_add_wins: 1,
+    }))
+  );
 }
 
 // Record a single completed hand. Idempotent on (gameSessionId, handNumber) — safe
@@ -68,4 +95,4 @@ async function recordHand({ gameSessionId, handNumber, potAmount, endedBy, playe
   if (error) throw error;
 }
 
-module.exports = { supabase, recordGameResult, recordHand };
+module.exports = { supabase, recordGameStart, recordGameResult, recordHand };

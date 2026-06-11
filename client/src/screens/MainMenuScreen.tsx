@@ -53,9 +53,14 @@ export function MainMenuScreen({
                 <span className="ml-1.5">{getFlagEmoji(profile.country_code)}</span>
               )}
             </p>
-            <p className="text-[10px] sm:text-xs text-gray-300 mt-0.5 truncate">
-              {profile.total_games} games played
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[10px] sm:text-xs text-gray-300 truncate">
+                {profile.total_games} games played
+              </span>
+              <span className={`text-[10px] sm:text-xs font-bold shrink-0 ${profile.current_streak > 0 ? 'text-orange-300' : 'text-gray-500'}`}>
+                🔥 {profile.current_streak}
+              </span>
+            </div>
           </div>
         </div>
 

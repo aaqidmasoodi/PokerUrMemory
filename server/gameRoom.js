@@ -106,6 +106,8 @@ class GameRoom {
         this.handNumber = 0;
         // Set by socketHandlers — invoked with hand snapshot after every showdown/bluff-win.
         this.onHandComplete = null;
+        // Invoked once when hand #1 starts — used to record game-start stats.
+        this.onGameStart = null;
         // Scheduled game: timer that starts the game after the join window expires.
         this.joinWindowTimer = null;
         // When true the game waits for the host to press "Start" (or the join window
@@ -255,6 +257,11 @@ class GameRoom {
             return;
         }
         this.handNumber++;
+        // Fire once when the first hand deals — lets socketHandlers record game-start stats.
+        if (this.handNumber === 1 && this.onGameStart) {
+            const humanPlayers = Array.from(this.players.values()).filter(p => p.userId);
+            this.onGameStart(humanPlayers);
+        }
         this.deck = createDeck();
         this.pot = 0;
         this.currentBet = 0;

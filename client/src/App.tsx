@@ -396,7 +396,7 @@ function ConfirmDialog({
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const { authState, user, profile, signInWithGoogle, signInWithFacebook, signOut, createProfile, updateProfile } = useAuth();
+  const { authState, user, profile, signInWithGoogle, signInWithFacebook, signOut, createProfile, updateProfile, refreshProfile } = useAuth();
   const {
     socket,
     inGame, playerId, gameState,
@@ -471,6 +471,7 @@ export default function App() {
     if (prevInGame.current && !inGame) {
       setAppScreen('menu');
       setShowExitDialog(false);
+      refreshProfile();
     }
     prevInGame.current = inGame;
   }, [inGame]);

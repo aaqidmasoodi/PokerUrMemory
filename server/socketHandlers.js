@@ -1,5 +1,5 @@
 const { GameRoom } = require('./gameRoom');
-const { recordGameResult, recordHand, supabase } = require('./supabase');
+const { recordGameResult, recordGameStart, recordHand, supabase } = require('./supabase');
 const { VALID_DIFFICULTIES } = require('./botPlayer');
 const crypto = require('crypto');
 
@@ -667,6 +667,11 @@ function setupSocketHandlers(io, rooms) {
         // Explicit teardown so a finished game's room doesn't linger in the map when
         // players sit on the game-over screen instead of disconnecting.
         room.onDestroy = () => { rooms.delete(roomCode.toUpperCase()); };
+        room.onGameStart = (players) => {
+          recordGameStart({ gameSessionId: room.gameSessionId, players }).catch(err => {
+            console.error('[stats] recordGameStart failed:', err);
+          });
+        };
         room.onGameOver = (players) => {
           recordGameResult({ gameSessionId: room.gameSessionId, players }).catch(err => {
             console.error('[stats] recordGameResult failed:', err);

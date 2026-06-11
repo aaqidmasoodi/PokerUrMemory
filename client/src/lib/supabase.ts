@@ -20,5 +20,8 @@ export type Profile = {
   biggest_pot_won: number;
   best_hand_rank: number;
   best_hand_name: string | null;
+  current_streak: number;
+  longest_streak: number;
+  last_played_date: string | null;
   created_at: string;
 };

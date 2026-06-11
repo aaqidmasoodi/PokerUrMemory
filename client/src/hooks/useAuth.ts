@@ -181,5 +181,10 @@ export function useAuth() {
     return null;
   }
 
-  return { authState, user, profile, signInWithGoogle, signInWithFacebook, signOut, createProfile, updateProfile };
+  async function refreshProfile() {
+    if (!user) return;
+    await fetchProfile(user.id);
+  }
+
+  return { authState, user, profile, signInWithGoogle, signInWithFacebook, signOut, createProfile, updateProfile, refreshProfile };
 }
