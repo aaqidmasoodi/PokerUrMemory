@@ -1,6 +1,6 @@
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
-import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Bot, Layers, Lightbulb } from 'lucide-react';
+import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Lightbulb } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function MainMenuScreen({
@@ -120,38 +120,25 @@ export function MainMenuScreen({
         {/* Primary button row — 5 square-ish tiles filling the horizontal space */}
         <div className="w-full max-w-md sm:max-w-lg lg:max-w-xl xl:max-w-2xl mx-auto flex items-stretch gap-2 sm:gap-3 lg:gap-4 xl:gap-5 min-h-[5rem] sm:min-h-[5.5rem] lg:min-h-[6.5rem] xl:min-h-[7.5rem]">
 
-          {/* Solitaire + Patience stacked in one tile slot */}
-          <div className="flex-1 flex flex-col gap-1.5 sm:gap-2">
-            <button
-              onClick={onSolitaire}
-              className="flex-1 flex flex-row items-center justify-center gap-2
-                px-2 rounded-2xl font-display tracking-wider uppercase
-                bg-white/15 backdrop-blur-sm border border-white/30 text-white
-                hover:bg-white/25 active:scale-[0.97] transition-all"
-            >
-              <Bot className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 shrink-0" />
-              <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold leading-tight text-center">
-                PokerUrMemory<br />Solitaire
-              </span>
-            </button>
-            <button
-              onClick={onPatience}
-              className="flex-1 flex flex-row items-center justify-center gap-2
-                px-2 rounded-2xl font-display tracking-wider uppercase
-                bg-white/15 backdrop-blur-sm border border-white/30 text-white
-                hover:bg-white/25 active:scale-[0.97] transition-all"
-            >
-              <Layers className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 shrink-0" />
-              <span className="text-[9px] sm:text-[10px] lg:text-xs font-bold leading-tight text-center">
-                PokerUrMemory<br />Patience
-              </span>
-            </button>
-          </div>
+          {/* Solitaire — leftmost, image only */}
+          <button
+            onClick={onSolitaire}
+            className="flex-1 relative rounded-2xl overflow-hidden border border-white/30
+              hover:brightness-110 active:scale-[0.97] transition-all"
+          >
+            <img
+              src="/images/PUM_Solitaire.png"
+              alt="Solitaire"
+              className="w-full h-full object-cover scale-[1.15] object-center"
+              draggable={false}
+            />
+            <div className="absolute inset-0 shadow-[inset_0_0_24px_6px_rgba(0,0,0,0.45)]" />
+          </button>
 
           {/* With Friends */}
           <button
             onClick={onPlayWithFriends}
-            className="flex-[1.25] flex flex-col items-center justify-center gap-2 sm:gap-2.5
+            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
               rounded-2xl font-display tracking-wider uppercase
               bg-white/15 backdrop-blur-sm border border-white/30 text-white
               hover:bg-white/25 active:scale-[0.97] transition-all"
@@ -165,7 +152,7 @@ export function MainMenuScreen({
           {/* Quick Play — blue primary */}
           <button
             onClick={onStartGame}
-            className="flex-[1.25] flex flex-col items-center justify-center gap-2 sm:gap-2.5
+            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
               rounded-2xl font-display tracking-wider uppercase
               bg-gradient-to-b from-[color:var(--color-blue)] to-[color:var(--color-blue-soft)]
               text-white border border-black/10
@@ -181,7 +168,7 @@ export function MainMenuScreen({
           {/* Schedule */}
           <button
             onClick={onScheduledGames}
-            className="flex-[1.25] flex flex-col items-center justify-center gap-2 sm:gap-2.5
+            className="flex-1 flex flex-col items-center justify-center gap-2 sm:gap-2.5
               rounded-2xl font-display tracking-wider uppercase
               bg-white/15 backdrop-blur-sm border border-white/30 text-white
               hover:bg-white/25 active:scale-[0.97] transition-all"
@@ -190,6 +177,21 @@ export function MainMenuScreen({
             <span className="text-[10px] sm:text-xs lg:text-[13px] xl:text-sm font-bold leading-tight text-center">
               Schedule
             </span>
+          </button>
+
+          {/* Patience — rightmost, image only */}
+          <button
+            onClick={onPatience}
+            className="flex-1 relative rounded-2xl overflow-hidden border border-white/30
+              hover:brightness-110 active:scale-[0.97] transition-all"
+          >
+            <img
+              src="/images/PUM_Patience.png"
+              alt="Patience"
+              className="w-full h-full object-cover scale-[1.15] object-center"
+              draggable={false}
+            />
+            <div className="absolute inset-0 shadow-[inset_0_0_24px_6px_rgba(0,0,0,0.45)]" />
           </button>
         </div>
 
