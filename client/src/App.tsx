@@ -4,6 +4,7 @@ import { TextToSpeech } from "@capacitor-community/text-to-speech";
 import { useSocket, type DiscardEntry, type Phase } from "./hooks/useSocket";
 import { useAuth } from "./hooks/useAuth";
 import { usePresence } from "./hooks/usePresence";
+import { useDailyCheckIn } from "./hooks/useDailyCheckIn";
 import { LandingScreen } from "./screens/LandingScreen";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 import { MainMenuScreen } from "./screens/MainMenuScreen";
@@ -19,6 +20,7 @@ import { WaitingRoomScreen } from "./screens/WaitingRoomScreen";
 import { TableLayoutEditor } from "./screens/TableLayoutEditor";
 import { IncomingInviteModal } from "./components/IncomingInviteModal";
 import { PlayerStatsModal } from "./components/PlayerStatsModal";
+import { DailyCheckInModal } from "./components/DailyCheckInModal";
 import { PokerBackground } from "./components/PokerBackground";
 import { PlayingCard } from "./components/poker/PlayingCard";
 import { PlayerSeat, PlayerNameDisplay, LayoutBox } from "./components/poker/PlayerSeat";
@@ -410,6 +412,7 @@ export default function App() {
     waitingRoom, beginScheduledGame, leaveWaitingRoom,
   } = useSocket();
   const onlineUserIds = usePresence(profile?.id ?? null, profile?.username ?? null);
+  const checkIn = useDailyCheckIn(profile?.id, refreshProfile);
 
   const [appScreen, setAppScreen] = useState<AppScreen>('menu');
   const [showRules, setShowRules] = useState(false);
@@ -694,6 +697,7 @@ export default function App() {
           onRules={() => setAppScreen('rules')}
           onAbout={() => setAppScreen('about')}
           onQuickIntro={() => setAppScreen('intro')}
+          onOpenCheckIn={checkIn.openModal}
         />
       );
     }
@@ -710,6 +714,9 @@ export default function App() {
           </div>
         )}
         {screen}
+        {checkIn.open && checkIn.data && (
+          <DailyCheckInModal data={checkIn.data} onClose={checkIn.closeModal} />
+        )}
         {incomingInvite && (
           <IncomingInviteModal
             invite={incomingInvite}

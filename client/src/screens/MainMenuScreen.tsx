@@ -1,6 +1,6 @@
 import type { Profile } from '../lib/supabase';
 import { getFlagEmoji } from '../lib/countries';
-import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Lightbulb, Bot, Cpu } from 'lucide-react';
+import { User, Settings, Spade, BookOpen, Users, Info, CalendarClock, Lightbulb, Bot, Cpu, Flame } from 'lucide-react';
 import { Avatar } from '../components/Avatar';
 
 export function MainMenuScreen({
@@ -15,6 +15,7 @@ export function MainMenuScreen({
   onRules,
   onAbout,
   onQuickIntro,
+  onOpenCheckIn,
 }: {
   profile: Profile;
   onStartGame: () => void;
@@ -27,6 +28,7 @@ export function MainMenuScreen({
   onRules: () => void;
   onAbout: () => void;
   onQuickIntro: () => void;
+  onOpenCheckIn: () => void;
 }) {
 
   return (
@@ -65,6 +67,27 @@ export function MainMenuScreen({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* Daily check-in — flame circle with streak badge */}
+          <button
+            onClick={onOpenCheckIn}
+            className="relative shrink-0 w-9 h-9 sm:w-10 sm:h-10 grid place-items-center
+              rounded-full bg-white/15 backdrop-blur-sm border border-white/30
+              active:scale-95 transition-all"
+            title="Daily check-in"
+          >
+            <Flame
+              className={`w-4 h-4 sm:w-[18px] sm:h-[18px] ${profile.checkin_streak > 0 ? 'text-orange-300' : 'text-white/70'}`}
+              fill={profile.checkin_streak > 0 ? 'currentColor' : 'none'}
+            />
+            {profile.checkin_streak > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1
+                rounded-full bg-orange-500 text-white text-[9px] font-bold leading-none
+                grid place-items-center border border-white/40 shadow">
+                {profile.checkin_streak}
+              </span>
+            )}
+          </button>
+
           <div className="brief-intro-wobble shrink-0">
             <button
               onClick={onQuickIntro}

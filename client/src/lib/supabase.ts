@@ -23,5 +23,9 @@ export type Profile = {
   current_streak: number;
   longest_streak: number;
   last_played_date: string | null;
+  xp: number;
+  checkin_streak: number;
+  longest_checkin_streak: number;
+  last_checkin_date: string | null;
   created_at: string;
 };
