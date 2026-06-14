@@ -38,7 +38,7 @@ export interface TableLayout {
 export const LIMITS = {
   x:     [3,   97]  as const,
   y:     [3,   97]  as const,
-  scale: [0.5, 2.0] as const,
+  scale: [0.25, 3.0] as const,
 };
 
 // Defaults reproduce the original look: opponents in a row near the top (name-tag

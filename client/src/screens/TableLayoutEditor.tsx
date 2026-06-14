@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import {
-  ChevronLeft, RotateCcw,
+  ChevronLeft, ChevronRight, RotateCcw,
   LogOut, Volume2, BookOpen, ScrollText,
 } from 'lucide-react';
 import { PlayingCard } from '../components/poker/PlayingCard';
@@ -154,6 +154,28 @@ export function TableLayoutEditor({
 
   function handleReset() {
     onChange(isHeroTab ? resetHero(layout) : resetCount(layout, tab as OppCount));
+  }
+
+  function cycleElement(dir: 1 | -1) {
+    const idx = elements.findIndex(e => selKey(e) === selKey(selected));
+    const next = (idx + dir + elements.length) % elements.length;
+    setSelected(elements[next]);
+  }
+
+  function adjustScale(delta: number) {
+    const bump = (cur: ElementLayout) =>
+      ({ ...cur, scale: Math.max(0.25, Math.min(3.0, cur.scale + delta)) });
+    if (selected.kind === 'hero') {
+      const cur = layout.hero[selected.part];
+      onChange({ ...layout, hero: { ...layout.hero, [selected.part]: bump(cur) } });
+    } else {
+      const seats = layout[oppCount];
+      if (!seats[selected.idx]) return;
+      const cur = seats[selected.idx][selected.part];
+      onChange({ ...layout, [oppCount]: seats.map((s, i) =>
+        i === selected.idx ? { ...s, [selected.part]: bump(cur) } : s
+      )});
+    }
   }
 
   function switchTab(t: EditorTab) {
@@ -338,9 +360,42 @@ export function TableLayoutEditor({
         ))}
       </div>
 
-      {/* ── Bottom hint ── */}
+      {/* ── Element controls: cycle (← →) and scale (− +) ── */}
       <div
-        className="absolute left-0 right-0 z-30 flex justify-center px-4"
+        className="absolute z-40 flex flex-col gap-2"
+        style={{
+          bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))',
+          right: 'calc(0.75rem + env(safe-area-inset-right, 0px))',
+        }}
+      >
+        <div className="flex gap-2">
+          {([[-1, <ChevronLeft className="w-5 h-5 text-white/80" />], [1, <ChevronRight className="w-5 h-5 text-white/80" />]] as const).map(([dir, icon]) => (
+            <button
+              key={String(dir)}
+              onPointerDown={e => { e.stopPropagation(); cycleElement(dir); }}
+              className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 grid place-items-center active:scale-90 transition-transform shadow-lg"
+            >
+              {icon}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          {([-0.15, 0.15] as const).map(delta => (
+            <button
+              key={String(delta)}
+              onPointerDown={e => { e.stopPropagation(); adjustScale(delta); }}
+              className="w-11 h-11 rounded-full bg-black/60 backdrop-blur-md border border-white/20 grid place-items-center active:scale-90 transition-transform shadow-lg text-white/80 text-xl font-bold leading-none"
+            >
+              {delta < 0 ? '−' : '+'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Bottom hint ── (pointer-events-none so the full-width wrapper doesn't
+           swallow taps on the scale buttons that sit at the same height) */}
+      <div
+        className="absolute left-0 right-0 z-30 flex justify-center px-4 pointer-events-none"
         style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/55 backdrop-blur-md border border-white/10 shadow-lg">
@@ -348,8 +403,12 @@ export function TableLayoutEditor({
             {selectionLabel(selected)}
           </span>
           <span className="w-px h-3 bg-white/15" />
+          <span className="text-[9px] text-white/70 font-mono whitespace-nowrap">
+            {Math.round(getEl(selected).scale * 100)}%
+          </span>
+          <span className="w-px h-3 bg-white/15" />
           <span className="text-[9px] text-white/50 tracking-wide whitespace-nowrap">
-            Drag to move · drag the gold dot to resize
+            Drag to move
           </span>
         </div>
       </div>
